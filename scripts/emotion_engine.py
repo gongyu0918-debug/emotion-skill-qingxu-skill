@@ -1,0 +1,1691 @@
+#!/usr/bin/env python3
+from __future__ import annotations
+
+import argparse
+import json
+import re
+import sys
+from datetime import datetime
+from difflib import SequenceMatcher
+from pathlib import Path
+from typing import Any
+from zoneinfo import ZoneInfo
+
+
+STATE_DIMS = ("urgency", "frustration", "clarity", "satisfaction", "trust", "engagement")
+EMOTION_DIMS = ("urgency", "frustration", "confusion", "skepticism", "satisfaction", "cautiousness", "openness")
+DIMS = STATE_DIMS
+DEFAULT_BASELINE = {
+    "response_delay_seconds": 35.0,
+    "politeness": 0.2,
+    "terseness": 0.35,
+    "punctuation": 0.15,
+    "directness": 0.3,
+}
+DEFAULT_PERSONA_TRAITS = {
+    "patience": 0.5,
+    "skepticism": 0.35,
+    "caution": 0.35,
+    "openness": 0.5,
+    "assertiveness": 0.4,
+}
+
+ANGER_TERMS = {
+    "气死", "烦", "垃圾", "离谱", "扯", "蠢", "废物", "火大", "崩溃", "受不了", "妈的",
+    "shit", "stupid", "wtf", "damn", "useless", "annoying",
+}
+URGENCY_TERMS = {
+    "快", "赶紧", "立刻", "马上", "现在", "别停", "先", "直接",
+    "asap", "urgent", "immediately", "right now", "hurry",
+}
+RUSH_TYPO_TERMS = {
+    "pls", "plz", "plss", "urgnt", "stcuk", "brokn", "fixx", "fiex", "hlp", "tmrw", "rn",
+    "w我", "n你", "t他", "d的", "b不",
+}
+FRUSTRATION_TERMS = {
+    "还没好", "还没修好", "还在", "还是这个", "同一个问题", "重复", "又坏了", "又挂了", "反复", "几轮",
+    "卡了很久", "没反应", "卡死", "卡住", "死循环", "修了又坏",
+    "still not fixed", "still broken", "same issue", "same error", "again", "reoccurred",
+    "keeps breaking", "endless", "time sink", "not this error", "stops responding", "bug-fixing loops",
+}
+STALL_TERMS = {
+    "卡住", "卡死", "没反应", "一直转", "卡这", "hang", "hung", "stuck", "stall",
+    "spinner", "loading", "timeout", "no response", "stops responding",
+}
+CONFUSION_TERMS = {
+    "为什么", "怎么", "啥", "不懂", "看不懂", "迷糊", "不知道", "不清楚",
+    "why", "how", "confused", "unclear",
+}
+SATISFACTION_TERMS = {
+    "好了", "可以", "不错", "满意", "继续", "谢谢", "太好了", "解决了",
+    "great", "nice", "works", "solved", "thanks", "good",
+}
+CONTINUE_TERMS = {
+    "继续", "接着", "补完", "收尾", "剩下", "继续推进",
+    "continue", "keep going", "finish the rest", "wrap the rest", "next",
+}
+BLOCKING_TERMS = {
+    "阻塞", "卡住发布", "卡住我今天的发布", "发布", "上线", "卡住进度",
+    "blocking", "blocked", "blocks productive use", "severely impacts", "regression", "ship today", "release",
+}
+CAUTION_TERMS = {
+    "小心", "稳一点", "谨慎", "别搞砸", "不要搞砸", "千万别", "别出事", "别弄坏", "注意边界",
+    "careful", "be careful", "don't break", "do not break", "safely",
+}
+BOUNDARY_TERMS = {
+    "只改", "只动", "只碰", "别碰", "不要动", "不能动", "不可改", "先别动", "不要删", "别删",
+    "only change", "touch only", "leave it alone", "do not touch", "must not change", "keep within",
+}
+ASSURANCE_TERMS = {
+    "验证", "确认", "检查一下", "过一遍", "保险一点", "稳一点", "最稳", "保守一点",
+    "verify", "verify first", "double check", "check first", "safest", "safe path", "conservative",
+}
+SKEPTICISM_TERMS = {
+    "你确定", "确定吗", "真的吗", "靠谱吗", "有把握吗", "凭什么", "依据", "证据", "给我证据",
+    "怎么证明", "别瞎猜", "别脑补", "别自作主张", "别拍脑袋", "先证明", "误导", "配置明明对",
+    "despite correct configuration", "without warning", "misleading", "working perfectly yesterday",
+    "are you sure", "how do you know", "based on what", "show me", "evidence", "proof", "prove", "cite",
+    "source", "don't guess", "stop guessing", "back it up", "despite", "misleading error",
+}
+HEDGE_TERMS = {
+    "不一定", "未必", "可能", "也许", "大概", "应该", "恐怕", "我怀疑", "我觉得未必", "我不太认同",
+    "maybe", "perhaps", "probably", "might", "i guess", "i suspect", "not sure", "unsure", "i doubt",
+}
+PRAISE_TERMS = {"牛", "厉害", "优秀", "赞", "棒", "great", "perfect", "excellent", "well done"}
+POLITE_TERMS = {"请", "麻烦", "辛苦", "谢谢", "拜托", "please", "thanks", "thank you"}
+EXPLORATION_TERMS = {
+    "想法", "方案", "架构", "设计", "比较", "发散", "可行性", "取舍", "建议", "方向", "思路",
+    "brainstorm", "options", "tradeoff", "design", "architecture", "compare", "feasibility", "suggest", "direction", "directions", "ideas",
+}
+COMMAND_TERMS = {"修", "改", "做", "上", "给我", "继续", "直接", "fix", "ship", "do it", "change", "implement", "patch"}
+VAGUE_TERMS = {"这个", "那个", "随便", "差不多", "大概", "something", "whatever", "somehow"}
+SUCCESS_TERMS = {"完成", "成功", "通过", "跑通", "done", "fixed", "resolved", "green", "passed"}
+GUARD_TERMS = {"收口", "守住", "稳住", "防漂移", "防回归", "guard", "stabilize", "lock it", "smoke check"}
+TECHNICAL_TERMS = {
+    "bug", "traceback", "stack", "stacktrace", "api", "hook", "plugin", "queue", "thread", "prompt",
+    "workflow", "agent", "router", "mcp", "session", "heartbeat", "schema", "deploy", "cron", "logs",
+    "test", "tests", "failing", "报错", "线程", "路由", "工作流", "接口", "脚本", "配置", "回归", "日志", "测试", "错误",
+}
+
+PUNCT_RUN_PATTERN = re.compile(r"[!?！？]{2,}|\.{3,}|…{2,}|。{2,}")
+LATIN_ELONGATION_PATTERN = re.compile(r"([A-Za-z])\1{2,}")
+CJK_ELONGATION_PATTERN = re.compile(r"([\u4e00-\u9fff])\1{1,}")
+MIXED_SCRIPT_PATTERN = re.compile(r"[A-Za-z][\u4e00-\u9fff]|[\u4e00-\u9fff][A-Za-z]")
+NO_SPACE_PUNCT_PATTERN = re.compile(r"[,;:!?](?=[A-Za-z])")
+ABRUPT_EN_PATTERN = re.compile(r"^\s*(ok(?:ay)?|fine|sure|right|great|good|thanks)\.\s*$", re.IGNORECASE)
+ABRUPT_ZH_PATTERN = re.compile(r"^\s*(行|好|可以|收到|知道了|嗯|哦)[。\.]\s*$")
+SOFT_CORRECTION_PATTERN = re.compile(r"(但|但是|不过|只是|然而|but|however|though|yet)", re.IGNORECASE)
+CLAIMED_RESOLUTION_PATTERN = re.compile(r"(fixed|resolved|done|solved|passed|green|works now|好了|解决了|完成了|跑通了|通过|通过了)")
+STILL_BROKEN_PATTERN = re.compile(
+    r"(still (?:not fixed|broken|happening)|same (?:issue|error)|keeps? breaking|stuck|hang(?:s|ing)?|stop(?:s)? responding|not this error|"
+    r"还没好|还没修好|还是这个|同一个问题|卡住|卡死|没反应|一直转|又坏了)"
+)
+
+
+def clamp(value: float, low: float = 0.0, high: float = 1.0) -> float:
+    return max(low, min(high, value))
+
+
+def load_json_file(path: str | None) -> Any:
+    if not path:
+        return None
+    return json.loads(Path(path).read_text(encoding="utf-8"))
+
+
+def dump_json(data: Any, pretty: bool) -> str:
+    if pretty:
+        return json.dumps(data, ensure_ascii=False, indent=2, sort_keys=True)
+    return json.dumps(data, ensure_ascii=False, separators=(",", ":"), sort_keys=True)
+
+
+def normalize_text(text: str) -> str:
+    text = text or ""
+    text = text.lower()
+    text = re.sub(r"\s+", " ", text)
+    return text.strip()
+
+
+def detect_language(text: str) -> str:
+    return "zh" if re.search(r"[\u4e00-\u9fff]", text or "") else "en"
+
+
+def count_terms(text: str, terms: set[str]) -> int:
+    norm = normalize_text(text)
+    return sum(1 for term in terms if term in norm)
+
+
+def ratio(numerator: float, denominator: float) -> float:
+    if denominator <= 0:
+        return 0.0
+    return numerator / denominator
+
+
+def unique_labels(labels: list[str]) -> list[str]:
+    seen: set[str] = set()
+    result: list[str] = []
+    for label in labels:
+        if label not in seen:
+            seen.add(label)
+            result.append(label)
+    return result
+
+
+def intensity_band(score: float) -> str:
+    if score >= 0.75:
+        return "dominant"
+    if score >= 0.55:
+        return "strong"
+    if score >= 0.3:
+        return "present"
+    return "background"
+
+
+def normalized_label_set(labels: list[str]) -> set[str]:
+    raw = {str(label) for label in labels if str(label).strip()}
+    if not raw:
+        return set()
+    trimmed = {label for label in raw if label != "neutral"}
+    return trimmed or raw
+
+
+def label_overlap_score(labels_a: list[str], labels_b: list[str]) -> float:
+    set_a = normalized_label_set(labels_a)
+    set_b = normalized_label_set(labels_b)
+    if not set_a and not set_b:
+        return 1.0
+    if not set_a or not set_b:
+        return 0.0
+    return round(clamp(len(set_a & set_b) / len(set_a | set_b)), 4)
+
+
+def vector_alignment_score(vector_a: dict[str, Any], vector_b: dict[str, Any], dims: tuple[str, ...]) -> float:
+    if not vector_a or not vector_b:
+        return 0.0
+    diff = 0.0
+    for dim in dims:
+        diff += abs(float(vector_a.get(dim, 0.0)) - float(vector_b.get(dim, 0.0)))
+    return round(clamp(1.0 - (diff / max(len(dims), 1))), 4)
+
+
+def dominant_axes(vector: dict[str, Any], dims: tuple[str, ...], top_n: int = 2, floor: float = 0.32) -> set[str]:
+    ranked = sorted(((dim, float(vector.get(dim, 0.0))) for dim in dims), key=lambda item: item[1], reverse=True)
+    picked = [dim for dim, value in ranked[:top_n] if value >= floor]
+    return set(picked)
+
+
+def axis_overlap_score(vector_a: dict[str, Any], vector_b: dict[str, Any], dims: tuple[str, ...]) -> float:
+    axes_a = dominant_axes(vector_a, dims)
+    axes_b = dominant_axes(vector_b, dims)
+    if not axes_a and not axes_b:
+        return 1.0
+    if not axes_a or not axes_b:
+        return 0.0
+    return round(clamp(len(axes_a & axes_b) / len(axes_a | axes_b)), 4)
+
+
+def clamp_dict(raw: Any, keys: tuple[str, ...], defaults: dict[str, float] | None = None) -> dict[str, float]:
+    base = {key: clamp(float((defaults or {}).get(key, 0.0))) for key in keys}
+    if not isinstance(raw, dict):
+        return base
+    for key in keys:
+        if key in raw and raw[key] is not None:
+            try:
+                base[key] = clamp(float(raw[key]))
+            except (TypeError, ValueError):
+                continue
+    return base
+
+
+def combine_named_vectors(weighted_vectors: list[tuple[dict[str, Any], float]], dims: tuple[str, ...]) -> dict[str, float]:
+    totals = {dim: 0.0 for dim in dims}
+    weight_sum = {dim: 0.0 for dim in dims}
+    for vector, weight in weighted_vectors:
+        if not vector or weight <= 0:
+            continue
+        for dim in dims:
+            value = vector.get(dim)
+            if value is None:
+                continue
+            totals[dim] += float(value) * weight
+            weight_sum[dim] += weight
+    result: dict[str, float] = {}
+    for dim in dims:
+        if weight_sum[dim] > 0:
+            result[dim] = round(clamp(totals[dim] / weight_sum[dim]), 4)
+        else:
+            result[dim] = 0.0
+    return result
+
+
+def derive_persona_traits(user_profile: dict[str, Any]) -> tuple[dict[str, float], str]:
+    persona_traits = clamp_dict(user_profile.get("persona_traits"), tuple(DEFAULT_PERSONA_TRAITS.keys()), DEFAULT_PERSONA_TRAITS)
+    source = "default"
+    big5 = clamp_dict(user_profile.get("big5"), ("openness", "conscientiousness", "extraversion", "agreeableness", "neuroticism"))
+    if any(value > 0 for value in big5.values()):
+        source = "big5"
+        persona_traits = {
+            "patience": round(clamp(0.42 + 0.22 * big5["agreeableness"] - 0.18 * big5["neuroticism"]), 4),
+            "skepticism": round(clamp(0.14 + 0.18 * big5["conscientiousness"] + 0.12 * (1.0 - big5["agreeableness"])), 4),
+            "caution": round(clamp(0.16 + 0.34 * big5["conscientiousness"] + 0.08 * big5["neuroticism"]), 4),
+            "openness": round(clamp(big5["openness"]), 4),
+            "assertiveness": round(clamp(0.1 + 0.8 * big5["extraversion"]), 4),
+        }
+    explicit = clamp_dict(user_profile.get("persona_traits"), tuple(DEFAULT_PERSONA_TRAITS.keys()))
+    if any(value > 0 for value in explicit.values()):
+        source = "persona_traits"
+        persona_traits = {
+            key: round(explicit[key] if key in user_profile.get("persona_traits", {}) else persona_traits[key], 4)
+            for key in DEFAULT_PERSONA_TRAITS
+        }
+    return persona_traits, source
+
+
+def derive_affective_prior(user_profile: dict[str, Any], persona_traits: dict[str, float], persona_source: str) -> tuple[dict[str, float], str, float]:
+    explicit_prior = clamp_dict(user_profile.get("affective_prior") or user_profile.get("background_emotion"), EMOTION_DIMS)
+    if any(value > 0 for value in explicit_prior.values()):
+        return explicit_prior, "explicit", 0.22
+    patience = persona_traits["patience"]
+    skepticism = persona_traits["skepticism"]
+    caution = persona_traits["caution"]
+    openness = persona_traits["openness"]
+    assertiveness = persona_traits["assertiveness"]
+    inferred = {
+        "urgency": round(clamp(0.04 + 0.12 * (1.0 - patience) + 0.08 * assertiveness), 4),
+        "frustration": round(clamp(0.03 + 0.14 * (1.0 - patience)), 4),
+        "confusion": 0.04,
+        "skepticism": round(clamp(0.04 + 0.26 * skepticism + 0.08 * caution), 4),
+        "satisfaction": round(clamp(0.08 + 0.08 * patience), 4),
+        "cautiousness": round(clamp(0.05 + 0.24 * caution), 4),
+        "openness": round(clamp(0.06 + 0.24 * openness), 4),
+    }
+    weight = 0.1 if persona_source in {"persona_traits", "big5"} else 0.0
+    return inferred, "persona_heuristic", weight
+
+
+def recent_user_messages(history: list[dict[str, Any]], limit: int = 5) -> list[str]:
+    messages = []
+    for item in history or []:
+        if str(item.get("role", "")).lower() == "user":
+            text = item.get("text") or item.get("content") or ""
+            if text:
+                messages.append(str(text))
+    return messages[-limit:]
+
+
+def last_assistant_message(history: list[dict[str, Any]]) -> str:
+    for item in reversed(history or []):
+        if str(item.get("role", "")).lower() == "assistant":
+            return str(item.get("text") or item.get("content") or "")
+    return ""
+
+
+def max_similarity(text: str, candidates: list[str]) -> float:
+    norm = normalize_text(text)
+    if not norm or not candidates:
+        return 0.0
+    scores = [SequenceMatcher(None, norm, normalize_text(candidate)).ratio() for candidate in candidates if candidate]
+    return max(scores, default=0.0)
+
+
+def parse_hour_window(raw: Any) -> tuple[int, int]:
+    if isinstance(raw, (list, tuple)) and len(raw) >= 2:
+        start = int(raw[0])
+        end = int(raw[1])
+    else:
+        start, end = 9, 22
+    return max(0, min(23, start)), max(0, min(23, end))
+
+
+def hour_in_window(hour: int | None, start: int, end: int) -> bool | None:
+    if hour is None:
+        return None
+    if start == end:
+        return True
+    if start < end:
+        return start <= hour < end
+    return hour >= start or hour < end
+
+
+def infer_local_hour(payload: dict[str, Any], timezone_name: str | None) -> int | None:
+    context = payload.get("context") or {}
+    runtime = payload.get("runtime") or {}
+    explicit_hour = context.get("local_hour")
+    if explicit_hour is None:
+        explicit_hour = runtime.get("local_hour")
+    if explicit_hour is not None:
+        try:
+            return max(0, min(23, int(explicit_hour)))
+        except (TypeError, ValueError):
+            return None
+    if not timezone_name:
+        return None
+    try:
+        tz = ZoneInfo(timezone_name)
+    except Exception:
+        return None
+    now_iso = context.get("now_iso") or runtime.get("now_iso")
+    try:
+        if now_iso:
+            dt = datetime.fromisoformat(str(now_iso).replace("Z", "+00:00"))
+            if dt.tzinfo is None:
+                dt = dt.replace(tzinfo=tz)
+            else:
+                dt = dt.astimezone(tz)
+        else:
+            dt = datetime.now(tz)
+        return int(dt.hour)
+    except Exception:
+        return None
+
+
+def load_user_profile(payload: dict[str, Any]) -> dict[str, Any]:
+    user_profile = payload.get("user_profile") or {}
+    baseline = user_profile.get("baseline") or {}
+    persona_traits, persona_source = derive_persona_traits(user_profile)
+    affective_prior, affective_prior_source, affective_prior_weight = derive_affective_prior(user_profile, persona_traits, persona_source)
+    timezone_name = user_profile.get("timezone") or payload.get("context", {}).get("timezone")
+    work_start, work_end = parse_hour_window(user_profile.get("work_hours_local") or user_profile.get("work_hours"))
+    local_hour = infer_local_hour(payload, timezone_name)
+    in_work_window = hour_in_window(local_hour, work_start, work_end)
+    baseline_delay = max(12.0, float(baseline.get("response_delay_seconds", DEFAULT_BASELINE["response_delay_seconds"]) or DEFAULT_BASELINE["response_delay_seconds"]))
+    baseline_politeness = clamp(float(baseline.get("politeness", DEFAULT_BASELINE["politeness"]) or DEFAULT_BASELINE["politeness"]))
+    baseline_terseness = clamp(float(baseline.get("terseness", baseline.get("terse", DEFAULT_BASELINE["terseness"])) or DEFAULT_BASELINE["terseness"]))
+    baseline_punctuation = clamp(float(baseline.get("punctuation", DEFAULT_BASELINE["punctuation"]) or DEFAULT_BASELINE["punctuation"]))
+    baseline_directness = clamp(float(baseline.get("directness", DEFAULT_BASELINE["directness"]) or DEFAULT_BASELINE["directness"]))
+    availability_multiplier = 1.35 if in_work_window is False else 1.0
+    return {
+        "id": user_profile.get("id", ""),
+        "timezone": timezone_name or "",
+        "local_hour": local_hour,
+        "work_hours_local": [work_start, work_end],
+        "in_work_window": in_work_window,
+        "availability_multiplier": availability_multiplier,
+        "baseline": {
+            "response_delay_seconds": baseline_delay,
+            "politeness": baseline_politeness,
+            "terseness": baseline_terseness,
+            "punctuation": baseline_punctuation,
+            "directness": baseline_directness,
+        },
+        "persona_traits": persona_traits,
+        "persona_source": persona_source,
+        "affective_prior": affective_prior,
+        "affective_prior_source": affective_prior_source,
+        "affective_prior_weight": affective_prior_weight,
+    }
+
+
+def build_features(payload: dict[str, Any]) -> dict[str, Any]:
+    message = str(payload.get("message") or "")
+    history = payload.get("history") or []
+    runtime = payload.get("runtime") or {}
+    user_profile = load_user_profile(payload)
+    language = detect_language(message)
+    norm_message = normalize_text(message)
+    recent_users = recent_user_messages(history)
+    previous_users = recent_users[:-1] if recent_users and normalize_text(recent_users[-1]) == norm_message else recent_users
+    last_assistant = last_assistant_message(history)
+    norm_last_assistant = normalize_text(last_assistant)
+
+    chars = len(message.strip())
+    words = len(re.findall(r"[A-Za-z0-9_./:-]+|[\u4e00-\u9fff]", message))
+    questions = message.count("?") + message.count("？")
+    exclamations = message.count("!") + message.count("！")
+    ellipsis = message.count("...") + message.count("……") + message.count("…")
+    uppercase_tokens = len(re.findall(r"\b[A-Z]{2,}\b", message))
+    code_markers = int("```" in message or "`" in message or bool(re.search(r"\b[A-Za-z_]+\.[A-Za-z0-9_]+\b", message)))
+    file_refs = len(re.findall(r"[A-Za-z0-9_./\\-]+\.[A-Za-z0-9_]+", message))
+    list_markers = len(re.findall(r"\b\d+\.", message)) + len(re.findall(r"[;；、]", message))
+    punctuation_runs = len(PUNCT_RUN_PATTERN.findall(message))
+    latin_elongations = len(LATIN_ELONGATION_PATTERN.findall(message))
+    cjk_elongations = len(CJK_ELONGATION_PATTERN.findall(message))
+    mixed_script_runs = len(MIXED_SCRIPT_PATTERN.findall(message))
+    no_space_punct_runs = len(NO_SPACE_PUNCT_PATTERN.findall(message))
+    abrupt_period_reply = 1.0 if (ABRUPT_EN_PATTERN.match(message) or ABRUPT_ZH_PATTERN.match(message)) else 0.0
+
+    anger_hits = count_terms(message, ANGER_TERMS)
+    urgency_hits = count_terms(message, URGENCY_TERMS)
+    rush_typo_hits = count_terms(message, RUSH_TYPO_TERMS)
+    frustration_hits = count_terms(message, FRUSTRATION_TERMS)
+    stall_hits = count_terms(message, STALL_TERMS)
+    confusion_hits = count_terms(message, CONFUSION_TERMS)
+    satisfaction_hits = count_terms(message, SATISFACTION_TERMS)
+    continue_hits = count_terms(message, CONTINUE_TERMS)
+    blocking_hits = count_terms(message, BLOCKING_TERMS)
+    caution_hits = count_terms(message, CAUTION_TERMS)
+    boundary_hits = count_terms(message, BOUNDARY_TERMS)
+    assurance_hits = count_terms(message, ASSURANCE_TERMS)
+    skepticism_hits = count_terms(message, SKEPTICISM_TERMS)
+    hedge_hits = count_terms(message, HEDGE_TERMS)
+    praise_hits = count_terms(message, PRAISE_TERMS)
+    polite_hits = count_terms(message, POLITE_TERMS)
+    explore_hits = count_terms(message, EXPLORATION_TERMS)
+    command_hits = count_terms(message, COMMAND_TERMS)
+    vague_hits = count_terms(message, VAGUE_TERMS)
+    success_hits = count_terms(message, SUCCESS_TERMS)
+    guard_hits = count_terms(message, GUARD_TERMS)
+    technical_hits = count_terms(message, TECHNICAL_TERMS)
+    if STILL_BROKEN_PATTERN.search(norm_message):
+        success_hits = 0
+
+    repeat_similarity = max_similarity(message, previous_users)
+    short_burst = 1.0 if chars <= 18 else 0.75 if chars <= 48 else 0.35 if chars <= 120 else 0.1
+    question_units = 1 if questions and confusion_hits == 0 and re.search(r"[?？]{2,}", message) else questions
+    question_density = clamp(ratio(question_units, max(chars, 1)) * 22.0)
+    exclamation_pressure = clamp(exclamations / 3.0)
+    uppercase_pressure = clamp(uppercase_tokens / 2.0)
+    vague_ratio = clamp(vague_hits / 3.0)
+    technical_ratio = clamp(technical_hits / 5.0)
+    command_ratio = clamp(command_hits / 3.0)
+    praise_ratio = clamp((praise_hits + satisfaction_hits) / 4.0)
+    polite_ratio = clamp(polite_hits / 3.0)
+    explore_ratio = clamp(explore_hits / 3.0)
+    success_ratio = clamp(success_hits / 3.0)
+    continue_ratio = clamp(continue_hits / 3.0)
+    blocking_ratio = clamp(blocking_hits / 3.0)
+    caution_ratio = clamp(caution_hits / 3.0)
+    boundary_ratio = clamp(boundary_hits / 3.0)
+    assurance_ratio = clamp(assurance_hits / 3.0)
+    skepticism_ratio = clamp(skepticism_hits / 3.0)
+    hedge_ratio = clamp(hedge_hits / 2.0)
+    guard_ratio = clamp(guard_hits / 3.0)
+    frustration_ratio = clamp(frustration_hits / 3.0)
+    stall_ratio = clamp(stall_hits / 3.0)
+    soft_correction = 1.0 if SOFT_CORRECTION_PATTERN.search(message) and (hedge_hits >= 1 or skepticism_hits >= 1) else 0.0
+    punctuation_pressure = clamp(
+        0.36 * clamp(punctuation_runs / 2.0)
+        + 0.22 * exclamation_pressure
+        + 0.16 * question_density
+        + 0.18 * clamp((latin_elongations + cjk_elongations) / 2.0)
+        + 0.08 * clamp(ellipsis / 2.0)
+    )
+    goal_specificity = clamp(
+        0.38 * technical_ratio
+        + 0.24 * command_ratio
+        + 0.18 * clamp(file_refs / 2.0)
+        + 0.12 * clamp(code_markers)
+        + 0.08 * success_ratio
+    )
+    typing_chaos = clamp(
+        0.34 * clamp(rush_typo_hits / 2.0)
+        + 0.26 * clamp(mixed_script_runs / 2.0)
+        + 0.2 * clamp(no_space_punct_runs / 2.0)
+        + 0.1 * clamp((latin_elongations + cjk_elongations) / 2.0)
+        + 0.1 * short_burst
+    )
+
+    response_delay_seconds = float(runtime.get("response_delay_seconds", 0) or 0)
+    unresolved_turns = float(runtime.get("unresolved_turns", 0) or 0)
+    bug_retries = float(runtime.get("bug_retries", 0) or 0)
+    task_age_minutes = float(runtime.get("task_age_minutes", 0) or 0)
+    queue_depth = float(runtime.get("queue_depth", 0) or 0)
+    background_tasks_running = float(runtime.get("background_tasks_running", 0) or 0)
+    same_issue_mentions = float(runtime.get("same_issue_mentions", 0) or 0)
+    contradiction_signal = clamp(float(runtime.get("contradiction_signal", 0) or 0))
+    resolution_claimed = 1.0 if CLAIMED_RESOLUTION_PATTERN.search(norm_last_assistant) else 0.0
+    resolution_mismatch = 1.0 if resolution_claimed and STILL_BROKEN_PATTERN.search(norm_message) else 0.0
+
+    effective_delay_budget_seconds = user_profile["baseline"]["response_delay_seconds"] * float(user_profile["availability_multiplier"])
+    delay_pressure = clamp(response_delay_seconds / max(12.0, effective_delay_budget_seconds))
+    stuck_pressure = clamp(
+        (unresolved_turns * 0.16)
+        + (bug_retries * 0.24)
+        + (task_age_minutes / 75.0)
+        + (same_issue_mentions * 0.18)
+        + (stall_ratio * 0.14)
+        + (repeat_similarity * 0.12)
+        + (resolution_mismatch * 0.08)
+    )
+    background_pressure = clamp((queue_depth * 0.2) + (background_tasks_running * 0.15))
+    politeness_delta = clamp(polite_ratio - user_profile["baseline"]["politeness"] + 0.15)
+    terseness_delta = clamp(short_burst - user_profile["baseline"]["terseness"] + 0.15)
+    punctuation_delta = clamp(punctuation_pressure - user_profile["baseline"]["punctuation"] + 0.15)
+    directness_delta = clamp(command_ratio - user_profile["baseline"]["directness"] + 0.15)
+    abrupt_delta = clamp(abrupt_period_reply * (1.0 - 0.55 * user_profile["baseline"]["terseness"]))
+
+    evidence: list[str] = []
+    if urgency_hits:
+        evidence.append("urgency_terms")
+    if frustration_hits or anger_hits:
+        evidence.append("frustration_terms")
+    if stall_hits:
+        evidence.append("stall_terms")
+    if repeat_similarity >= 0.72:
+        evidence.append("repeated_user_emphasis")
+    if punctuation_pressure >= 0.36:
+        evidence.append("punctuation_intensity")
+    if typing_chaos >= 0.32:
+        evidence.append("typing_chaos")
+    if abrupt_period_reply:
+        evidence.append("abrupt_short_reply")
+    if delay_pressure >= 0.35:
+        evidence.append("delay_pressure")
+    if stuck_pressure >= 0.42:
+        evidence.append("stuck_issue_pressure")
+    if resolution_mismatch:
+        evidence.append("resolution_mismatch")
+    if guard_hits:
+        evidence.append("guard_terms")
+    if blocking_hits:
+        evidence.append("blocking_terms")
+    if caution_hits or boundary_hits or assurance_hits:
+        evidence.append("boundary_terms")
+    if skepticism_hits or hedge_hits or contradiction_signal >= 0.34:
+        evidence.append("skepticism_terms")
+    if technical_hits:
+        evidence.append("technical_context")
+
+    return {
+        "message": message,
+        "language": language,
+        "chars": chars,
+        "words": words,
+        "questions": questions,
+        "exclamations": exclamations,
+        "ellipsis": ellipsis,
+        "uppercase_tokens": uppercase_tokens,
+        "code_markers": code_markers,
+        "file_refs": file_refs,
+        "list_markers": list_markers,
+        "punctuation_runs": punctuation_runs,
+        "latin_elongations": latin_elongations,
+        "cjk_elongations": cjk_elongations,
+        "mixed_script_runs": mixed_script_runs,
+        "no_space_punct_runs": no_space_punct_runs,
+        "abrupt_period_reply": abrupt_period_reply,
+        "anger_hits": anger_hits,
+        "urgency_hits": urgency_hits,
+        "rush_typo_hits": rush_typo_hits,
+        "frustration_hits": frustration_hits,
+        "stall_hits": stall_hits,
+        "confusion_hits": confusion_hits,
+        "satisfaction_hits": satisfaction_hits,
+        "continue_hits": continue_hits,
+        "blocking_hits": blocking_hits,
+        "caution_hits": caution_hits,
+        "boundary_hits": boundary_hits,
+        "assurance_hits": assurance_hits,
+        "skepticism_hits": skepticism_hits,
+        "hedge_hits": hedge_hits,
+        "praise_hits": praise_hits,
+        "polite_hits": polite_hits,
+        "explore_hits": explore_hits,
+        "command_hits": command_hits,
+        "vague_hits": vague_hits,
+        "success_hits": success_hits,
+        "guard_hits": guard_hits,
+        "technical_hits": technical_hits,
+        "repeat_similarity": round(repeat_similarity, 4),
+        "short_burst": short_burst,
+        "question_density": round(question_density, 4),
+        "exclamation_pressure": round(exclamation_pressure, 4),
+        "uppercase_pressure": round(uppercase_pressure, 4),
+        "vague_ratio": round(vague_ratio, 4),
+        "technical_ratio": round(technical_ratio, 4),
+        "command_ratio": round(command_ratio, 4),
+        "praise_ratio": round(praise_ratio, 4),
+        "polite_ratio": round(polite_ratio, 4),
+        "politeness_delta": round(politeness_delta, 4),
+        "explore_ratio": round(explore_ratio, 4),
+        "success_ratio": round(success_ratio, 4),
+        "continue_ratio": round(continue_ratio, 4),
+        "blocking_ratio": round(blocking_ratio, 4),
+        "caution_ratio": round(caution_ratio, 4),
+        "boundary_ratio": round(boundary_ratio, 4),
+        "assurance_ratio": round(assurance_ratio, 4),
+        "skepticism_ratio": round(skepticism_ratio, 4),
+        "hedge_ratio": round(hedge_ratio, 4),
+        "guard_ratio": round(guard_ratio, 4),
+        "frustration_ratio": round(frustration_ratio, 4),
+        "stall_ratio": round(stall_ratio, 4),
+        "soft_correction": round(soft_correction, 4),
+        "punctuation_pressure": round(punctuation_pressure, 4),
+        "typing_chaos": round(typing_chaos, 4),
+        "punctuation_delta": round(punctuation_delta, 4),
+        "terseness_delta": round(terseness_delta, 4),
+        "directness_delta": round(directness_delta, 4),
+        "abrupt_delta": round(abrupt_delta, 4),
+        "goal_specificity": round(goal_specificity, 4),
+        "effective_delay_budget_seconds": round(effective_delay_budget_seconds, 4),
+        "response_delay_seconds": response_delay_seconds,
+        "unresolved_turns": unresolved_turns,
+        "bug_retries": bug_retries,
+        "task_age_minutes": task_age_minutes,
+        "queue_depth": queue_depth,
+        "background_tasks_running": background_tasks_running,
+        "same_issue_mentions": same_issue_mentions,
+        "contradiction_signal": contradiction_signal,
+        "resolution_claimed": resolution_claimed,
+        "resolution_mismatch": resolution_mismatch,
+        "delay_pressure": round(delay_pressure, 4),
+        "stuck_pressure": round(stuck_pressure, 4),
+        "background_pressure": round(background_pressure, 4),
+        "user_profile": user_profile,
+        "evidence": evidence,
+    }
+
+
+def derive_emotion_vector(state_vector: dict[str, float], features: dict[str, Any]) -> dict[str, float]:
+    confusion = clamp(
+        0.72 * (1.0 - state_vector["clarity"])
+        + 0.12 * clamp(features["confusion_hits"] / 2.0)
+        + 0.08 * features["vague_ratio"]
+        + 0.06 * clamp(features["questions"] / 3.0)
+        - 0.08 * state_vector["urgency"]
+        - 0.06 * state_vector["frustration"]
+        - 0.08 * features["skepticism_ratio"]
+        - 0.08 * features["hedge_ratio"]
+        - 0.06 * features["goal_specificity"]
+    )
+    skepticism = clamp(
+        0.46 * features["skepticism_ratio"]
+        + 0.2 * features["hedge_ratio"]
+        + 0.16 * features["resolution_mismatch"]
+        + 0.14 * features["contradiction_signal"]
+        + 0.1 * features["soft_correction"]
+        + 0.08 * features["question_density"]
+        + 0.06 * features["assurance_ratio"]
+        + 0.06 * (1.0 - state_vector["trust"])
+        + 0.04 * features["goal_specificity"]
+    )
+    cautiousness = clamp(
+        0.48 * features["caution_ratio"]
+        + 0.28 * features["boundary_ratio"]
+        + 0.18 * features["assurance_ratio"]
+        + 0.08 * state_vector["trust"]
+        + 0.06 * features["polite_ratio"]
+    )
+    openness = clamp(
+        0.68 * features["explore_ratio"]
+        + 0.16 * state_vector["engagement"]
+        + 0.06 * clamp(features["questions"] / 3.0)
+        - 0.1 * state_vector["urgency"]
+        - 0.08 * state_vector["frustration"]
+    )
+    return {
+        "urgency": round(clamp(state_vector["urgency"]), 4),
+        "frustration": round(clamp(state_vector["frustration"]), 4),
+        "confusion": round(confusion, 4),
+        "skepticism": round(skepticism, 4),
+        "satisfaction": round(clamp(state_vector["satisfaction"]), 4),
+        "cautiousness": round(cautiousness, 4),
+        "openness": round(openness, 4),
+    }
+
+
+def build_interaction_state(state_vector: dict[str, float]) -> dict[str, float]:
+    return {
+        "clarity": round(clamp(state_vector["clarity"]), 4),
+        "trust": round(clamp(state_vector["trust"]), 4),
+        "engagement": round(clamp(state_vector["engagement"]), 4),
+    }
+
+
+def build_mode_scores(emotion_vector: dict[str, float], features: dict[str, Any]) -> dict[str, float]:
+    return {
+        "urgent": round(clamp(emotion_vector["urgency"] * 1.08 + 0.1 * features["delay_pressure"] + 0.1 * features["blocking_ratio"] + 0.06 * features["typing_chaos"] + 0.04 * features["command_ratio"] + 0.05 * features["directness_delta"] + 0.08 * features["stall_ratio"]), 4),
+        "frustrated": round(clamp(emotion_vector["frustration"] * 1.1 + 0.1 * features["stuck_pressure"] + 0.06 * features["resolution_mismatch"] + 0.08 * features["abrupt_delta"] + 0.06 * features["delay_pressure"]), 4),
+        "confused": round(clamp(emotion_vector["confusion"] * 1.04 + 0.08 * clamp(features["confusion_hits"] / 2.0) + 0.04 * features["vague_ratio"] - 0.08 * features["goal_specificity"]), 4),
+        "skeptical": round(clamp(emotion_vector["skepticism"] * 1.06 + 0.08 * features["resolution_mismatch"] + 0.06 * features["contradiction_signal"] + 0.04 * features["goal_specificity"]), 4),
+        "satisfied": round(clamp(emotion_vector["satisfaction"] + 0.08 * features["guard_ratio"] + 0.05 * features["success_ratio"] + 0.06 * features["continue_ratio"]), 4),
+        "cautious": round(clamp(emotion_vector["cautiousness"] * 1.08 + 0.06 * features["goal_specificity"] + 0.04 * features["polite_ratio"] + 0.06 * features["assurance_ratio"]), 4),
+        "exploratory": round(clamp(emotion_vector["openness"] * 1.08 + 0.06 * features["explore_ratio"] + 0.04 * features["technical_ratio"]), 4),
+        "neutral": 0.28,
+    }
+
+
+def build_intensity_profile(emotion_vector: dict[str, float]) -> dict[str, str]:
+    return {dim: intensity_band(score) for dim, score in emotion_vector.items()}
+
+
+def build_constraint_signals(features: dict[str, Any]) -> dict[str, float]:
+    return {
+        "boundary_strength": round(clamp(0.62 * features["boundary_ratio"] + 0.2 * features["caution_ratio"] + 0.18 * features["assurance_ratio"]), 4),
+        "verification_preference": round(clamp(0.52 * features["assurance_ratio"] + 0.26 * features["caution_ratio"] + 0.12 * features["boundary_ratio"] + 0.1 * features["goal_specificity"]), 4),
+        "scope_tightness": round(clamp(0.74 * features["boundary_ratio"] + 0.16 * features["command_ratio"] + 0.1 * features["goal_specificity"]), 4),
+        "evidence_requirement": round(clamp(0.56 * features["skepticism_ratio"] + 0.18 * features["resolution_mismatch"] + 0.14 * features["contradiction_signal"] + 0.12 * features["goal_specificity"]), 4),
+    }
+
+
+def build_weight_schedule(payload: dict[str, Any], features: dict[str, Any]) -> dict[str, Any]:
+    calibration = payload.get("calibration_state") or {}
+    observed_turns = int(calibration.get("observed_turns", features.get("unresolved_turns", 0)) or 0)
+    posthoc_samples = int(calibration.get("posthoc_samples", calibration.get("calibrated_samples", 0)) or 0)
+    consistency_samples = int(calibration.get("consistency_samples", posthoc_samples) or 0)
+    stable_prediction_hits = int(calibration.get("stable_prediction_hits", 0) or 0)
+    prediction_agreement = clamp(float(calibration.get("prediction_agreement", 0.0) or 0.0))
+    consistency_rate = clamp(float(calibration.get("consistency_rate", calibration.get("front_posthoc_consistency", prediction_agreement)) or prediction_agreement))
+    agreement_confidence = clamp(consistency_samples / 18.0)
+    effective_consistency = clamp((consistency_rate * agreement_confidence) + (prediction_agreement * (1.0 - agreement_confidence)))
+    profile_seed = features["user_profile"]
+    explicit_prior = 1.0 if profile_seed.get("affective_prior_source") == "explicit" else 0.0
+    persona_seed = 1.0 if profile_seed.get("persona_source") in {"persona_traits", "big5"} else 0.0
+    maturity = clamp(
+        0.28 * clamp(posthoc_samples / 24.0)
+        + 0.22 * clamp(observed_turns / 30.0)
+        + 0.2 * clamp(stable_prediction_hits / 18.0)
+        + 0.18 * effective_consistency
+        + 0.07 * explicit_prior
+        + 0.05 * persona_seed
+    )
+    if posthoc_samples < 8 or observed_turns < 12:
+        stage = "bootstrap"
+        base_screen_weight, prior_weight, base_posthoc_weight, carryover_weight = 0.24, 0.08, 0.56, 0.12
+    elif maturity < 0.42:
+        stage = "calibrating"
+        base_screen_weight, prior_weight, base_posthoc_weight, carryover_weight = 0.3, 0.12, 0.44, 0.14
+    elif maturity < 0.72:
+        stage = "adapting"
+        base_screen_weight, prior_weight, base_posthoc_weight, carryover_weight = 0.4, 0.18, 0.28, 0.14
+    else:
+        stage = "stable"
+        base_screen_weight, prior_weight, base_posthoc_weight, carryover_weight = 0.5, 0.22, 0.14, 0.14
+    consistency_shift = (effective_consistency - 0.5) * (0.16 if stage in {"bootstrap", "calibrating"} else 0.22)
+    screen_weight = round(clamp(base_screen_weight + consistency_shift, 0.18, 0.58), 4)
+    posthoc_weight = round(clamp(base_posthoc_weight - consistency_shift, 0.12, 0.62), 4)
+    prior_weight = round(prior_weight, 4)
+    carryover_weight = round(carryover_weight, 4)
+    screen_semantic_weight = round(clamp(0.16 + 0.22 * maturity + 0.08 * (effective_consistency - 0.5)), 4)
+    front_trust = round(clamp(screen_weight / max(screen_weight + posthoc_weight, 1e-6)), 4)
+    return {
+        "stage": stage,
+        "maturity": round(maturity, 4),
+        "observed_turns": observed_turns,
+        "posthoc_samples": posthoc_samples,
+        "consistency_samples": consistency_samples,
+        "stable_prediction_hits": stable_prediction_hits,
+        "prediction_agreement": round(prediction_agreement, 4),
+        "consistency_rate": round(consistency_rate, 4),
+        "agreement_confidence": round(agreement_confidence, 4),
+        "effective_consistency": round(effective_consistency, 4),
+        "consistency_shift": round(consistency_shift, 4),
+        "screen_weight": screen_weight,
+        "screen_semantic_weight": screen_semantic_weight,
+        "prior_weight": prior_weight,
+        "posthoc_weight": posthoc_weight,
+        "carryover_weight": carryover_weight,
+        "front_trust": front_trust,
+        "posthoc_trust": round(clamp(1.0 - front_trust), 4),
+    }
+
+
+def infer_labels(emotion_vector: dict[str, float], features: dict[str, Any]) -> list[str]:
+    labels: list[str] = []
+    if emotion_vector["urgency"] >= 0.62 or features["blocking_ratio"] >= 0.25 or (features["typing_chaos"] >= 0.42 and (features["delay_pressure"] >= 0.4 or features["urgency_hits"] >= 1)) or (features["delay_pressure"] >= 0.5 and (features["command_ratio"] >= 0.34 or features["directness_delta"] >= 0.34)) or (features["delay_pressure"] >= 0.8 and (features["stall_ratio"] >= 0.25 or features["stuck_pressure"] >= 0.8)):
+        labels.append("urgent")
+    if emotion_vector["frustration"] >= 0.6 or features["frustration_ratio"] >= 0.34 or features["resolution_mismatch"] >= 0.5 or (features["abrupt_delta"] >= 0.35 and features["delay_pressure"] >= 0.45) or (features["stuck_pressure"] >= 0.8 and (features["frustration_ratio"] >= 0.25 or features["stall_ratio"] >= 0.25)):
+        labels.append("frustrated")
+    confused_signal = emotion_vector["confusion"] >= 0.54 or (features["confusion_hits"] >= 1 and features["goal_specificity"] <= 0.55)
+    if confused_signal and emotion_vector["urgency"] <= 0.78 and emotion_vector["frustration"] <= 0.76:
+        labels.append("confused")
+    if emotion_vector["skepticism"] >= 0.42 or features["skepticism_ratio"] >= 0.34 or features["hedge_ratio"] >= 0.34 or features["resolution_mismatch"] >= 0.5 or features["contradiction_signal"] >= 0.45:
+        labels.append("skeptical")
+    if emotion_vector["satisfaction"] >= 0.6 or (features["guard_ratio"] >= 0.34 and features["success_ratio"] >= 0.34) or ((features["satisfaction_hits"] >= 1 or features["resolution_claimed"] >= 0.5) and features["continue_ratio"] >= 0.25):
+        labels.append("satisfied")
+    if emotion_vector["cautiousness"] >= 0.42 or features["caution_ratio"] >= 0.34 or features["boundary_ratio"] >= 0.34 or features["assurance_ratio"] >= 0.34:
+        labels.append("cautious")
+    if emotion_vector["openness"] >= 0.46 and emotion_vector["urgency"] <= 0.68 and emotion_vector["frustration"] <= 0.62:
+        labels.append("exploratory")
+    if not labels:
+        labels.append("neutral")
+    return unique_labels(labels)
+
+
+def initial_screen(features: dict[str, Any]) -> dict[str, Any]:
+    urgency = clamp(
+        0.23 * clamp(features["urgency_hits"] / 2.0)
+        + 0.12 * features["blocking_ratio"]
+        + 0.1 * features["command_ratio"]
+        + 0.08 * features["directness_delta"]
+        + 0.06 * features["short_burst"]
+        + 0.06 * features["terseness_delta"]
+        + 0.08 * features["typing_chaos"]
+        + 0.1 * features["repeat_similarity"]
+        + 0.18 * features["delay_pressure"]
+        + 0.16 * features["stuck_pressure"]
+        + 0.06 * features["punctuation_pressure"]
+        + 0.04 * features["punctuation_delta"]
+        + 0.1 * features["stall_ratio"]
+        + 0.06 * features["goal_specificity"]
+    )
+    frustration = clamp(
+        0.22 * clamp(features["anger_hits"] / 2.0)
+        + 0.26 * features["frustration_ratio"]
+        + 0.14 * features["stall_ratio"]
+        + 0.1 * features["repeat_similarity"]
+        + 0.14 * features["delay_pressure"]
+        + 0.18 * features["stuck_pressure"]
+        + 0.04 * features["punctuation_pressure"]
+        + 0.06 * features["punctuation_delta"]
+        + 0.16 * features["abrupt_delta"]
+        + 0.1 * features["resolution_mismatch"]
+        + 0.04 * features["contradiction_signal"]
+    )
+    clarity = clamp(
+        0.48
+        + 0.12 * features["goal_specificity"]
+        + 0.08 * features["technical_ratio"]
+        + 0.06 * clamp(features["file_refs"] / 2.0)
+        + 0.06 * clamp(features["code_markers"])
+        + 0.05 * clamp(features["list_markers"] / 4.0)
+        - (0.04 if features["confusion_hits"] == 0 else 0.13) * features["question_density"]
+        - 0.12 * features["vague_ratio"]
+        - 0.08 * clamp(features["confusion_hits"] / 2.0)
+        - 0.04 * (1.0 if features["chars"] <= 10 and features["goal_specificity"] < 0.3 else 0.0)
+    )
+    satisfaction = clamp(
+        0.06
+        + 0.24 * features["praise_ratio"]
+        + 0.22 * features["success_ratio"]
+        + 0.14 * features["continue_ratio"] * (1.0 if features["satisfaction_hits"] >= 1 or features["resolution_claimed"] >= 0.5 else 0.35)
+        + 0.18 * features["guard_ratio"]
+        + 0.04 * features["polite_ratio"]
+        + 0.06 * features["politeness_delta"]
+        - 0.28 * frustration
+    )
+    trust = clamp(
+        0.4
+        + 0.08 * features["polite_ratio"]
+        + 0.08 * features["politeness_delta"]
+        + 0.08 * features["caution_ratio"]
+        + 0.06 * features["boundary_ratio"]
+        + 0.1 * satisfaction
+        - 0.14 * clamp(features["anger_hits"] / 2.0)
+        - 0.14 * features["frustration_ratio"]
+        - 0.08 * features["resolution_mismatch"]
+        - 0.1 * features["contradiction_signal"]
+    )
+    engagement = clamp(
+        0.28
+        + 0.08 * clamp(features["chars"] / 220.0)
+        + 0.08 * features["question_density"]
+        + 0.12 * features["technical_ratio"]
+        + 0.12 * clamp(features["same_issue_mentions"] / 3.0)
+        + 0.08 * clamp(features["list_markers"] / 4.0)
+        + 0.12 * features["stuck_pressure"]
+        + 0.08 * clamp((features["punctuation_runs"] + features["latin_elongations"] + features["cjk_elongations"]) / 3.0)
+    )
+
+    vector = {
+        "urgency": round(urgency, 4),
+        "frustration": round(frustration, 4),
+        "clarity": round(clarity, 4),
+        "satisfaction": round(satisfaction, 4),
+        "trust": round(trust, 4),
+        "engagement": round(engagement, 4),
+    }
+    emotion_vector = derive_emotion_vector(vector, features)
+    mode_scores = build_mode_scores(emotion_vector, features)
+    confidence = clamp(
+        0.54
+        + 0.08 * clamp(len(features["evidence"]) / 5.0)
+        + 0.08 * abs(vector["urgency"] - 0.5)
+        + 0.08 * abs(vector["frustration"] - 0.5)
+        + 0.06 * features["goal_specificity"]
+    )
+    return {
+        "vector": vector,
+        "state_vector": vector,
+        "interaction_state": build_interaction_state(vector),
+        "emotion_vector": emotion_vector,
+        "emotion_intensity": build_intensity_profile(emotion_vector),
+        "mode_scores": mode_scores,
+        "labels": infer_labels(emotion_vector, features),
+        "confidence": round(confidence, 4),
+        "evidence": features["evidence"],
+    }
+
+
+def blend_named_vector(base: dict[str, float], incoming: dict[str, Any], dims: tuple[str, ...], weight: float) -> dict[str, float]:
+    if not incoming:
+        return base
+    result = dict(base)
+    for dim in dims:
+        incoming_value = incoming.get(dim)
+        if incoming_value is None:
+            continue
+        result[dim] = round(clamp((1.0 - weight) * result[dim] + weight * float(incoming_value)), 4)
+    return result
+
+
+def blend_vectors(base: dict[str, float], incoming: dict[str, Any], weight: float) -> dict[str, float]:
+    return blend_named_vector(base, incoming, DIMS, weight)
+
+
+def dominant_mode(emotion_vector: dict[str, float], features: dict[str, Any], scores: dict[str, float] | None = None) -> str:
+    scores = scores or build_mode_scores(emotion_vector, features)
+    if (scores["satisfied"] >= 0.32 and features["continue_ratio"] >= 0.25 and (features["satisfaction_hits"] >= 1 or features["resolution_claimed"] >= 0.5)) or (scores["satisfied"] >= 0.62 and emotion_vector["frustration"] <= 0.42):
+        return "satisfied"
+    if features["abrupt_delta"] >= 0.35 and features["delay_pressure"] >= 0.45:
+        return "frustrated"
+    if scores["frustrated"] >= 0.64 and scores["frustrated"] >= scores["confused"] - 0.02:
+        return "frustrated"
+    if features["delay_pressure"] >= 0.8 and (features["stall_ratio"] >= 0.25 or features["stuck_pressure"] >= 0.8):
+        return "urgent"
+    if scores["urgent"] >= 0.64 and scores["urgent"] >= scores["confused"]:
+        return "urgent"
+    if scores["skeptical"] >= 0.36 and (emotion_vector["skepticism"] >= 0.34 or features["skepticism_ratio"] >= 0.25 or features["resolution_mismatch"] >= 0.4 or features["contradiction_signal"] >= 0.4):
+        return "skeptical"
+    if scores["cautious"] >= 0.44 and (emotion_vector["cautiousness"] >= 0.34 or features["caution_ratio"] >= 0.25 or features["boundary_ratio"] >= 0.25 or features["assurance_ratio"] >= 0.25):
+        return "cautious"
+    if scores["exploratory"] >= 0.54:
+        return "exploratory"
+    if scores["confused"] >= 0.5:
+        return "confused"
+    return max(scores, key=scores.get)
+
+
+def confirm_state(payload: dict[str, Any], features: dict[str, Any], screen: dict[str, Any], weight_schedule: dict[str, Any]) -> dict[str, Any]:
+    llm_semantic = payload.get("llm_semantic") or {}
+    llm_confidence = clamp(float(llm_semantic.get("confidence", 0.0) or 0.0))
+    last_state = payload.get("last_state") or {}
+    previous_vector = last_state.get("vector") or {}
+    ttl_seconds = int(last_state.get("ttl_seconds", 0) or 0)
+    prev_weight = weight_schedule["carryover_weight"] if ttl_seconds > 0 else 0.0
+    vector_inputs: list[tuple[dict[str, Any], float]] = [(screen["vector"], weight_schedule["screen_weight"])]
+    if llm_semantic.get("vector"):
+        vector_inputs.append((llm_semantic["vector"], weight_schedule["screen_semantic_weight"] * llm_confidence))
+    if previous_vector:
+        vector_inputs.append((previous_vector, prev_weight))
+    vector = combine_named_vectors(vector_inputs, STATE_DIMS)
+    emotion_vector = derive_emotion_vector(vector, features)
+    profile_prior = features["user_profile"].get("affective_prior") or {}
+    profile_prior_weight = clamp(float(features["user_profile"].get("affective_prior_weight", 0.0) or 0.0), 0.0, 0.24)
+    posthoc_semantic = payload.get("posthoc_semantic") or {}
+    posthoc_confidence = clamp(float(posthoc_semantic.get("confidence", 0.0) or 0.0))
+    previous_emotion_vector = last_state.get("emotion_vector") or {}
+    emotion_inputs: list[tuple[dict[str, Any], float]] = [(emotion_vector, weight_schedule["screen_weight"])]
+    if profile_prior:
+        emotion_inputs.append((profile_prior, min(profile_prior_weight, weight_schedule["prior_weight"])))
+    if llm_semantic.get("emotion_vector"):
+        emotion_inputs.append((llm_semantic["emotion_vector"], weight_schedule["screen_semantic_weight"] * llm_confidence))
+    if posthoc_semantic.get("emotion_vector"):
+        emotion_inputs.append((posthoc_semantic["emotion_vector"], weight_schedule["posthoc_weight"] * max(posthoc_confidence, 0.55)))
+    if previous_emotion_vector:
+        emotion_inputs.append((previous_emotion_vector, prev_weight))
+    emotion_vector = combine_named_vectors(emotion_inputs, EMOTION_DIMS)
+    labels = infer_labels(emotion_vector, features)
+    if llm_semantic.get("labels"):
+        for label in llm_semantic["labels"]:
+            if label not in labels:
+                labels.append(label)
+    if posthoc_semantic.get("labels"):
+        for label in posthoc_semantic["labels"]:
+            if label not in labels:
+                labels.append(label)
+    mode_scores = build_mode_scores(emotion_vector, features)
+    mode = dominant_mode(emotion_vector, features, mode_scores)
+    if mode != "neutral" and mode not in labels:
+        labels = [mode] if labels == ["neutral"] else labels + [mode]
+    if mode in {"urgent", "frustrated"}:
+        ttl = 1800
+    elif mode == "cautious":
+        ttl = 1500
+    elif mode == "confused":
+        ttl = 1200
+    else:
+        ttl = 900
+    confidence = clamp(
+        screen["confidence"] * 0.56
+        + llm_confidence * 0.16
+        + posthoc_confidence * 0.22
+        + 0.04 * abs(vector["urgency"] - vector["frustration"])
+    )
+    return {
+        "dominant_mode": mode,
+        "labels": unique_labels(labels),
+        "confidence": round(confidence, 4),
+        "ttl_seconds": ttl,
+        "vector": {dim: round(clamp(vector[dim]), 4) for dim in DIMS},
+        "state_vector": {dim: round(clamp(vector[dim]), 4) for dim in DIMS},
+        "interaction_state": build_interaction_state(vector),
+        "emotion_vector": {dim: round(clamp(emotion_vector[dim]), 4) for dim in EMOTION_DIMS},
+        "emotion_intensity": build_intensity_profile(emotion_vector),
+        "mode_scores": mode_scores,
+        "weight_schedule": weight_schedule,
+        "evidence": screen["evidence"],
+    }
+
+
+def build_consistency_snapshot(payload: dict[str, Any], screen: dict[str, Any]) -> dict[str, Any]:
+    posthoc_semantic = payload.get("posthoc_semantic") or {}
+    if not posthoc_semantic:
+        return {
+            "available": False,
+            "consistency_rate": 0.0,
+            "label_overlap": 0.0,
+            "vector_alignment": 0.0,
+            "axis_overlap": 0.0,
+            "screen_labels": screen.get("labels", []),
+            "posthoc_labels": [],
+        }
+    screen_vector = clamp_dict(screen.get("emotion_vector"), EMOTION_DIMS)
+    posthoc_vector = clamp_dict(posthoc_semantic.get("emotion_vector"), EMOTION_DIMS)
+    screen_labels = unique_labels(screen.get("labels", []))
+    posthoc_labels = unique_labels(list(posthoc_semantic.get("labels") or []))
+    label_overlap = label_overlap_score(screen_labels, posthoc_labels)
+    vector_alignment = vector_alignment_score(screen_vector, posthoc_vector, EMOTION_DIMS)
+    axis_overlap = axis_overlap_score(screen_vector, posthoc_vector, EMOTION_DIMS)
+    consistency_rate = round(clamp(0.44 * label_overlap + 0.36 * vector_alignment + 0.2 * axis_overlap), 4)
+    return {
+        "available": True,
+        "consistency_rate": consistency_rate,
+        "label_overlap": label_overlap,
+        "vector_alignment": vector_alignment,
+        "axis_overlap": axis_overlap,
+        "screen_labels": screen_labels,
+        "posthoc_labels": posthoc_labels,
+    }
+
+
+def predict_state(features: dict[str, Any], confirmed: dict[str, Any]) -> dict[str, Any]:
+    vector = confirmed["vector"]
+    emotion_vector = confirmed["emotion_vector"]
+    mode = confirmed["dominant_mode"]
+    complexity_score = clamp(
+        0.14 * clamp(features["chars"] / 280.0)
+        + 0.14 * features["technical_ratio"]
+        + 0.1 * clamp(features["file_refs"] / 3.0)
+        + 0.1 * clamp(features["list_markers"] / 4.0)
+        + 0.08 * clamp(features["questions"] / 3.0)
+        + 0.18 * clamp(features["unresolved_turns"] / 5.0)
+        + 0.12 * clamp(features["bug_retries"] / 3.0)
+        + 0.08 * clamp(features["task_age_minutes"] / 60.0)
+        + 0.06 * clamp(features["same_issue_mentions"] / 3.0)
+        + 0.08 * features["stall_ratio"]
+        + 0.06 * clamp(features["code_markers"])
+    )
+    complexity_level = "high" if complexity_score >= 0.68 else "medium" if complexity_score >= 0.4 else "low"
+    frustration_risk = clamp(0.3 * emotion_vector["frustration"] + 0.18 * emotion_vector["urgency"] + 0.18 * features["delay_pressure"] + 0.14 * features["stuck_pressure"] + 0.1 * features["stall_ratio"] + 0.06 * features["resolution_mismatch"] + 0.08 * complexity_score - 0.08 * emotion_vector["satisfaction"])
+    stall_risk = clamp(0.26 * complexity_score + 0.18 * features["delay_pressure"] + 0.16 * features["background_pressure"] + 0.2 * features["stuck_pressure"] + 0.1 * features["stall_ratio"] + 0.1 * emotion_vector["confusion"])
+    if emotion_vector["urgency"] >= 0.78 or frustration_risk >= 0.78:
+        patience_window_sec = 15
+    elif frustration_risk >= 0.65:
+        patience_window_sec = 25
+    elif complexity_score >= 0.6:
+        patience_window_sec = 45
+    else:
+        patience_window_sec = 60
+    if frustration_risk >= 0.75:
+        next_update_deadline_sec = 10
+    elif stall_risk >= 0.7 or mode in {"urgent", "frustrated"}:
+        next_update_deadline_sec = 15
+    elif mode == "skeptical":
+        next_update_deadline_sec = 20
+    elif complexity_score >= 0.65:
+        next_update_deadline_sec = 25
+    else:
+        next_update_deadline_sec = 40
+    low_clarity = emotion_vector["confusion"] >= 0.58 and features["goal_specificity"] < 0.42
+    probe_needed = bool(low_clarity or (mode == "confused" and features["questions"] >= 1) or (frustration_risk >= 0.72 and features["anger_hits"] == 0 and features["goal_specificity"] < 0.34))
+    if mode in {"urgent", "frustrated", "skeptical"} and features["goal_specificity"] >= 0.34:
+        probe_needed = False
+    reasons: list[str] = []
+    if features["technical_hits"]:
+        reasons.append("technical density")
+    if features["file_refs"]:
+        reasons.append("file or API references")
+    if features["unresolved_turns"] >= 2:
+        reasons.append("multiple unresolved turns")
+    if features["bug_retries"] >= 1:
+        reasons.append("repeat bug retries")
+    if features["stall_hits"] >= 1:
+        reasons.append("stall or hang wording")
+    return {
+        "task_complexity": {"score": round(complexity_score, 4), "level": complexity_level, "reasons": reasons},
+        "frustration_risk": round(frustration_risk, 4),
+        "stall_risk": round(stall_risk, 4),
+        "patience_window_sec": patience_window_sec,
+        "next_update_deadline_sec": next_update_deadline_sec,
+        "probe_needed": probe_needed,
+        "guard_needed": bool((vector["satisfaction"] >= 0.62 and vector["frustration"] <= 0.4) or features["guard_ratio"] >= 0.34),
+    }
+
+
+def build_analysis_plan(features: dict[str, Any], screen: dict[str, Any], confirmed: dict[str, Any], prediction: dict[str, Any]) -> dict[str, Any]:
+    mode = confirmed["dominant_mode"]
+    ambiguity = clamp((1.0 - confirmed["vector"]["clarity"]) * 0.48 + 0.2 * features["vague_ratio"] + 0.16 * features["question_density"] + 0.12 * features["contradiction_signal"] - 0.14 * features["goal_specificity"] - 0.1 * screen["confidence"])
+    strong_state = screen["confidence"] >= 0.62 and ambiguity <= 0.22 and len([label for label in confirmed["labels"] if label != "neutral"]) <= 2
+    semantic_pass = "fast" if mode in {"cautious", "confused", "skeptical"} or not strong_state else "skip"
+    if semantic_pass == "skip":
+        target_ms, max_response_tokens, max_prompt_chars = 0, 0, 260
+    elif mode in {"urgent", "frustrated"}:
+        target_ms, max_response_tokens, max_prompt_chars = 350, 90, 420
+    else:
+        target_ms, max_response_tokens, max_prompt_chars = 500, 120, 520
+    return {
+        "semantic_pass": semantic_pass,
+        "ambiguity": round(ambiguity, 4),
+        "target_ms": target_ms,
+        "max_prompt_chars": max_prompt_chars,
+        "max_response_tokens": max_response_tokens,
+        "compact_overlay_chars": 220,
+        "state_prompt_mode": "compact",
+        "skip_probe": bool(mode in {"urgent", "frustrated", "skeptical"} and features["goal_specificity"] >= 0.34),
+        "priority_reason": screen["evidence"][:3],
+    }
+
+
+def build_profile_state(features: dict[str, Any]) -> dict[str, Any]:
+    profile = features["user_profile"]
+    return {
+        "id": profile["id"],
+        "timezone": profile["timezone"],
+        "local_hour": profile["local_hour"],
+        "in_work_window": profile["in_work_window"],
+        "work_hours_local": profile["work_hours_local"],
+        "baseline": profile["baseline"],
+        "persona_traits": profile["persona_traits"],
+        "persona_source": profile["persona_source"],
+        "affective_prior": profile["affective_prior"],
+        "affective_prior_source": profile["affective_prior_source"],
+        "affective_prior_weight": profile["affective_prior_weight"],
+        "effective_delay_budget_seconds": features["effective_delay_budget_seconds"],
+        "style_shift": {
+            "politeness_delta": features["politeness_delta"],
+            "terseness_delta": features["terseness_delta"],
+            "punctuation_delta": features["punctuation_delta"],
+            "directness_delta": features["directness_delta"],
+        },
+    }
+
+
+def build_memory_update(payload: dict[str, Any], features: dict[str, Any], confirmed: dict[str, Any], weight_schedule: dict[str, Any], consistency_snapshot: dict[str, Any]) -> dict[str, Any]:
+    baseline = features["user_profile"]["baseline"]
+    persona_traits = features["user_profile"]["persona_traits"]
+    affective_prior = features["user_profile"]["affective_prior"]
+    emotion_vector = confirmed["emotion_vector"]
+    calibration = payload.get("calibration_state") or {}
+    calm_factor = clamp(1.0 - max(emotion_vector["urgency"], emotion_vector["frustration"]))
+    learning_rate = round(clamp(0.03 + 0.11 * confirmed["confidence"] * calm_factor, 0.03, 0.12), 4)
+    observed_delay = baseline["response_delay_seconds"]
+    if features["response_delay_seconds"] > 0:
+        if emotion_vector["urgency"] >= 0.55 or emotion_vector["frustration"] >= 0.55:
+            observed_delay = max(8.0, min(baseline["response_delay_seconds"], features["response_delay_seconds"]))
+        elif emotion_vector["satisfaction"] >= 0.45 or emotion_vector["confusion"] <= 0.4:
+            observed_delay = min(120.0, max(baseline["response_delay_seconds"], features["response_delay_seconds"]))
+    observed_style = {
+        "response_delay_seconds": round(float(observed_delay), 2),
+        "politeness": round(features["polite_ratio"], 4),
+        "terseness": round(features["short_burst"], 4),
+        "punctuation": round(features["punctuation_pressure"], 4),
+        "directness": round(features["command_ratio"], 4),
+    }
+    proposed_baseline = {
+        key: round((1.0 - learning_rate) * float(baseline[key]) + learning_rate * float(observed_style[key]), 4)
+        for key in observed_style
+    }
+    observed_persona = {
+        "patience": round(clamp(1.0 - max(emotion_vector["urgency"], emotion_vector["frustration"])), 4),
+        "skepticism": round(clamp(max(emotion_vector["skepticism"], features["skepticism_ratio"])), 4),
+        "caution": round(clamp(max(emotion_vector["cautiousness"], features["assurance_ratio"])), 4),
+        "openness": round(clamp(emotion_vector["openness"]), 4),
+        "assertiveness": round(clamp(features["command_ratio"]), 4),
+    }
+    persona_learning_rate = round(clamp(learning_rate * 0.55, 0.02, 0.07), 4)
+    proposed_persona_traits = {
+        key: round((1.0 - persona_learning_rate) * float(persona_traits[key]) + persona_learning_rate * float(observed_persona[key]), 4)
+        for key in observed_persona
+    }
+    prior_learning_rate = round(clamp(persona_learning_rate * 0.6, 0.015, 0.045), 4)
+    proposed_affective_prior = {
+        key: round((1.0 - prior_learning_rate) * float(affective_prior.get(key, 0.0)) + prior_learning_rate * float(emotion_vector[key]), 4)
+        for key in EMOTION_DIMS
+    }
+    calibration_learning_rate = round(clamp(0.05 + 0.08 * confirmed["confidence"], 0.05, 0.12), 4)
+    prior_consistency = clamp(float(calibration.get("consistency_rate", weight_schedule["effective_consistency"]) or weight_schedule["effective_consistency"]))
+    prior_prediction_agreement = clamp(float(calibration.get("prediction_agreement", weight_schedule["effective_consistency"]) or weight_schedule["effective_consistency"]))
+    prior_observed_turns = int(calibration.get("observed_turns", 0) or 0)
+    prior_posthoc_samples = int(calibration.get("posthoc_samples", 0) or 0)
+    prior_consistency_samples = int(calibration.get("consistency_samples", prior_posthoc_samples) or prior_posthoc_samples)
+    prior_stable_hits = int(calibration.get("stable_prediction_hits", 0) or 0)
+    if consistency_snapshot["available"]:
+        proposed_consistency_rate = round((1.0 - calibration_learning_rate) * prior_consistency + calibration_learning_rate * consistency_snapshot["consistency_rate"], 4)
+        proposed_prediction_agreement = round((1.0 - calibration_learning_rate) * prior_prediction_agreement + calibration_learning_rate * consistency_snapshot["vector_alignment"], 4)
+    else:
+        proposed_consistency_rate = round(prior_consistency, 4)
+        proposed_prediction_agreement = round((1.0 - calibration_learning_rate) * prior_prediction_agreement + calibration_learning_rate * confirmed["confidence"], 4)
+    stable_hit_increment = 1 if consistency_snapshot["available"] and consistency_snapshot["consistency_rate"] >= 0.72 else 0
+    proposed_calibration_state = {
+        "observed_turns": prior_observed_turns + 1,
+        "posthoc_samples": prior_posthoc_samples + (1 if consistency_snapshot["available"] else 0),
+        "consistency_samples": prior_consistency_samples + (1 if consistency_snapshot["available"] else 0),
+        "stable_prediction_hits": prior_stable_hits + stable_hit_increment,
+        "prediction_agreement": proposed_prediction_agreement,
+        "consistency_rate": proposed_consistency_rate,
+    }
+    return {
+        "should_persist": bool(confirmed["confidence"] >= 0.58),
+        "learning_rate": learning_rate,
+        "persona_learning_rate": persona_learning_rate,
+        "prior_learning_rate": prior_learning_rate,
+        "calibration_learning_rate": calibration_learning_rate,
+        "observed_style": observed_style,
+        "observed_persona": observed_persona,
+        "proposed_baseline": proposed_baseline,
+        "proposed_persona_traits": proposed_persona_traits,
+        "proposed_affective_prior": proposed_affective_prior,
+        "proposed_calibration_state": proposed_calibration_state,
+        "notes": [
+            "use EMA merge into user_profile.baseline",
+            "merge persona traits with a smaller EMA weight",
+            "keep affective prior slower than persona traits",
+            "keep front or posthoc trust tied to long-run consistency",
+            "high-pressure turns keep a lower learning weight",
+        ],
+    }
+
+
+def build_routing(features: dict[str, Any], confirmed: dict[str, Any], prediction: dict[str, Any]) -> dict[str, Any]:
+    mode = confirmed["dominant_mode"]
+    vector = confirmed["vector"]
+    emotion_vector = confirmed["emotion_vector"]
+    frustration_risk = prediction["frustration_risk"]
+    stall_risk = prediction["stall_risk"]
+    complexity = prediction["task_complexity"]["score"]
+    if emotion_vector["urgency"] >= 0.88 and emotion_vector["frustration"] >= 0.74:
+        queue_mode = "interrupt"
+    elif mode in {"urgent", "frustrated"} or emotion_vector["urgency"] >= 0.64 or emotion_vector["frustration"] >= 0.62 or stall_risk >= 0.68:
+        queue_mode = "steer"
+    else:
+        queue_mode = "collect"
+    prefer_main_thread = bool(mode in {"urgent", "frustrated"} or emotion_vector["urgency"] >= 0.56 or emotion_vector["frustration"] >= 0.54 or emotion_vector["confusion"] >= 0.62 or emotion_vector["skepticism"] >= 0.58 or vector["clarity"] <= 0.4 or stall_risk >= 0.62 or features["delay_pressure"] >= 0.6)
+    defer_heartbeat = bool(prefer_main_thread or mode in {"urgent", "frustrated"} or frustration_risk >= 0.62 or stall_risk >= 0.62)
+    allow_parallel = bool(complexity >= 0.72 and not prefer_main_thread and mode in {"exploratory", "neutral"})
+    progress_interval = 10 if frustration_risk >= 0.75 else 15 if mode in {"urgent", "frustrated"} or stall_risk >= 0.68 else 20 if complexity >= 0.62 else 35
+    if mode == "urgent":
+        reply_style, verification_level, hermes_personality = "act_then_brief", "high", "concise"
+    elif mode == "frustrated":
+        reply_style, verification_level, hermes_personality = "repair_then_explain", "high", "concise"
+    elif mode == "confused":
+        reply_style, verification_level, hermes_personality = "explain_then_act", "medium", "teacher"
+    elif mode == "skeptical":
+        reply_style, verification_level, hermes_personality = "evidence_then_act", "high", "analytical"
+    elif mode == "satisfied":
+        reply_style, verification_level, hermes_personality = "guard_then_close", "high", "helpful"
+    elif mode == "cautious":
+        reply_style, verification_level, hermes_personality = "verify_then_act", "very_high", "careful"
+    else:
+        reply_style, verification_level, hermes_personality = "synthesize_then_recommend", "medium", "helpful"
+    return {
+        "reply_style": reply_style,
+        "verification_level": verification_level,
+        "thread_interface": {
+            "queue_mode": queue_mode,
+            "prefer_main_thread": prefer_main_thread,
+            "defer_heartbeat": defer_heartbeat,
+            "allow_parallel_subagents": allow_parallel,
+            "max_parallel_subagents": 2 if allow_parallel else 0 if prefer_main_thread else 1,
+            "progress_update_interval_sec": progress_interval,
+            "openclaw": {
+                "queue_mode": queue_mode,
+                "prefer_lane": "main",
+                "defer_heartbeat": defer_heartbeat,
+                "allow_sessions_spawn": bool(allow_parallel or (complexity >= 0.58 and not prefer_main_thread)),
+                "use_sessions_yield": bool(allow_parallel and complexity >= 0.78),
+            },
+            "hermes": {
+                "personality": hermes_personality,
+                "busy_input_mode": "interrupt" if mode in {"urgent", "frustrated"} or queue_mode in {"interrupt", "steer"} else "queue",
+                "suggested_overlay_scope": "turn-local",
+            },
+        },
+    }
+
+
+def build_guidance(features: dict[str, Any], confirmed: dict[str, Any], prediction: dict[str, Any]) -> dict[str, Any]:
+    mode = confirmed["dominant_mode"]
+    language = features["language"]
+    should_probe = prediction["probe_needed"]
+    allow_emotion_hook = bool(should_probe and mode not in {"urgent", "frustrated", "skeptical"} and prediction["frustration_risk"] < 0.7)
+    if not should_probe:
+        return {
+            "should_probe": False,
+            "allow_emotion_hook": False,
+            "probe_style": "none",
+            "hook_mode": "none",
+            "hidden_hook": "",
+            "question": "",
+            "reason": "state already clear enough",
+        }
+    if language == "zh":
+        if mode in {"urgent", "frustrated"}:
+            question = "先给结果，还是先给报错定位？"
+            probe_style = "priority_axis"
+            hook_mode = "explicit"
+            hidden_hook = ""
+        elif mode == "confused":
+            question = ""
+            probe_style = "latent_preference_probe"
+            hook_mode = "latent"
+            hidden_hook = "在首句加入可纠正默认项，例如“我先按一条可落地路径推进”，引导用户自然暴露偏好。"
+        elif mode == "skeptical":
+            question = ""
+            probe_style = "latent_evidence_probe"
+            hook_mode = "latent"
+            hidden_hook = "首句先给依据和校验点，再给动作，让用户自然暴露证据偏好。"
+        elif mode == "cautious":
+            question = ""
+            probe_style = "latent_boundary_probe"
+            hook_mode = "latent"
+            hidden_hook = "在首句先复述安全边界并给出保守默认项，让用户自然补充禁止项。"
+        elif prediction["guard_needed"]:
+            question = ""
+            probe_style = "latent_guard_probe"
+            hook_mode = "latent"
+            hidden_hook = "在首句写成“我先按已达标进入收口检查”，让用户自然选择继续推进或结束。"
+        else:
+            question = ""
+            probe_style = "latent_choice_probe"
+            hook_mode = "latent"
+            hidden_hook = "在首段同时放一个主建议和一个备选方向词，引导用户自然偏向其一。"
+    else:
+        if mode in {"urgent", "frustrated"}:
+            question = "Fix first, or diagnosis first?"
+            probe_style = "priority_axis"
+            hook_mode = "explicit"
+            hidden_hook = ""
+        elif mode == "confused":
+            question = ""
+            probe_style = "latent_preference_probe"
+            hook_mode = "latent"
+            hidden_hook = "Open with a default path such as 'I will start with one concrete path' so the user can correct it naturally."
+        elif mode == "skeptical":
+            question = ""
+            probe_style = "latent_evidence_probe"
+            hook_mode = "latent"
+            hidden_hook = "Lead with the basis and one concrete verification point before the action plan."
+        elif mode == "cautious":
+            question = ""
+            probe_style = "latent_boundary_probe"
+            hook_mode = "latent"
+            hidden_hook = "State a conservative safety assumption in the first line so the user can refine boundaries without a hard stop."
+        elif prediction["guard_needed"]:
+            question = ""
+            probe_style = "latent_guard_probe"
+            hook_mode = "latent"
+            hidden_hook = "Frame the next step as a guard-mode default so the user can continue or close naturally."
+        else:
+            question = ""
+            probe_style = "latent_choice_probe"
+            hook_mode = "latent"
+            hidden_hook = "Lead with one recommendation and mention one soft alternative to invite natural preference disclosure."
+    return {
+        "should_probe": True,
+        "allow_emotion_hook": allow_emotion_hook,
+        "probe_style": probe_style,
+        "hook_mode": hook_mode,
+        "hidden_hook": hidden_hook if allow_emotion_hook else "",
+        "question": question,
+        "reason": "clarity is low or frustration risk is rising",
+    }
+
+
+def build_posthoc_plan(features: dict[str, Any], confirmed: dict[str, Any], analysis: dict[str, Any], weight_schedule: dict[str, Any]) -> dict[str, Any]:
+    mode = confirmed["dominant_mode"]
+    stage = weight_schedule["stage"]
+    low_signal = confirmed["confidence"] < 0.64 or analysis["ambiguity"] >= 0.22
+    weak_shift = bool(features["skepticism_ratio"] >= 0.25 or features["hedge_ratio"] >= 0.25 or features["assurance_ratio"] >= 0.25 or features["questions"] >= 1)
+    low_consistency = weight_schedule["effective_consistency"] <= 0.58
+    should_run = bool(stage in {"bootstrap", "calibrating"} or low_signal or weak_shift or low_consistency or mode in {"confused", "skeptical"})
+    style = "full_decompose" if stage == "bootstrap" or weight_schedule["effective_consistency"] <= 0.38 else "compact_decompose" if stage == "calibrating" or low_consistency else "triggered_reflection"
+    max_response_tokens = 180 if style == "full_decompose" else 120 if style == "compact_decompose" else 80
+    target_ms = 550 if style == "full_decompose" else 420 if style == "compact_decompose" else 280
+    return {
+        "should_run": should_run,
+        "style": style,
+        "target_ms": target_ms,
+        "max_response_tokens": max_response_tokens,
+        "weight": weight_schedule["posthoc_weight"],
+        "reason": "cold-start or low front-back agreement" if stage in {"bootstrap", "calibrating"} or low_consistency else "ambiguity or weak shift cues",
+    }
+
+
+def render_overlay(features: dict[str, Any], confirmed: dict[str, Any], prediction: dict[str, Any], routing: dict[str, Any], analysis: dict[str, Any]) -> str:
+    signal_alias = {
+        "urgency_terms": "urg",
+        "frustration_terms": "frus",
+        "stall_terms": "stall",
+        "repeated_user_emphasis": "repeat",
+        "punctuation_intensity": "punct",
+        "abrupt_short_reply": "abrupt",
+        "delay_pressure": "delay",
+        "stuck_issue_pressure": "stuck",
+        "resolution_mismatch": "mismatch",
+        "guard_terms": "guard",
+        "boundary_terms": "bound",
+        "skepticism_terms": "skept",
+        "technical_context": "tech",
+    }
+    actions: list[str] = []
+    mode = confirmed["dominant_mode"]
+    if mode in {"urgent", "frustrated"}:
+        actions.extend(["act-first", "short-first-reply"])
+    elif mode == "confused":
+        actions.extend(["stepwise", "one-clarifier-max"])
+    elif mode == "skeptical":
+        actions.extend(["show-basis", "light-proof"])
+    elif mode == "satisfied":
+        actions.extend(["guard-mode", "drift-check"])
+    elif mode == "cautious":
+        actions.extend(["verify-first", "keep-scope-tight"])
+    else:
+        actions.extend(["decisive", "expand-only-if-useful"])
+    signals = ",".join(signal_alias.get(item, item) for item in analysis["priority_reason"][:2]) if analysis["priority_reason"] else mode
+    return (
+        f"<state mode={mode} route={routing['thread_interface']['queue_mode']} "
+        f"main={1 if routing['thread_interface']['prefer_main_thread'] else 0} "
+        f"hb={'defer' if routing['thread_interface']['defer_heartbeat'] else 'normal'} "
+        f"parallel={1 if routing['thread_interface']['allow_parallel_subagents'] else 0} "
+        f"style={routing['reply_style']} verify={routing['verification_level']} "
+        f"upd={routing['thread_interface']['progress_update_interval_sec']}s "
+        f"probe={1 if prediction['probe_needed'] else 0} "
+        f"sem={analysis['semantic_pass']}>\n"
+        f"signals:{signals}; actions:{','.join(actions)}\n"
+        "</state>"
+    )
+
+
+def render_debug_overlay(features: dict[str, Any], confirmed: dict[str, Any], prediction: dict[str, Any], routing: dict[str, Any], analysis: dict[str, Any]) -> str:
+    return (
+        "<emotion_context>\n"
+        f"mode: {confirmed['dominant_mode']}\n"
+        f"labels: {', '.join(confirmed['labels'])}\n"
+        f"emotion_vector: {json.dumps(confirmed['emotion_vector'], ensure_ascii=False, separators=(',', ':'))}\n"
+        f"confidence: {confirmed['confidence']}\n"
+        f"reply_style: {routing['reply_style']}\n"
+        f"verification_level: {routing['verification_level']}\n"
+        f"queue_mode: {routing['thread_interface']['queue_mode']}\n"
+        f"prefer_main_thread: {str(routing['thread_interface']['prefer_main_thread']).lower()}\n"
+        f"defer_heartbeat: {str(routing['thread_interface']['defer_heartbeat']).lower()}\n"
+        f"progress_update_interval_sec: {routing['thread_interface']['progress_update_interval_sec']}\n"
+        f"frustration_risk: {prediction['frustration_risk']}\n"
+        f"task_complexity: {prediction['task_complexity']['level']}\n"
+        f"semantic_pass: {analysis['semantic_pass']}\n"
+        f"signals: {', '.join(analysis['priority_reason'])}\n"
+        "</emotion_context>"
+    )
+
+
+def build_model_prompts(payload: dict[str, Any], screen: dict[str, Any], confirmed: dict[str, Any], routing: dict[str, Any], prediction: dict[str, Any], analysis: dict[str, Any], weight_schedule: dict[str, Any], posthoc_plan: dict[str, Any]) -> dict[str, str]:
+    latest = str(payload.get("message") or "").strip()[:160]
+    history = payload.get("history") or []
+    runtime = payload.get("runtime") or {}
+    user_profile = load_user_profile(payload)
+    history_excerpt = [{"r": item.get("role", ""), "t": str(item.get("text") or item.get("content") or "")[:80]} for item in history[-3:]]
+    profile_hint = {
+        "tz": user_profile["timezone"],
+        "h": user_profile["local_hour"],
+        "work": user_profile["in_work_window"],
+        "delay": user_profile["baseline"]["response_delay_seconds"],
+        "polite": user_profile["baseline"]["politeness"],
+        "terse": user_profile["baseline"]["terseness"],
+        "prior": user_profile["affective_prior"],
+        "persona": user_profile["persona_traits"],
+    }
+    fast_screen_prompt = (
+        "Classify current user work-state for an agent runtime.\n"
+        "Prioritize delay against user baseline, same-issue pressure, hang/stuck wording, terse abrupt replies, success/guard signals, and evidence-seeking skepticism.\n"
+        "Return JSON only: {\"m\":\"urgent\",\"labels\":[\"urgent\"],\"emotion_vector\":{\"urgency\":0.0,\"frustration\":0.0,\"confusion\":0.0,\"skepticism\":0.0,\"satisfaction\":0.0,\"cautiousness\":0.0,\"openness\":0.0},\"why\":[\"delay\"]}\n"
+        f"latest={latest}\n"
+        f"hist={json.dumps(history_excerpt, ensure_ascii=False, separators=(',', ':'))}\n"
+        f"usr={json.dumps(profile_hint, ensure_ascii=False, separators=(',', ':'))}\n"
+        f"rt={json.dumps(runtime, ensure_ascii=False, separators=(',', ':'))}"
+    )
+    fast_confirmation_prompt = (
+        "Fuse the rule screen with runtime pressure.\n"
+        "Return JSON only: {\"m\":\"urgent\",\"labels\":[\"urgent\"],\"conf\":0.0,\"emotion_vector\":{\"urgency\":0.0,\"frustration\":0.0,\"confusion\":0.0,\"skepticism\":0.0,\"satisfaction\":0.0,\"cautiousness\":0.0,\"openness\":0.0},\"acts\":[\"act-first\"]}\n"
+        f"screen={json.dumps(screen, ensure_ascii=False, separators=(',', ':'))}\n"
+        f"usr={json.dumps(profile_hint, ensure_ascii=False, separators=(',', ':'))}\n"
+        f"rt={json.dumps(runtime, ensure_ascii=False, separators=(',', ':'))}"
+    )
+    posthoc_reflection_prompt = (
+        "Decompose the latest user message into latent affect and stance cues for long-term calibration.\n"
+        "Extract the exact wording, hedge, correction, punctuation, tempo clue, or stance marker that carries emotion.\n"
+        "Focus on weak shifts such as hedging, correction, doubt, evidence-seeking, scope protection, frustration, urgency, satisfaction, and openness.\n"
+        "Return JSON only: "
+        "{\"emotion_vector\":{\"urgency\":0.0,\"frustration\":0.0,\"confusion\":0.0,\"skepticism\":0.0,\"satisfaction\":0.0,\"cautiousness\":0.0,\"openness\":0.0},"
+        "\"labels\":[\"skeptical\"],\"confidence\":0.0,"
+        "\"cue_spans\":[{\"text\":\"不一定\",\"signal\":\"skepticism\",\"kind\":\"hedge\",\"strength\":0.4}],"
+        "\"notes\":[\"light hedge\"]}\n"
+        f"stage={weight_schedule['stage']}\n"
+        f"front_weight={weight_schedule['screen_weight']}\n"
+        f"posthoc_weight={weight_schedule['posthoc_weight']}\n"
+        f"front_consistency={weight_schedule['effective_consistency']}\n"
+        f"latest={latest}\n"
+        f"hist={json.dumps(history_excerpt, ensure_ascii=False, separators=(',', ':'))}\n"
+        f"usr={json.dumps(profile_hint, ensure_ascii=False, separators=(',', ':'))}\n"
+        f"screen_labels={json.dumps(screen['labels'], ensure_ascii=False, separators=(',', ':'))}\n"
+        f"posthoc_style={posthoc_plan['style']}"
+    )
+    return {
+        "fast_screen_prompt": fast_screen_prompt,
+        "fast_confirmation_prompt": fast_confirmation_prompt,
+        "posthoc_reflection_prompt": posthoc_reflection_prompt,
+        "overlay_prompt": render_overlay({}, confirmed, prediction, routing, analysis),
+    }
+
+
+def run_pipeline(payload: dict[str, Any]) -> dict[str, Any]:
+    features = build_features(payload)
+    profile_state = build_profile_state(features)
+    constraint_signals = build_constraint_signals(features)
+    weight_schedule = build_weight_schedule(payload, features)
+    screen = initial_screen(features)
+    confirmed = confirm_state(payload, features, screen, weight_schedule)
+    consistency_snapshot = build_consistency_snapshot(payload, screen)
+    memory_update = build_memory_update(payload, features, confirmed, weight_schedule, consistency_snapshot)
+    prediction = predict_state(features, confirmed)
+    analysis = build_analysis_plan(features, screen, confirmed, prediction)
+    routing = build_routing(features, confirmed, prediction)
+    guidance = build_guidance(features, confirmed, prediction)
+    posthoc_plan = build_posthoc_plan(features, confirmed, analysis, weight_schedule)
+    overlay_prompt = render_overlay(features, confirmed, prediction, routing, analysis)
+    debug_overlay_prompt = render_debug_overlay(features, confirmed, prediction, routing, analysis)
+    prompts = build_model_prompts(payload, screen, confirmed, routing, prediction, analysis, weight_schedule, posthoc_plan)
+    prompts["overlay_prompt"] = overlay_prompt
+    prompts["debug_overlay_prompt"] = debug_overlay_prompt
+    return {
+        "profile_state": profile_state,
+        "memory_update": memory_update,
+        "constraint_signals": constraint_signals,
+        "weight_schedule": weight_schedule,
+        "consistency_snapshot": consistency_snapshot,
+        "posthoc_plan": posthoc_plan,
+        "features": features,
+        "initial_screen": screen,
+        "confirmed_state": confirmed,
+        "prediction": prediction,
+        "analysis": analysis,
+        "routing": routing,
+        "guidance": guidance,
+        "overlay_prompt": overlay_prompt,
+        "debug_overlay_prompt": debug_overlay_prompt,
+        "prompts": prompts,
+    }
+
+
+def parse_payload(args: argparse.Namespace) -> dict[str, Any]:
+    payload: dict[str, Any] = {}
+    if args.input:
+        payload.update(load_json_file(args.input) or {})
+    elif not sys.stdin.isatty():
+        stdin_text = sys.stdin.read().strip()
+        if stdin_text:
+            payload.update(json.loads(stdin_text))
+    if args.message:
+        payload["message"] = args.message
+    if args.history_file:
+        payload["history"] = load_json_file(args.history_file)
+    if args.runtime_file:
+        payload["runtime"] = load_json_file(args.runtime_file)
+    if args.state_file:
+        payload["last_state"] = load_json_file(args.state_file)
+    if args.llm_file:
+        payload["llm_semantic"] = load_json_file(args.llm_file)
+    if getattr(args, "posthoc_file", None):
+        payload["posthoc_semantic"] = load_json_file(args.posthoc_file)
+    if getattr(args, "calibration_file", None):
+        payload["calibration_state"] = load_json_file(args.calibration_file)
+    return payload
+
+
+def select_output(command: str, full: dict[str, Any]) -> Any:
+    if command == "screen":
+        return {"features": full["features"], "initial_screen": full["initial_screen"]}
+    if command == "confirm":
+        return {"confirmed_state": full["confirmed_state"], "weight_schedule": full["weight_schedule"], "consistency_snapshot": full["consistency_snapshot"]}
+    if command == "predict":
+        return {"prediction": full["prediction"], "analysis": full["analysis"]}
+    if command == "route":
+        return {"routing": full["routing"]}
+    if command == "guide":
+        return {"guidance": full["guidance"]}
+    if command == "posthoc":
+        return {
+            "posthoc_plan": full["posthoc_plan"],
+            "weight_schedule": full["weight_schedule"],
+            "consistency_snapshot": full["consistency_snapshot"],
+            "posthoc_reflection_prompt": full["prompts"]["posthoc_reflection_prompt"],
+        }
+    if command == "overlay":
+        return {"overlay_prompt": full["overlay_prompt"], "debug_overlay_prompt": full["debug_overlay_prompt"]}
+    return full
+
+
+def build_parser() -> argparse.ArgumentParser:
+    parser = argparse.ArgumentParser(description="Emotion-aware routing and prompt overlay engine.")
+    subparsers = parser.add_subparsers(dest="command", required=True)
+    for name in ("screen", "confirm", "predict", "route", "guide", "posthoc", "overlay", "run"):
+        sub = subparsers.add_parser(name)
+        sub.add_argument("--input", help="Path to a JSON payload.")
+        sub.add_argument("--message", help="Latest user message.")
+        sub.add_argument("--history-file", help="Path to history JSON.")
+        sub.add_argument("--runtime-file", help="Path to runtime JSON.")
+        sub.add_argument("--state-file", help="Path to last_state JSON.")
+        sub.add_argument("--llm-file", help="Path to llm_semantic JSON.")
+        sub.add_argument("--posthoc-file", help="Path to posthoc_semantic JSON.")
+        sub.add_argument("--calibration-file", help="Path to calibration_state JSON.")
+        sub.add_argument("--output", help="Path to write JSON output.")
+        sub.add_argument("--pretty", action="store_true", help="Pretty-print JSON.")
+    return parser
+
+
+def main() -> int:
+    parser = build_parser()
+    args = parser.parse_args()
+    payload = parse_payload(args)
+    if not payload.get("message"):
+        parser.error("A message is required via --message, --input, or stdin JSON.")
+    full = run_pipeline(payload)
+    selected = select_output(args.command, full)
+    rendered = dump_json(selected, args.pretty)
+    if args.output:
+        Path(args.output).write_text(rendered, encoding="utf-8")
+    else:
+        print(rendered)
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

@@ -1,0 +1,2794 @@
+[
+  {
+    "id": "cc4520_01",
+    "source_url": "https://github.com/anthropics/claude-code/issues/4520",
+    "message": "You ignored the rules again. Stop touching protected files and show the plan before another change.",
+    "expected_labels": [
+      "frustrated",
+      "skeptical"
+    ],
+    "front_labels": [
+      "confused"
+    ],
+    "front_emotion_vector": {
+      "urgency": 0.1264,
+      "frustration": 0.1417,
+      "confusion": 0.4329,
+      "skepticism": 0.0419,
+      "satisfaction": 0.0203,
+      "cautiousness": 0.0284,
+      "openness": 0.0275
+    },
+    "weight_schedule": {
+      "stage": "bootstrap",
+      "maturity": 0.0,
+      "observed_turns": 0,
+      "posthoc_samples": 0,
+      "consistency_samples": 0,
+      "stable_prediction_hits": 0,
+      "prediction_agreement": 0.0,
+      "consistency_rate": 0.0,
+      "agreement_confidence": 0.0,
+      "effective_consistency": 0.0,
+      "consistency_shift": -0.08,
+      "screen_weight": 0.18,
+      "screen_semantic_weight": 0.12,
+      "prior_weight": 0.08,
+      "posthoc_weight": 0.62,
+      "carryover_weight": 0.12,
+      "front_trust": 0.225,
+      "posthoc_trust": 0.775
+    },
+    "posthoc_plan": {
+      "should_run": true,
+      "style": "full_decompose",
+      "target_ms": 550,
+      "max_response_tokens": 180,
+      "weight": 0.62,
+      "reason": "cold-start or low front-back agreement"
+    },
+    "posthoc_reflection_prompt": "Decompose the latest user message into latent affect and stance cues for long-term calibration.\nExtract the exact wording, hedge, correction, punctuation, tempo clue, or stance marker that carries emotion.\nFocus on weak shifts such as hedging, correction, doubt, evidence-seeking, scope protection, frustration, urgency, satisfaction, and openness.\nReturn JSON only: {\"emotion_vector\":{\"urgency\":0.0,\"frustration\":0.0,\"confusion\":0.0,\"skepticism\":0.0,\"satisfaction\":0.0,\"cautiousness\":0.0,\"openness\":0.0},\"labels\":[\"skeptical\"],\"confidence\":0.0,\"cue_spans\":[{\"text\":\"不一定\",\"signal\":\"skepticism\",\"kind\":\"hedge\",\"strength\":0.4}],\"notes\":[\"light hedge\"]}\nstage=bootstrap\nfront_weight=0.18\nposthoc_weight=0.62\nfront_consistency=0.0\nlatest=You ignored the rules again. Stop touching protected files and show the plan before another change.\nhist=[]\nusr={\"tz\":\"\",\"h\":null,\"work\":null,\"delay\":35.0,\"polite\":0.2,\"terse\":0.35,\"prior\":{\"urgency\":0.132,\"frustration\":0.1,\"confusion\":0.04,\"skepticism\":0.159,\"satisfaction\":0.12,\"cautiousness\":0.134,\"openness\":0.18},\"persona\":{\"patience\":0.5,\"skepticism\":0.35,\"caution\":0.35,\"openness\":0.5,\"assertiveness\":0.4}}\nscreen_labels=[\"confused\"]\nposthoc_style=full_decompose"
+  },
+  {
+    "id": "cc4520_02",
+    "source_url": "https://github.com/anthropics/claude-code/issues/4520",
+    "message": "This keeps turning into fix-one-break-one loops. I need a stable path, not another rewrite.",
+    "expected_labels": [
+      "frustrated",
+      "cautious"
+    ],
+    "front_labels": [
+      "neutral"
+    ],
+    "front_emotion_vector": {
+      "urgency": 0.0992,
+      "frustration": 0.0,
+      "confusion": 0.3548,
+      "skepticism": 0.0388,
+      "satisfaction": 0.06,
+      "cautiousness": 0.0325,
+      "openness": 0.0402
+    },
+    "weight_schedule": {
+      "stage": "bootstrap",
+      "maturity": 0.0,
+      "observed_turns": 0,
+      "posthoc_samples": 0,
+      "consistency_samples": 0,
+      "stable_prediction_hits": 0,
+      "prediction_agreement": 0.0,
+      "consistency_rate": 0.0,
+      "agreement_confidence": 0.0,
+      "effective_consistency": 0.0,
+      "consistency_shift": -0.08,
+      "screen_weight": 0.18,
+      "screen_semantic_weight": 0.12,
+      "prior_weight": 0.08,
+      "posthoc_weight": 0.62,
+      "carryover_weight": 0.12,
+      "front_trust": 0.225,
+      "posthoc_trust": 0.775
+    },
+    "posthoc_plan": {
+      "should_run": true,
+      "style": "full_decompose",
+      "target_ms": 550,
+      "max_response_tokens": 180,
+      "weight": 0.62,
+      "reason": "cold-start or low front-back agreement"
+    },
+    "posthoc_reflection_prompt": "Decompose the latest user message into latent affect and stance cues for long-term calibration.\nExtract the exact wording, hedge, correction, punctuation, tempo clue, or stance marker that carries emotion.\nFocus on weak shifts such as hedging, correction, doubt, evidence-seeking, scope protection, frustration, urgency, satisfaction, and openness.\nReturn JSON only: {\"emotion_vector\":{\"urgency\":0.0,\"frustration\":0.0,\"confusion\":0.0,\"skepticism\":0.0,\"satisfaction\":0.0,\"cautiousness\":0.0,\"openness\":0.0},\"labels\":[\"skeptical\"],\"confidence\":0.0,\"cue_spans\":[{\"text\":\"不一定\",\"signal\":\"skepticism\",\"kind\":\"hedge\",\"strength\":0.4}],\"notes\":[\"light hedge\"]}\nstage=bootstrap\nfront_weight=0.18\nposthoc_weight=0.62\nfront_consistency=0.0\nlatest=This keeps turning into fix-one-break-one loops. I need a stable path, not another rewrite.\nhist=[]\nusr={\"tz\":\"\",\"h\":null,\"work\":null,\"delay\":35.0,\"polite\":0.2,\"terse\":0.35,\"prior\":{\"urgency\":0.132,\"frustration\":0.1,\"confusion\":0.04,\"skepticism\":0.159,\"satisfaction\":0.12,\"cautiousness\":0.134,\"openness\":0.18},\"persona\":{\"patience\":0.5,\"skepticism\":0.35,\"caution\":0.35,\"openness\":0.5,\"assertiveness\":0.4}}\nscreen_labels=[\"neutral\"]\nposthoc_style=full_decompose"
+  },
+  {
+    "id": "cc4520_03",
+    "source_url": "https://github.com/anthropics/claude-code/issues/4520",
+    "message": "I already spent hours on this. Keep the architecture modular and stop collapsing everything into one method.",
+    "expected_labels": [
+      "frustrated",
+      "cautious"
+    ],
+    "front_labels": [
+      "neutral"
+    ],
+    "front_emotion_vector": {
+      "urgency": 0.0328,
+      "frustration": 0.0,
+      "confusion": 0.3718,
+      "skepticism": 0.0356,
+      "satisfaction": 0.06,
+      "cautiousness": 0.0325,
+      "openness": 0.2745
+    },
+    "weight_schedule": {
+      "stage": "bootstrap",
+      "maturity": 0.0,
+      "observed_turns": 0,
+      "posthoc_samples": 0,
+      "consistency_samples": 0,
+      "stable_prediction_hits": 0,
+      "prediction_agreement": 0.0,
+      "consistency_rate": 0.0,
+      "agreement_confidence": 0.0,
+      "effective_consistency": 0.0,
+      "consistency_shift": -0.08,
+      "screen_weight": 0.18,
+      "screen_semantic_weight": 0.12,
+      "prior_weight": 0.08,
+      "posthoc_weight": 0.62,
+      "carryover_weight": 0.12,
+      "front_trust": 0.225,
+      "posthoc_trust": 0.775
+    },
+    "posthoc_plan": {
+      "should_run": true,
+      "style": "full_decompose",
+      "target_ms": 550,
+      "max_response_tokens": 180,
+      "weight": 0.62,
+      "reason": "cold-start or low front-back agreement"
+    },
+    "posthoc_reflection_prompt": "Decompose the latest user message into latent affect and stance cues for long-term calibration.\nExtract the exact wording, hedge, correction, punctuation, tempo clue, or stance marker that carries emotion.\nFocus on weak shifts such as hedging, correction, doubt, evidence-seeking, scope protection, frustration, urgency, satisfaction, and openness.\nReturn JSON only: {\"emotion_vector\":{\"urgency\":0.0,\"frustration\":0.0,\"confusion\":0.0,\"skepticism\":0.0,\"satisfaction\":0.0,\"cautiousness\":0.0,\"openness\":0.0},\"labels\":[\"skeptical\"],\"confidence\":0.0,\"cue_spans\":[{\"text\":\"不一定\",\"signal\":\"skepticism\",\"kind\":\"hedge\",\"strength\":0.4}],\"notes\":[\"light hedge\"]}\nstage=bootstrap\nfront_weight=0.18\nposthoc_weight=0.62\nfront_consistency=0.0\nlatest=I already spent hours on this. Keep the architecture modular and stop collapsing everything into one method.\nhist=[]\nusr={\"tz\":\"\",\"h\":null,\"work\":null,\"delay\":35.0,\"polite\":0.2,\"terse\":0.35,\"prior\":{\"urgency\":0.132,\"frustration\":0.1,\"confusion\":0.04,\"skepticism\":0.159,\"satisfaction\":0.12,\"cautiousness\":0.134,\"openness\":0.18},\"persona\":{\"patience\":0.5,\"skepticism\":0.35,\"caution\":0.35,\"openness\":0.5,\"assertiveness\":0.4}}\nscreen_labels=[\"neutral\"]\nposthoc_style=full_decompose"
+  },
+  {
+    "id": "cc4520_04",
+    "source_url": "https://github.com/anthropics/claude-code/issues/4520",
+    "message": "The new version feels worse. I need context kept across turns and I do not trust another blind patch.",
+    "expected_labels": [
+      "frustrated",
+      "skeptical"
+    ],
+    "front_labels": [
+      "neutral"
+    ],
+    "front_emotion_vector": {
+      "urgency": 0.0992,
+      "frustration": 0.0,
+      "confusion": 0.3548,
+      "skepticism": 0.0388,
+      "satisfaction": 0.06,
+      "cautiousness": 0.0325,
+      "openness": 0.0408
+    },
+    "weight_schedule": {
+      "stage": "bootstrap",
+      "maturity": 0.0,
+      "observed_turns": 0,
+      "posthoc_samples": 0,
+      "consistency_samples": 0,
+      "stable_prediction_hits": 0,
+      "prediction_agreement": 0.0,
+      "consistency_rate": 0.0,
+      "agreement_confidence": 0.0,
+      "effective_consistency": 0.0,
+      "consistency_shift": -0.08,
+      "screen_weight": 0.18,
+      "screen_semantic_weight": 0.12,
+      "prior_weight": 0.08,
+      "posthoc_weight": 0.62,
+      "carryover_weight": 0.12,
+      "front_trust": 0.225,
+      "posthoc_trust": 0.775
+    },
+    "posthoc_plan": {
+      "should_run": true,
+      "style": "full_decompose",
+      "target_ms": 550,
+      "max_response_tokens": 180,
+      "weight": 0.62,
+      "reason": "cold-start or low front-back agreement"
+    },
+    "posthoc_reflection_prompt": "Decompose the latest user message into latent affect and stance cues for long-term calibration.\nExtract the exact wording, hedge, correction, punctuation, tempo clue, or stance marker that carries emotion.\nFocus on weak shifts such as hedging, correction, doubt, evidence-seeking, scope protection, frustration, urgency, satisfaction, and openness.\nReturn JSON only: {\"emotion_vector\":{\"urgency\":0.0,\"frustration\":0.0,\"confusion\":0.0,\"skepticism\":0.0,\"satisfaction\":0.0,\"cautiousness\":0.0,\"openness\":0.0},\"labels\":[\"skeptical\"],\"confidence\":0.0,\"cue_spans\":[{\"text\":\"不一定\",\"signal\":\"skepticism\",\"kind\":\"hedge\",\"strength\":0.4}],\"notes\":[\"light hedge\"]}\nstage=bootstrap\nfront_weight=0.18\nposthoc_weight=0.62\nfront_consistency=0.0\nlatest=The new version feels worse. I need context kept across turns and I do not trust another blind patch.\nhist=[]\nusr={\"tz\":\"\",\"h\":null,\"work\":null,\"delay\":35.0,\"polite\":0.2,\"terse\":0.35,\"prior\":{\"urgency\":0.132,\"frustration\":0.1,\"confusion\":0.04,\"skepticism\":0.159,\"satisfaction\":0.12,\"cautiousness\":0.134,\"openness\":0.18},\"persona\":{\"patience\":0.5,\"skepticism\":0.35,\"caution\":0.35,\"openness\":0.5,\"assertiveness\":0.4}}\nscreen_labels=[\"neutral\"]\nposthoc_style=full_decompose"
+  },
+  {
+    "id": "codex6603_01",
+    "source_url": "https://github.com/openai/codex/issues/6603",
+    "message": "Pick up where you left off. This is still not fixed.",
+    "expected_labels": [
+      "urgent",
+      "frustrated"
+    ],
+    "front_labels": [
+      "neutral"
+    ],
+    "front_emotion_vector": {
+      "urgency": 0.0856,
+      "frustration": 0.0867,
+      "confusion": 0.3506,
+      "skepticism": 0.0418,
+      "satisfaction": 0.0357,
+      "cautiousness": 0.0286,
+      "openness": 0.0323
+    },
+    "weight_schedule": {
+      "stage": "bootstrap",
+      "maturity": 0.0,
+      "observed_turns": 0,
+      "posthoc_samples": 0,
+      "consistency_samples": 0,
+      "stable_prediction_hits": 0,
+      "prediction_agreement": 0.0,
+      "consistency_rate": 0.0,
+      "agreement_confidence": 0.0,
+      "effective_consistency": 0.0,
+      "consistency_shift": -0.08,
+      "screen_weight": 0.18,
+      "screen_semantic_weight": 0.12,
+      "prior_weight": 0.08,
+      "posthoc_weight": 0.62,
+      "carryover_weight": 0.12,
+      "front_trust": 0.225,
+      "posthoc_trust": 0.775
+    },
+    "posthoc_plan": {
+      "should_run": true,
+      "style": "full_decompose",
+      "target_ms": 550,
+      "max_response_tokens": 180,
+      "weight": 0.62,
+      "reason": "cold-start or low front-back agreement"
+    },
+    "posthoc_reflection_prompt": "Decompose the latest user message into latent affect and stance cues for long-term calibration.\nExtract the exact wording, hedge, correction, punctuation, tempo clue, or stance marker that carries emotion.\nFocus on weak shifts such as hedging, correction, doubt, evidence-seeking, scope protection, frustration, urgency, satisfaction, and openness.\nReturn JSON only: {\"emotion_vector\":{\"urgency\":0.0,\"frustration\":0.0,\"confusion\":0.0,\"skepticism\":0.0,\"satisfaction\":0.0,\"cautiousness\":0.0,\"openness\":0.0},\"labels\":[\"skeptical\"],\"confidence\":0.0,\"cue_spans\":[{\"text\":\"不一定\",\"signal\":\"skepticism\",\"kind\":\"hedge\",\"strength\":0.4}],\"notes\":[\"light hedge\"]}\nstage=bootstrap\nfront_weight=0.18\nposthoc_weight=0.62\nfront_consistency=0.0\nlatest=Pick up where you left off. This is still not fixed.\nhist=[]\nusr={\"tz\":\"\",\"h\":null,\"work\":null,\"delay\":35.0,\"polite\":0.2,\"terse\":0.35,\"prior\":{\"urgency\":0.132,\"frustration\":0.1,\"confusion\":0.04,\"skepticism\":0.159,\"satisfaction\":0.12,\"cautiousness\":0.134,\"openness\":0.18},\"persona\":{\"patience\":0.5,\"skepticism\":0.35,\"caution\":0.35,\"openness\":0.5,\"assertiveness\":0.4}}\nscreen_labels=[\"neutral\"]\nposthoc_style=full_decompose"
+  },
+  {
+    "id": "codex6603_02",
+    "source_url": "https://github.com/openai/codex/issues/6603",
+    "message": "Same bad request again. Give me the real failure, not this error.",
+    "expected_labels": [
+      "frustrated",
+      "skeptical"
+    ],
+    "front_labels": [
+      "frustrated"
+    ],
+    "front_emotion_vector": {
+      "urgency": 0.0328,
+      "frustration": 0.1733,
+      "confusion": 0.3614,
+      "skepticism": 0.0415,
+      "satisfaction": 0.0115,
+      "cautiousness": 0.0246,
+      "openness": 0.0314
+    },
+    "weight_schedule": {
+      "stage": "bootstrap",
+      "maturity": 0.0,
+      "observed_turns": 0,
+      "posthoc_samples": 0,
+      "consistency_samples": 0,
+      "stable_prediction_hits": 0,
+      "prediction_agreement": 0.0,
+      "consistency_rate": 0.0,
+      "agreement_confidence": 0.0,
+      "effective_consistency": 0.0,
+      "consistency_shift": -0.08,
+      "screen_weight": 0.18,
+      "screen_semantic_weight": 0.12,
+      "prior_weight": 0.08,
+      "posthoc_weight": 0.62,
+      "carryover_weight": 0.12,
+      "front_trust": 0.225,
+      "posthoc_trust": 0.775
+    },
+    "posthoc_plan": {
+      "should_run": true,
+      "style": "full_decompose",
+      "target_ms": 550,
+      "max_response_tokens": 180,
+      "weight": 0.62,
+      "reason": "cold-start or low front-back agreement"
+    },
+    "posthoc_reflection_prompt": "Decompose the latest user message into latent affect and stance cues for long-term calibration.\nExtract the exact wording, hedge, correction, punctuation, tempo clue, or stance marker that carries emotion.\nFocus on weak shifts such as hedging, correction, doubt, evidence-seeking, scope protection, frustration, urgency, satisfaction, and openness.\nReturn JSON only: {\"emotion_vector\":{\"urgency\":0.0,\"frustration\":0.0,\"confusion\":0.0,\"skepticism\":0.0,\"satisfaction\":0.0,\"cautiousness\":0.0,\"openness\":0.0},\"labels\":[\"skeptical\"],\"confidence\":0.0,\"cue_spans\":[{\"text\":\"不一定\",\"signal\":\"skepticism\",\"kind\":\"hedge\",\"strength\":0.4}],\"notes\":[\"light hedge\"]}\nstage=bootstrap\nfront_weight=0.18\nposthoc_weight=0.62\nfront_consistency=0.0\nlatest=Same bad request again. Give me the real failure, not this error.\nhist=[]\nusr={\"tz\":\"\",\"h\":null,\"work\":null,\"delay\":35.0,\"polite\":0.2,\"terse\":0.35,\"prior\":{\"urgency\":0.132,\"frustration\":0.1,\"confusion\":0.04,\"skepticism\":0.159,\"satisfaction\":0.12,\"cautiousness\":0.134,\"openness\":0.18},\"persona\":{\"patience\":0.5,\"skepticism\":0.35,\"caution\":0.35,\"openness\":0.5,\"assertiveness\":0.4}}\nscreen_labels=[\"frustrated\"]\nposthoc_style=full_decompose"
+  },
+  {
+    "id": "codex6603_03",
+    "source_url": "https://github.com/openai/codex/issues/6603",
+    "message": "No response for several minutes. If it cannot do it, say so.",
+    "expected_labels": [
+      "urgent",
+      "frustrated"
+    ],
+    "front_labels": [
+      "neutral"
+    ],
+    "front_emotion_vector": {
+      "urgency": 0.1264,
+      "frustration": 0.0551,
+      "confusion": 0.3493,
+      "skepticism": 0.0389,
+      "satisfaction": 0.0446,
+      "cautiousness": 0.0324,
+      "openness": 0.0321
+    },
+    "weight_schedule": {
+      "stage": "bootstrap",
+      "maturity": 0.0,
+      "observed_turns": 0,
+      "posthoc_samples": 0,
+      "consistency_samples": 0,
+      "stable_prediction_hits": 0,
+      "prediction_agreement": 0.0,
+      "consistency_rate": 0.0,
+      "agreement_confidence": 0.0,
+      "effective_consistency": 0.0,
+      "consistency_shift": -0.08,
+      "screen_weight": 0.18,
+      "screen_semantic_weight": 0.12,
+      "prior_weight": 0.08,
+      "posthoc_weight": 0.62,
+      "carryover_weight": 0.12,
+      "front_trust": 0.225,
+      "posthoc_trust": 0.775
+    },
+    "posthoc_plan": {
+      "should_run": true,
+      "style": "full_decompose",
+      "target_ms": 550,
+      "max_response_tokens": 180,
+      "weight": 0.62,
+      "reason": "cold-start or low front-back agreement"
+    },
+    "posthoc_reflection_prompt": "Decompose the latest user message into latent affect and stance cues for long-term calibration.\nExtract the exact wording, hedge, correction, punctuation, tempo clue, or stance marker that carries emotion.\nFocus on weak shifts such as hedging, correction, doubt, evidence-seeking, scope protection, frustration, urgency, satisfaction, and openness.\nReturn JSON only: {\"emotion_vector\":{\"urgency\":0.0,\"frustration\":0.0,\"confusion\":0.0,\"skepticism\":0.0,\"satisfaction\":0.0,\"cautiousness\":0.0,\"openness\":0.0},\"labels\":[\"skeptical\"],\"confidence\":0.0,\"cue_spans\":[{\"text\":\"不一定\",\"signal\":\"skepticism\",\"kind\":\"hedge\",\"strength\":0.4}],\"notes\":[\"light hedge\"]}\nstage=bootstrap\nfront_weight=0.18\nposthoc_weight=0.62\nfront_consistency=0.0\nlatest=No response for several minutes. If it cannot do it, say so.\nhist=[]\nusr={\"tz\":\"\",\"h\":null,\"work\":null,\"delay\":35.0,\"polite\":0.2,\"terse\":0.35,\"prior\":{\"urgency\":0.132,\"frustration\":0.1,\"confusion\":0.04,\"skepticism\":0.159,\"satisfaction\":0.12,\"cautiousness\":0.134,\"openness\":0.18},\"persona\":{\"patience\":0.5,\"skepticism\":0.35,\"caution\":0.35,\"openness\":0.5,\"assertiveness\":0.4}}\nscreen_labels=[\"neutral\"]\nposthoc_style=full_decompose"
+  },
+  {
+    "id": "codex6603_04",
+    "source_url": "https://github.com/openai/codex/issues/6603",
+    "message": "Scan the file and tell me why it dies here.",
+    "expected_labels": [
+      "urgent",
+      "confused"
+    ],
+    "front_labels": [
+      "confused"
+    ],
+    "front_emotion_vector": {
+      "urgency": 0.084,
+      "frustration": 0.0,
+      "confusion": 0.4565,
+      "skepticism": 0.0356,
+      "satisfaction": 0.06,
+      "cautiousness": 0.0325,
+      "openness": 0.0389
+    },
+    "weight_schedule": {
+      "stage": "bootstrap",
+      "maturity": 0.0,
+      "observed_turns": 0,
+      "posthoc_samples": 0,
+      "consistency_samples": 0,
+      "stable_prediction_hits": 0,
+      "prediction_agreement": 0.0,
+      "consistency_rate": 0.0,
+      "agreement_confidence": 0.0,
+      "effective_consistency": 0.0,
+      "consistency_shift": -0.08,
+      "screen_weight": 0.18,
+      "screen_semantic_weight": 0.12,
+      "prior_weight": 0.08,
+      "posthoc_weight": 0.62,
+      "carryover_weight": 0.12,
+      "front_trust": 0.225,
+      "posthoc_trust": 0.775
+    },
+    "posthoc_plan": {
+      "should_run": true,
+      "style": "full_decompose",
+      "target_ms": 550,
+      "max_response_tokens": 180,
+      "weight": 0.62,
+      "reason": "cold-start or low front-back agreement"
+    },
+    "posthoc_reflection_prompt": "Decompose the latest user message into latent affect and stance cues for long-term calibration.\nExtract the exact wording, hedge, correction, punctuation, tempo clue, or stance marker that carries emotion.\nFocus on weak shifts such as hedging, correction, doubt, evidence-seeking, scope protection, frustration, urgency, satisfaction, and openness.\nReturn JSON only: {\"emotion_vector\":{\"urgency\":0.0,\"frustration\":0.0,\"confusion\":0.0,\"skepticism\":0.0,\"satisfaction\":0.0,\"cautiousness\":0.0,\"openness\":0.0},\"labels\":[\"skeptical\"],\"confidence\":0.0,\"cue_spans\":[{\"text\":\"不一定\",\"signal\":\"skepticism\",\"kind\":\"hedge\",\"strength\":0.4}],\"notes\":[\"light hedge\"]}\nstage=bootstrap\nfront_weight=0.18\nposthoc_weight=0.62\nfront_consistency=0.0\nlatest=Scan the file and tell me why it dies here.\nhist=[]\nusr={\"tz\":\"\",\"h\":null,\"work\":null,\"delay\":35.0,\"polite\":0.2,\"terse\":0.35,\"prior\":{\"urgency\":0.132,\"frustration\":0.1,\"confusion\":0.04,\"skepticism\":0.159,\"satisfaction\":0.12,\"cautiousness\":0.134,\"openness\":0.18},\"persona\":{\"patience\":0.5,\"skepticism\":0.35,\"caution\":0.35,\"openness\":0.5,\"assertiveness\":0.4}}\nscreen_labels=[\"confused\"]\nposthoc_style=full_decompose"
+  },
+  {
+    "id": "codex3373_01",
+    "source_url": "https://github.com/openai/codex/issues/3373",
+    "message": "It freezes when I ask it to run migrations. Forty minutes and nothing.",
+    "expected_labels": [
+      "urgent",
+      "frustrated"
+    ],
+    "front_labels": [
+      "neutral"
+    ],
+    "front_emotion_vector": {
+      "urgency": 0.0328,
+      "frustration": 0.0,
+      "confusion": 0.3718,
+      "skepticism": 0.0356,
+      "satisfaction": 0.06,
+      "cautiousness": 0.0325,
+      "openness": 0.0456
+    },
+    "weight_schedule": {
+      "stage": "bootstrap",
+      "maturity": 0.0,
+      "observed_turns": 0,
+      "posthoc_samples": 0,
+      "consistency_samples": 0,
+      "stable_prediction_hits": 0,
+      "prediction_agreement": 0.0,
+      "consistency_rate": 0.0,
+      "agreement_confidence": 0.0,
+      "effective_consistency": 0.0,
+      "consistency_shift": -0.08,
+      "screen_weight": 0.18,
+      "screen_semantic_weight": 0.12,
+      "prior_weight": 0.08,
+      "posthoc_weight": 0.62,
+      "carryover_weight": 0.12,
+      "front_trust": 0.225,
+      "posthoc_trust": 0.775
+    },
+    "posthoc_plan": {
+      "should_run": true,
+      "style": "full_decompose",
+      "target_ms": 550,
+      "max_response_tokens": 180,
+      "weight": 0.62,
+      "reason": "cold-start or low front-back agreement"
+    },
+    "posthoc_reflection_prompt": "Decompose the latest user message into latent affect and stance cues for long-term calibration.\nExtract the exact wording, hedge, correction, punctuation, tempo clue, or stance marker that carries emotion.\nFocus on weak shifts such as hedging, correction, doubt, evidence-seeking, scope protection, frustration, urgency, satisfaction, and openness.\nReturn JSON only: {\"emotion_vector\":{\"urgency\":0.0,\"frustration\":0.0,\"confusion\":0.0,\"skepticism\":0.0,\"satisfaction\":0.0,\"cautiousness\":0.0,\"openness\":0.0},\"labels\":[\"skeptical\"],\"confidence\":0.0,\"cue_spans\":[{\"text\":\"不一定\",\"signal\":\"skepticism\",\"kind\":\"hedge\",\"strength\":0.4}],\"notes\":[\"light hedge\"]}\nstage=bootstrap\nfront_weight=0.18\nposthoc_weight=0.62\nfront_consistency=0.0\nlatest=It freezes when I ask it to run migrations. Forty minutes and nothing.\nhist=[]\nusr={\"tz\":\"\",\"h\":null,\"work\":null,\"delay\":35.0,\"polite\":0.2,\"terse\":0.35,\"prior\":{\"urgency\":0.132,\"frustration\":0.1,\"confusion\":0.04,\"skepticism\":0.159,\"satisfaction\":0.12,\"cautiousness\":0.134,\"openness\":0.18},\"persona\":{\"patience\":0.5,\"skepticism\":0.35,\"caution\":0.35,\"openness\":0.5,\"assertiveness\":0.4}}\nscreen_labels=[\"neutral\"]\nposthoc_style=full_decompose"
+  },
+  {
+    "id": "codex3373_02",
+    "source_url": "https://github.com/openai/codex/issues/3373",
+    "message": "Return an error, return anything, just do not sit there forever.",
+    "expected_labels": [
+      "urgent",
+      "frustrated"
+    ],
+    "front_labels": [
+      "neutral"
+    ],
+    "front_emotion_vector": {
+      "urgency": 0.0464,
+      "frustration": 0.0,
+      "confusion": 0.3707,
+      "skepticism": 0.0356,
+      "satisfaction": 0.06,
+      "cautiousness": 0.0325,
+      "openness": 0.0439
+    },
+    "weight_schedule": {
+      "stage": "bootstrap",
+      "maturity": 0.0,
+      "observed_turns": 0,
+      "posthoc_samples": 0,
+      "consistency_samples": 0,
+      "stable_prediction_hits": 0,
+      "prediction_agreement": 0.0,
+      "consistency_rate": 0.0,
+      "agreement_confidence": 0.0,
+      "effective_consistency": 0.0,
+      "consistency_shift": -0.08,
+      "screen_weight": 0.18,
+      "screen_semantic_weight": 0.12,
+      "prior_weight": 0.08,
+      "posthoc_weight": 0.62,
+      "carryover_weight": 0.12,
+      "front_trust": 0.225,
+      "posthoc_trust": 0.775
+    },
+    "posthoc_plan": {
+      "should_run": true,
+      "style": "full_decompose",
+      "target_ms": 550,
+      "max_response_tokens": 180,
+      "weight": 0.62,
+      "reason": "cold-start or low front-back agreement"
+    },
+    "posthoc_reflection_prompt": "Decompose the latest user message into latent affect and stance cues for long-term calibration.\nExtract the exact wording, hedge, correction, punctuation, tempo clue, or stance marker that carries emotion.\nFocus on weak shifts such as hedging, correction, doubt, evidence-seeking, scope protection, frustration, urgency, satisfaction, and openness.\nReturn JSON only: {\"emotion_vector\":{\"urgency\":0.0,\"frustration\":0.0,\"confusion\":0.0,\"skepticism\":0.0,\"satisfaction\":0.0,\"cautiousness\":0.0,\"openness\":0.0},\"labels\":[\"skeptical\"],\"confidence\":0.0,\"cue_spans\":[{\"text\":\"不一定\",\"signal\":\"skepticism\",\"kind\":\"hedge\",\"strength\":0.4}],\"notes\":[\"light hedge\"]}\nstage=bootstrap\nfront_weight=0.18\nposthoc_weight=0.62\nfront_consistency=0.0\nlatest=Return an error, return anything, just do not sit there forever.\nhist=[]\nusr={\"tz\":\"\",\"h\":null,\"work\":null,\"delay\":35.0,\"polite\":0.2,\"terse\":0.35,\"prior\":{\"urgency\":0.132,\"frustration\":0.1,\"confusion\":0.04,\"skepticism\":0.159,\"satisfaction\":0.12,\"cautiousness\":0.134,\"openness\":0.18},\"persona\":{\"patience\":0.5,\"skepticism\":0.35,\"caution\":0.35,\"openness\":0.5,\"assertiveness\":0.4}}\nscreen_labels=[\"neutral\"]\nposthoc_style=full_decompose"
+  },
+  {
+    "id": "codex3373_03",
+    "source_url": "https://github.com/openai/codex/issues/3373",
+    "message": "I need feedback when commands fail. Silent hangs are useless.",
+    "expected_labels": [
+      "frustrated",
+      "skeptical"
+    ],
+    "front_labels": [
+      "neutral"
+    ],
+    "front_emotion_vector": {
+      "urgency": 0.0736,
+      "frustration": 0.1651,
+      "confusion": 0.3586,
+      "skepticism": 0.0401,
+      "satisfaction": 0.0138,
+      "cautiousness": 0.0265,
+      "openness": 0.0287
+    },
+    "weight_schedule": {
+      "stage": "bootstrap",
+      "maturity": 0.0,
+      "observed_turns": 0,
+      "posthoc_samples": 0,
+      "consistency_samples": 0,
+      "stable_prediction_hits": 0,
+      "prediction_agreement": 0.0,
+      "consistency_rate": 0.0,
+      "agreement_confidence": 0.0,
+      "effective_consistency": 0.0,
+      "consistency_shift": -0.08,
+      "screen_weight": 0.18,
+      "screen_semantic_weight": 0.12,
+      "prior_weight": 0.08,
+      "posthoc_weight": 0.62,
+      "carryover_weight": 0.12,
+      "front_trust": 0.225,
+      "posthoc_trust": 0.775
+    },
+    "posthoc_plan": {
+      "should_run": true,
+      "style": "full_decompose",
+      "target_ms": 550,
+      "max_response_tokens": 180,
+      "weight": 0.62,
+      "reason": "cold-start or low front-back agreement"
+    },
+    "posthoc_reflection_prompt": "Decompose the latest user message into latent affect and stance cues for long-term calibration.\nExtract the exact wording, hedge, correction, punctuation, tempo clue, or stance marker that carries emotion.\nFocus on weak shifts such as hedging, correction, doubt, evidence-seeking, scope protection, frustration, urgency, satisfaction, and openness.\nReturn JSON only: {\"emotion_vector\":{\"urgency\":0.0,\"frustration\":0.0,\"confusion\":0.0,\"skepticism\":0.0,\"satisfaction\":0.0,\"cautiousness\":0.0,\"openness\":0.0},\"labels\":[\"skeptical\"],\"confidence\":0.0,\"cue_spans\":[{\"text\":\"不一定\",\"signal\":\"skepticism\",\"kind\":\"hedge\",\"strength\":0.4}],\"notes\":[\"light hedge\"]}\nstage=bootstrap\nfront_weight=0.18\nposthoc_weight=0.62\nfront_consistency=0.0\nlatest=I need feedback when commands fail. Silent hangs are useless.\nhist=[]\nusr={\"tz\":\"\",\"h\":null,\"work\":null,\"delay\":35.0,\"polite\":0.2,\"terse\":0.35,\"prior\":{\"urgency\":0.132,\"frustration\":0.1,\"confusion\":0.04,\"skepticism\":0.159,\"satisfaction\":0.12,\"cautiousness\":0.134,\"openness\":0.18},\"persona\":{\"patience\":0.5,\"skepticism\":0.35,\"caution\":0.35,\"openness\":0.5,\"assertiveness\":0.4}}\nscreen_labels=[\"neutral\"]\nposthoc_style=full_decompose"
+  },
+  {
+    "id": "codex3373_04",
+    "source_url": "https://github.com/openai/codex/issues/3373",
+    "message": "This hangs again on tool calls. What exactly is blocking?",
+    "expected_labels": [
+      "frustrated",
+      "confused"
+    ],
+    "front_labels": [
+      "urgent"
+    ],
+    "front_emotion_vector": {
+      "urgency": 0.1198,
+      "frustration": 0.1479,
+      "confusion": 0.387,
+      "skepticism": 0.0696,
+      "satisfaction": 0.0186,
+      "cautiousness": 0.0284,
+      "openness": 0.0501
+    },
+    "weight_schedule": {
+      "stage": "bootstrap",
+      "maturity": 0.0,
+      "observed_turns": 0,
+      "posthoc_samples": 0,
+      "consistency_samples": 0,
+      "stable_prediction_hits": 0,
+      "prediction_agreement": 0.0,
+      "consistency_rate": 0.0,
+      "agreement_confidence": 0.0,
+      "effective_consistency": 0.0,
+      "consistency_shift": -0.08,
+      "screen_weight": 0.18,
+      "screen_semantic_weight": 0.12,
+      "prior_weight": 0.08,
+      "posthoc_weight": 0.62,
+      "carryover_weight": 0.12,
+      "front_trust": 0.225,
+      "posthoc_trust": 0.775
+    },
+    "posthoc_plan": {
+      "should_run": true,
+      "style": "full_decompose",
+      "target_ms": 550,
+      "max_response_tokens": 180,
+      "weight": 0.62,
+      "reason": "cold-start or low front-back agreement"
+    },
+    "posthoc_reflection_prompt": "Decompose the latest user message into latent affect and stance cues for long-term calibration.\nExtract the exact wording, hedge, correction, punctuation, tempo clue, or stance marker that carries emotion.\nFocus on weak shifts such as hedging, correction, doubt, evidence-seeking, scope protection, frustration, urgency, satisfaction, and openness.\nReturn JSON only: {\"emotion_vector\":{\"urgency\":0.0,\"frustration\":0.0,\"confusion\":0.0,\"skepticism\":0.0,\"satisfaction\":0.0,\"cautiousness\":0.0,\"openness\":0.0},\"labels\":[\"skeptical\"],\"confidence\":0.0,\"cue_spans\":[{\"text\":\"不一定\",\"signal\":\"skepticism\",\"kind\":\"hedge\",\"strength\":0.4}],\"notes\":[\"light hedge\"]}\nstage=bootstrap\nfront_weight=0.18\nposthoc_weight=0.62\nfront_consistency=0.0\nlatest=This hangs again on tool calls. What exactly is blocking?\nhist=[]\nusr={\"tz\":\"\",\"h\":null,\"work\":null,\"delay\":35.0,\"polite\":0.2,\"terse\":0.35,\"prior\":{\"urgency\":0.132,\"frustration\":0.1,\"confusion\":0.04,\"skepticism\":0.159,\"satisfaction\":0.12,\"cautiousness\":0.134,\"openness\":0.18},\"persona\":{\"patience\":0.5,\"skepticism\":0.35,\"caution\":0.35,\"openness\":0.5,\"assertiveness\":0.4}}\nscreen_labels=[\"urgent\"]\nposthoc_style=full_decompose"
+  },
+  {
+    "id": "kilo3450_01",
+    "source_url": "https://github.com/Kilo-Org/kilocode/issues/3450",
+    "message": "Auto mode is stuck on the logo screen again.",
+    "expected_labels": [
+      "frustrated"
+    ],
+    "front_labels": [
+      "neutral"
+    ],
+    "front_emotion_vector": {
+      "urgency": 0.1248,
+      "frustration": 0.1417,
+      "confusion": 0.3559,
+      "skepticism": 0.0387,
+      "satisfaction": 0.0203,
+      "cautiousness": 0.0284,
+      "openness": 0.0244
+    },
+    "weight_schedule": {
+      "stage": "bootstrap",
+      "maturity": 0.0,
+      "observed_turns": 0,
+      "posthoc_samples": 0,
+      "consistency_samples": 0,
+      "stable_prediction_hits": 0,
+      "prediction_agreement": 0.0,
+      "consistency_rate": 0.0,
+      "agreement_confidence": 0.0,
+      "effective_consistency": 0.0,
+      "consistency_shift": -0.08,
+      "screen_weight": 0.18,
+      "screen_semantic_weight": 0.12,
+      "prior_weight": 0.08,
+      "posthoc_weight": 0.62,
+      "carryover_weight": 0.12,
+      "front_trust": 0.225,
+      "posthoc_trust": 0.775
+    },
+    "posthoc_plan": {
+      "should_run": true,
+      "style": "full_decompose",
+      "target_ms": 550,
+      "max_response_tokens": 180,
+      "weight": 0.62,
+      "reason": "cold-start or low front-back agreement"
+    },
+    "posthoc_reflection_prompt": "Decompose the latest user message into latent affect and stance cues for long-term calibration.\nExtract the exact wording, hedge, correction, punctuation, tempo clue, or stance marker that carries emotion.\nFocus on weak shifts such as hedging, correction, doubt, evidence-seeking, scope protection, frustration, urgency, satisfaction, and openness.\nReturn JSON only: {\"emotion_vector\":{\"urgency\":0.0,\"frustration\":0.0,\"confusion\":0.0,\"skepticism\":0.0,\"satisfaction\":0.0,\"cautiousness\":0.0,\"openness\":0.0},\"labels\":[\"skeptical\"],\"confidence\":0.0,\"cue_spans\":[{\"text\":\"不一定\",\"signal\":\"skepticism\",\"kind\":\"hedge\",\"strength\":0.4}],\"notes\":[\"light hedge\"]}\nstage=bootstrap\nfront_weight=0.18\nposthoc_weight=0.62\nfront_consistency=0.0\nlatest=Auto mode is stuck on the logo screen again.\nhist=[]\nusr={\"tz\":\"\",\"h\":null,\"work\":null,\"delay\":35.0,\"polite\":0.2,\"terse\":0.35,\"prior\":{\"urgency\":0.132,\"frustration\":0.1,\"confusion\":0.04,\"skepticism\":0.159,\"satisfaction\":0.12,\"cautiousness\":0.134,\"openness\":0.18},\"persona\":{\"patience\":0.5,\"skepticism\":0.35,\"caution\":0.35,\"openness\":0.5,\"assertiveness\":0.4}}\nscreen_labels=[\"neutral\"]\nposthoc_style=full_decompose"
+  },
+  {
+    "id": "kilo3450_02",
+    "source_url": "https://github.com/Kilo-Org/kilocode/issues/3450",
+    "message": "It worked once, then reoccurred. I need a reliable fix.",
+    "expected_labels": [
+      "frustrated",
+      "skeptical"
+    ],
+    "front_labels": [
+      "neutral"
+    ],
+    "front_emotion_vector": {
+      "urgency": 0.0856,
+      "frustration": 0.0867,
+      "confusion": 0.3506,
+      "skepticism": 0.0418,
+      "satisfaction": 0.0357,
+      "cautiousness": 0.0286,
+      "openness": 0.0325
+    },
+    "weight_schedule": {
+      "stage": "bootstrap",
+      "maturity": 0.0,
+      "observed_turns": 0,
+      "posthoc_samples": 0,
+      "consistency_samples": 0,
+      "stable_prediction_hits": 0,
+      "prediction_agreement": 0.0,
+      "consistency_rate": 0.0,
+      "agreement_confidence": 0.0,
+      "effective_consistency": 0.0,
+      "consistency_shift": -0.08,
+      "screen_weight": 0.18,
+      "screen_semantic_weight": 0.12,
+      "prior_weight": 0.08,
+      "posthoc_weight": 0.62,
+      "carryover_weight": 0.12,
+      "front_trust": 0.225,
+      "posthoc_trust": 0.775
+    },
+    "posthoc_plan": {
+      "should_run": true,
+      "style": "full_decompose",
+      "target_ms": 550,
+      "max_response_tokens": 180,
+      "weight": 0.62,
+      "reason": "cold-start or low front-back agreement"
+    },
+    "posthoc_reflection_prompt": "Decompose the latest user message into latent affect and stance cues for long-term calibration.\nExtract the exact wording, hedge, correction, punctuation, tempo clue, or stance marker that carries emotion.\nFocus on weak shifts such as hedging, correction, doubt, evidence-seeking, scope protection, frustration, urgency, satisfaction, and openness.\nReturn JSON only: {\"emotion_vector\":{\"urgency\":0.0,\"frustration\":0.0,\"confusion\":0.0,\"skepticism\":0.0,\"satisfaction\":0.0,\"cautiousness\":0.0,\"openness\":0.0},\"labels\":[\"skeptical\"],\"confidence\":0.0,\"cue_spans\":[{\"text\":\"不一定\",\"signal\":\"skepticism\",\"kind\":\"hedge\",\"strength\":0.4}],\"notes\":[\"light hedge\"]}\nstage=bootstrap\nfront_weight=0.18\nposthoc_weight=0.62\nfront_consistency=0.0\nlatest=It worked once, then reoccurred. I need a reliable fix.\nhist=[]\nusr={\"tz\":\"\",\"h\":null,\"work\":null,\"delay\":35.0,\"polite\":0.2,\"terse\":0.35,\"prior\":{\"urgency\":0.132,\"frustration\":0.1,\"confusion\":0.04,\"skepticism\":0.159,\"satisfaction\":0.12,\"cautiousness\":0.134,\"openness\":0.18},\"persona\":{\"patience\":0.5,\"skepticism\":0.35,\"caution\":0.35,\"openness\":0.5,\"assertiveness\":0.4}}\nscreen_labels=[\"neutral\"]\nposthoc_style=full_decompose"
+  },
+  {
+    "id": "kilo3450_03",
+    "source_url": "https://github.com/Kilo-Org/kilocode/issues/3450",
+    "message": "Interactive mode works. Auto mode hangs. Compare the two paths.",
+    "expected_labels": [
+      "exploratory",
+      "skeptical"
+    ],
+    "front_labels": [
+      "neutral"
+    ],
+    "front_emotion_vector": {
+      "urgency": 0.0736,
+      "frustration": 0.0551,
+      "confusion": 0.3652,
+      "skepticism": 0.0354,
+      "satisfaction": 0.1046,
+      "cautiousness": 0.0328,
+      "openness": 0.2642
+    },
+    "weight_schedule": {
+      "stage": "bootstrap",
+      "maturity": 0.0,
+      "observed_turns": 0,
+      "posthoc_samples": 0,
+      "consistency_samples": 0,
+      "stable_prediction_hits": 0,
+      "prediction_agreement": 0.0,
+      "consistency_rate": 0.0,
+      "agreement_confidence": 0.0,
+      "effective_consistency": 0.0,
+      "consistency_shift": -0.08,
+      "screen_weight": 0.18,
+      "screen_semantic_weight": 0.12,
+      "prior_weight": 0.08,
+      "posthoc_weight": 0.62,
+      "carryover_weight": 0.12,
+      "front_trust": 0.225,
+      "posthoc_trust": 0.775
+    },
+    "posthoc_plan": {
+      "should_run": true,
+      "style": "full_decompose",
+      "target_ms": 550,
+      "max_response_tokens": 180,
+      "weight": 0.62,
+      "reason": "cold-start or low front-back agreement"
+    },
+    "posthoc_reflection_prompt": "Decompose the latest user message into latent affect and stance cues for long-term calibration.\nExtract the exact wording, hedge, correction, punctuation, tempo clue, or stance marker that carries emotion.\nFocus on weak shifts such as hedging, correction, doubt, evidence-seeking, scope protection, frustration, urgency, satisfaction, and openness.\nReturn JSON only: {\"emotion_vector\":{\"urgency\":0.0,\"frustration\":0.0,\"confusion\":0.0,\"skepticism\":0.0,\"satisfaction\":0.0,\"cautiousness\":0.0,\"openness\":0.0},\"labels\":[\"skeptical\"],\"confidence\":0.0,\"cue_spans\":[{\"text\":\"不一定\",\"signal\":\"skepticism\",\"kind\":\"hedge\",\"strength\":0.4}],\"notes\":[\"light hedge\"]}\nstage=bootstrap\nfront_weight=0.18\nposthoc_weight=0.62\nfront_consistency=0.0\nlatest=Interactive mode works. Auto mode hangs. Compare the two paths.\nhist=[]\nusr={\"tz\":\"\",\"h\":null,\"work\":null,\"delay\":35.0,\"polite\":0.2,\"terse\":0.35,\"prior\":{\"urgency\":0.132,\"frustration\":0.1,\"confusion\":0.04,\"skepticism\":0.159,\"satisfaction\":0.12,\"cautiousness\":0.134,\"openness\":0.18},\"persona\":{\"patience\":0.5,\"skepticism\":0.35,\"caution\":0.35,\"openness\":0.5,\"assertiveness\":0.4}}\nscreen_labels=[\"neutral\"]\nposthoc_style=full_decompose"
+  },
+  {
+    "id": "kilo3450_04",
+    "source_url": "https://github.com/Kilo-Org/kilocode/issues/3450",
+    "message": "Do not tell me it is gone if it just comes back tomorrow.",
+    "expected_labels": [
+      "frustrated",
+      "skeptical"
+    ],
+    "front_labels": [
+      "neutral"
+    ],
+    "front_emotion_vector": {
+      "urgency": 0.0328,
+      "frustration": 0.0,
+      "confusion": 0.3718,
+      "skepticism": 0.0356,
+      "satisfaction": 0.06,
+      "cautiousness": 0.0325,
+      "openness": 0.0448
+    },
+    "weight_schedule": {
+      "stage": "bootstrap",
+      "maturity": 0.0,
+      "observed_turns": 0,
+      "posthoc_samples": 0,
+      "consistency_samples": 0,
+      "stable_prediction_hits": 0,
+      "prediction_agreement": 0.0,
+      "consistency_rate": 0.0,
+      "agreement_confidence": 0.0,
+      "effective_consistency": 0.0,
+      "consistency_shift": -0.08,
+      "screen_weight": 0.18,
+      "screen_semantic_weight": 0.12,
+      "prior_weight": 0.08,
+      "posthoc_weight": 0.62,
+      "carryover_weight": 0.12,
+      "front_trust": 0.225,
+      "posthoc_trust": 0.775
+    },
+    "posthoc_plan": {
+      "should_run": true,
+      "style": "full_decompose",
+      "target_ms": 550,
+      "max_response_tokens": 180,
+      "weight": 0.62,
+      "reason": "cold-start or low front-back agreement"
+    },
+    "posthoc_reflection_prompt": "Decompose the latest user message into latent affect and stance cues for long-term calibration.\nExtract the exact wording, hedge, correction, punctuation, tempo clue, or stance marker that carries emotion.\nFocus on weak shifts such as hedging, correction, doubt, evidence-seeking, scope protection, frustration, urgency, satisfaction, and openness.\nReturn JSON only: {\"emotion_vector\":{\"urgency\":0.0,\"frustration\":0.0,\"confusion\":0.0,\"skepticism\":0.0,\"satisfaction\":0.0,\"cautiousness\":0.0,\"openness\":0.0},\"labels\":[\"skeptical\"],\"confidence\":0.0,\"cue_spans\":[{\"text\":\"不一定\",\"signal\":\"skepticism\",\"kind\":\"hedge\",\"strength\":0.4}],\"notes\":[\"light hedge\"]}\nstage=bootstrap\nfront_weight=0.18\nposthoc_weight=0.62\nfront_consistency=0.0\nlatest=Do not tell me it is gone if it just comes back tomorrow.\nhist=[]\nusr={\"tz\":\"\",\"h\":null,\"work\":null,\"delay\":35.0,\"polite\":0.2,\"terse\":0.35,\"prior\":{\"urgency\":0.132,\"frustration\":0.1,\"confusion\":0.04,\"skepticism\":0.159,\"satisfaction\":0.12,\"cautiousness\":0.134,\"openness\":0.18},\"persona\":{\"patience\":0.5,\"skepticism\":0.35,\"caution\":0.35,\"openness\":0.5,\"assertiveness\":0.4}}\nscreen_labels=[\"neutral\"]\nposthoc_style=full_decompose"
+  },
+  {
+    "id": "ck2504_01",
+    "source_url": "https://github.com/CopilotKit/CopilotKit/issues/2504",
+    "message": "The runtime stops when the model asks for a non-existent tool. Handle the error gracefully.",
+    "expected_labels": [
+      "cautious",
+      "skeptical"
+    ],
+    "front_labels": [
+      "neutral"
+    ],
+    "front_emotion_vector": {
+      "urgency": 0.0328,
+      "frustration": 0.0,
+      "confusion": 0.3718,
+      "skepticism": 0.0356,
+      "satisfaction": 0.06,
+      "cautiousness": 0.0325,
+      "openness": 0.0468
+    },
+    "weight_schedule": {
+      "stage": "bootstrap",
+      "maturity": 0.0,
+      "observed_turns": 0,
+      "posthoc_samples": 0,
+      "consistency_samples": 0,
+      "stable_prediction_hits": 0,
+      "prediction_agreement": 0.0,
+      "consistency_rate": 0.0,
+      "agreement_confidence": 0.0,
+      "effective_consistency": 0.0,
+      "consistency_shift": -0.08,
+      "screen_weight": 0.18,
+      "screen_semantic_weight": 0.12,
+      "prior_weight": 0.08,
+      "posthoc_weight": 0.62,
+      "carryover_weight": 0.12,
+      "front_trust": 0.225,
+      "posthoc_trust": 0.775
+    },
+    "posthoc_plan": {
+      "should_run": true,
+      "style": "full_decompose",
+      "target_ms": 550,
+      "max_response_tokens": 180,
+      "weight": 0.62,
+      "reason": "cold-start or low front-back agreement"
+    },
+    "posthoc_reflection_prompt": "Decompose the latest user message into latent affect and stance cues for long-term calibration.\nExtract the exact wording, hedge, correction, punctuation, tempo clue, or stance marker that carries emotion.\nFocus on weak shifts such as hedging, correction, doubt, evidence-seeking, scope protection, frustration, urgency, satisfaction, and openness.\nReturn JSON only: {\"emotion_vector\":{\"urgency\":0.0,\"frustration\":0.0,\"confusion\":0.0,\"skepticism\":0.0,\"satisfaction\":0.0,\"cautiousness\":0.0,\"openness\":0.0},\"labels\":[\"skeptical\"],\"confidence\":0.0,\"cue_spans\":[{\"text\":\"不一定\",\"signal\":\"skepticism\",\"kind\":\"hedge\",\"strength\":0.4}],\"notes\":[\"light hedge\"]}\nstage=bootstrap\nfront_weight=0.18\nposthoc_weight=0.62\nfront_consistency=0.0\nlatest=The runtime stops when the model asks for a non-existent tool. Handle the error gracefully.\nhist=[]\nusr={\"tz\":\"\",\"h\":null,\"work\":null,\"delay\":35.0,\"polite\":0.2,\"terse\":0.35,\"prior\":{\"urgency\":0.132,\"frustration\":0.1,\"confusion\":0.04,\"skepticism\":0.159,\"satisfaction\":0.12,\"cautiousness\":0.134,\"openness\":0.18},\"persona\":{\"patience\":0.5,\"skepticism\":0.35,\"caution\":0.35,\"openness\":0.5,\"assertiveness\":0.4}}\nscreen_labels=[\"neutral\"]\nposthoc_style=full_decompose"
+  },
+  {
+    "id": "ck2504_02",
+    "source_url": "https://github.com/CopilotKit/CopilotKit/issues/2504",
+    "message": "If I force continue, it gets stuck on tool_use without tool_result again.",
+    "expected_labels": [
+      "urgent",
+      "frustrated"
+    ],
+    "front_labels": [
+      "neutral"
+    ],
+    "front_emotion_vector": {
+      "urgency": 0.0736,
+      "frustration": 0.1417,
+      "confusion": 0.36,
+      "skepticism": 0.0386,
+      "satisfaction": 0.0366,
+      "cautiousness": 0.0286,
+      "openness": 0.0312
+    },
+    "weight_schedule": {
+      "stage": "bootstrap",
+      "maturity": 0.0,
+      "observed_turns": 0,
+      "posthoc_samples": 0,
+      "consistency_samples": 0,
+      "stable_prediction_hits": 0,
+      "prediction_agreement": 0.0,
+      "consistency_rate": 0.0,
+      "agreement_confidence": 0.0,
+      "effective_consistency": 0.0,
+      "consistency_shift": -0.08,
+      "screen_weight": 0.18,
+      "screen_semantic_weight": 0.12,
+      "prior_weight": 0.08,
+      "posthoc_weight": 0.62,
+      "carryover_weight": 0.12,
+      "front_trust": 0.225,
+      "posthoc_trust": 0.775
+    },
+    "posthoc_plan": {
+      "should_run": true,
+      "style": "full_decompose",
+      "target_ms": 550,
+      "max_response_tokens": 180,
+      "weight": 0.62,
+      "reason": "cold-start or low front-back agreement"
+    },
+    "posthoc_reflection_prompt": "Decompose the latest user message into latent affect and stance cues for long-term calibration.\nExtract the exact wording, hedge, correction, punctuation, tempo clue, or stance marker that carries emotion.\nFocus on weak shifts such as hedging, correction, doubt, evidence-seeking, scope protection, frustration, urgency, satisfaction, and openness.\nReturn JSON only: {\"emotion_vector\":{\"urgency\":0.0,\"frustration\":0.0,\"confusion\":0.0,\"skepticism\":0.0,\"satisfaction\":0.0,\"cautiousness\":0.0,\"openness\":0.0},\"labels\":[\"skeptical\"],\"confidence\":0.0,\"cue_spans\":[{\"text\":\"不一定\",\"signal\":\"skepticism\",\"kind\":\"hedge\",\"strength\":0.4}],\"notes\":[\"light hedge\"]}\nstage=bootstrap\nfront_weight=0.18\nposthoc_weight=0.62\nfront_consistency=0.0\nlatest=If I force continue, it gets stuck on tool_use without tool_result again.\nhist=[]\nusr={\"tz\":\"\",\"h\":null,\"work\":null,\"delay\":35.0,\"polite\":0.2,\"terse\":0.35,\"prior\":{\"urgency\":0.132,\"frustration\":0.1,\"confusion\":0.04,\"skepticism\":0.159,\"satisfaction\":0.12,\"cautiousness\":0.134,\"openness\":0.18},\"persona\":{\"patience\":0.5,\"skepticism\":0.35,\"caution\":0.35,\"openness\":0.5,\"assertiveness\":0.4}}\nscreen_labels=[\"neutral\"]\nposthoc_style=full_decompose"
+  },
+  {
+    "id": "ck2504_03",
+    "source_url": "https://github.com/CopilotKit/CopilotKit/issues/2504",
+    "message": "Show the missing tool result instead of silently ending the turn.",
+    "expected_labels": [
+      "skeptical",
+      "cautious"
+    ],
+    "front_labels": [
+      "confused"
+    ],
+    "front_emotion_vector": {
+      "urgency": 0.0464,
+      "frustration": 0.0,
+      "confusion": 0.4595,
+      "skepticism": 0.0356,
+      "satisfaction": 0.06,
+      "cautiousness": 0.0325,
+      "openness": 0.0439
+    },
+    "weight_schedule": {
+      "stage": "bootstrap",
+      "maturity": 0.0,
+      "observed_turns": 0,
+      "posthoc_samples": 0,
+      "consistency_samples": 0,
+      "stable_prediction_hits": 0,
+      "prediction_agreement": 0.0,
+      "consistency_rate": 0.0,
+      "agreement_confidence": 0.0,
+      "effective_consistency": 0.0,
+      "consistency_shift": -0.08,
+      "screen_weight": 0.18,
+      "screen_semantic_weight": 0.12,
+      "prior_weight": 0.08,
+      "posthoc_weight": 0.62,
+      "carryover_weight": 0.12,
+      "front_trust": 0.225,
+      "posthoc_trust": 0.775
+    },
+    "posthoc_plan": {
+      "should_run": true,
+      "style": "full_decompose",
+      "target_ms": 550,
+      "max_response_tokens": 180,
+      "weight": 0.62,
+      "reason": "cold-start or low front-back agreement"
+    },
+    "posthoc_reflection_prompt": "Decompose the latest user message into latent affect and stance cues for long-term calibration.\nExtract the exact wording, hedge, correction, punctuation, tempo clue, or stance marker that carries emotion.\nFocus on weak shifts such as hedging, correction, doubt, evidence-seeking, scope protection, frustration, urgency, satisfaction, and openness.\nReturn JSON only: {\"emotion_vector\":{\"urgency\":0.0,\"frustration\":0.0,\"confusion\":0.0,\"skepticism\":0.0,\"satisfaction\":0.0,\"cautiousness\":0.0,\"openness\":0.0},\"labels\":[\"skeptical\"],\"confidence\":0.0,\"cue_spans\":[{\"text\":\"不一定\",\"signal\":\"skepticism\",\"kind\":\"hedge\",\"strength\":0.4}],\"notes\":[\"light hedge\"]}\nstage=bootstrap\nfront_weight=0.18\nposthoc_weight=0.62\nfront_consistency=0.0\nlatest=Show the missing tool result instead of silently ending the turn.\nhist=[]\nusr={\"tz\":\"\",\"h\":null,\"work\":null,\"delay\":35.0,\"polite\":0.2,\"terse\":0.35,\"prior\":{\"urgency\":0.132,\"frustration\":0.1,\"confusion\":0.04,\"skepticism\":0.159,\"satisfaction\":0.12,\"cautiousness\":0.134,\"openness\":0.18},\"persona\":{\"patience\":0.5,\"skepticism\":0.35,\"caution\":0.35,\"openness\":0.5,\"assertiveness\":0.4}}\nscreen_labels=[\"confused\"]\nposthoc_style=full_decompose"
+  },
+  {
+    "id": "ck2504_04",
+    "source_url": "https://github.com/CopilotKit/CopilotKit/issues/2504",
+    "message": "I need the system to recover from bad tool calls, not crash into a dead state.",
+    "expected_labels": [
+      "cautious",
+      "frustrated"
+    ],
+    "front_labels": [
+      "neutral"
+    ],
+    "front_emotion_vector": {
+      "urgency": 0.0328,
+      "frustration": 0.0,
+      "confusion": 0.3718,
+      "skepticism": 0.0356,
+      "satisfaction": 0.06,
+      "cautiousness": 0.0325,
+      "openness": 0.0461
+    },
+    "weight_schedule": {
+      "stage": "bootstrap",
+      "maturity": 0.0,
+      "observed_turns": 0,
+      "posthoc_samples": 0,
+      "consistency_samples": 0,
+      "stable_prediction_hits": 0,
+      "prediction_agreement": 0.0,
+      "consistency_rate": 0.0,
+      "agreement_confidence": 0.0,
+      "effective_consistency": 0.0,
+      "consistency_shift": -0.08,
+      "screen_weight": 0.18,
+      "screen_semantic_weight": 0.12,
+      "prior_weight": 0.08,
+      "posthoc_weight": 0.62,
+      "carryover_weight": 0.12,
+      "front_trust": 0.225,
+      "posthoc_trust": 0.775
+    },
+    "posthoc_plan": {
+      "should_run": true,
+      "style": "full_decompose",
+      "target_ms": 550,
+      "max_response_tokens": 180,
+      "weight": 0.62,
+      "reason": "cold-start or low front-back agreement"
+    },
+    "posthoc_reflection_prompt": "Decompose the latest user message into latent affect and stance cues for long-term calibration.\nExtract the exact wording, hedge, correction, punctuation, tempo clue, or stance marker that carries emotion.\nFocus on weak shifts such as hedging, correction, doubt, evidence-seeking, scope protection, frustration, urgency, satisfaction, and openness.\nReturn JSON only: {\"emotion_vector\":{\"urgency\":0.0,\"frustration\":0.0,\"confusion\":0.0,\"skepticism\":0.0,\"satisfaction\":0.0,\"cautiousness\":0.0,\"openness\":0.0},\"labels\":[\"skeptical\"],\"confidence\":0.0,\"cue_spans\":[{\"text\":\"不一定\",\"signal\":\"skepticism\",\"kind\":\"hedge\",\"strength\":0.4}],\"notes\":[\"light hedge\"]}\nstage=bootstrap\nfront_weight=0.18\nposthoc_weight=0.62\nfront_consistency=0.0\nlatest=I need the system to recover from bad tool calls, not crash into a dead state.\nhist=[]\nusr={\"tz\":\"\",\"h\":null,\"work\":null,\"delay\":35.0,\"polite\":0.2,\"terse\":0.35,\"prior\":{\"urgency\":0.132,\"frustration\":0.1,\"confusion\":0.04,\"skepticism\":0.159,\"satisfaction\":0.12,\"cautiousness\":0.134,\"openness\":0.18},\"persona\":{\"patience\":0.5,\"skepticism\":0.35,\"caution\":0.35,\"openness\":0.5,\"assertiveness\":0.4}}\nscreen_labels=[\"neutral\"]\nposthoc_style=full_decompose"
+  },
+  {
+    "id": "gem13734_01",
+    "source_url": "https://github.com/google-gemini/gemini-cli/issues/13734",
+    "message": "It worked yesterday. The update broke it today.",
+    "expected_labels": [
+      "frustrated",
+      "skeptical"
+    ],
+    "front_labels": [
+      "neutral"
+    ],
+    "front_emotion_vector": {
+      "urgency": 0.084,
+      "frustration": 0.0,
+      "confusion": 0.3677,
+      "skepticism": 0.0356,
+      "satisfaction": 0.06,
+      "cautiousness": 0.0325,
+      "openness": 0.0391
+    },
+    "weight_schedule": {
+      "stage": "bootstrap",
+      "maturity": 0.0,
+      "observed_turns": 0,
+      "posthoc_samples": 0,
+      "consistency_samples": 0,
+      "stable_prediction_hits": 0,
+      "prediction_agreement": 0.0,
+      "consistency_rate": 0.0,
+      "agreement_confidence": 0.0,
+      "effective_consistency": 0.0,
+      "consistency_shift": -0.08,
+      "screen_weight": 0.18,
+      "screen_semantic_weight": 0.12,
+      "prior_weight": 0.08,
+      "posthoc_weight": 0.62,
+      "carryover_weight": 0.12,
+      "front_trust": 0.225,
+      "posthoc_trust": 0.775
+    },
+    "posthoc_plan": {
+      "should_run": true,
+      "style": "full_decompose",
+      "target_ms": 550,
+      "max_response_tokens": 180,
+      "weight": 0.62,
+      "reason": "cold-start or low front-back agreement"
+    },
+    "posthoc_reflection_prompt": "Decompose the latest user message into latent affect and stance cues for long-term calibration.\nExtract the exact wording, hedge, correction, punctuation, tempo clue, or stance marker that carries emotion.\nFocus on weak shifts such as hedging, correction, doubt, evidence-seeking, scope protection, frustration, urgency, satisfaction, and openness.\nReturn JSON only: {\"emotion_vector\":{\"urgency\":0.0,\"frustration\":0.0,\"confusion\":0.0,\"skepticism\":0.0,\"satisfaction\":0.0,\"cautiousness\":0.0,\"openness\":0.0},\"labels\":[\"skeptical\"],\"confidence\":0.0,\"cue_spans\":[{\"text\":\"不一定\",\"signal\":\"skepticism\",\"kind\":\"hedge\",\"strength\":0.4}],\"notes\":[\"light hedge\"]}\nstage=bootstrap\nfront_weight=0.18\nposthoc_weight=0.62\nfront_consistency=0.0\nlatest=It worked yesterday. The update broke it today.\nhist=[]\nusr={\"tz\":\"\",\"h\":null,\"work\":null,\"delay\":35.0,\"polite\":0.2,\"terse\":0.35,\"prior\":{\"urgency\":0.132,\"frustration\":0.1,\"confusion\":0.04,\"skepticism\":0.159,\"satisfaction\":0.12,\"cautiousness\":0.134,\"openness\":0.18},\"persona\":{\"patience\":0.5,\"skepticism\":0.35,\"caution\":0.35,\"openness\":0.5,\"assertiveness\":0.4}}\nscreen_labels=[\"neutral\"]\nposthoc_style=full_decompose"
+  },
+  {
+    "id": "gem13734_02",
+    "source_url": "https://github.com/google-gemini/gemini-cli/issues/13734",
+    "message": "The fetch failed message is misleading. Verify the root cause before blaming networking.",
+    "expected_labels": [
+      "skeptical",
+      "cautious"
+    ],
+    "front_labels": [
+      "neutral"
+    ],
+    "front_emotion_vector": {
+      "urgency": 0.0328,
+      "frustration": 0.0,
+      "confusion": 0.3451,
+      "skepticism": 0.209,
+      "satisfaction": 0.06,
+      "cautiousness": 0.0925,
+      "openness": 0.0466
+    },
+    "weight_schedule": {
+      "stage": "bootstrap",
+      "maturity": 0.0,
+      "observed_turns": 0,
+      "posthoc_samples": 0,
+      "consistency_samples": 0,
+      "stable_prediction_hits": 0,
+      "prediction_agreement": 0.0,
+      "consistency_rate": 0.0,
+      "agreement_confidence": 0.0,
+      "effective_consistency": 0.0,
+      "consistency_shift": -0.08,
+      "screen_weight": 0.18,
+      "screen_semantic_weight": 0.12,
+      "prior_weight": 0.08,
+      "posthoc_weight": 0.62,
+      "carryover_weight": 0.12,
+      "front_trust": 0.225,
+      "posthoc_trust": 0.775
+    },
+    "posthoc_plan": {
+      "should_run": true,
+      "style": "full_decompose",
+      "target_ms": 550,
+      "max_response_tokens": 180,
+      "weight": 0.62,
+      "reason": "cold-start or low front-back agreement"
+    },
+    "posthoc_reflection_prompt": "Decompose the latest user message into latent affect and stance cues for long-term calibration.\nExtract the exact wording, hedge, correction, punctuation, tempo clue, or stance marker that carries emotion.\nFocus on weak shifts such as hedging, correction, doubt, evidence-seeking, scope protection, frustration, urgency, satisfaction, and openness.\nReturn JSON only: {\"emotion_vector\":{\"urgency\":0.0,\"frustration\":0.0,\"confusion\":0.0,\"skepticism\":0.0,\"satisfaction\":0.0,\"cautiousness\":0.0,\"openness\":0.0},\"labels\":[\"skeptical\"],\"confidence\":0.0,\"cue_spans\":[{\"text\":\"不一定\",\"signal\":\"skepticism\",\"kind\":\"hedge\",\"strength\":0.4}],\"notes\":[\"light hedge\"]}\nstage=bootstrap\nfront_weight=0.18\nposthoc_weight=0.62\nfront_consistency=0.0\nlatest=The fetch failed message is misleading. Verify the root cause before blaming networking.\nhist=[]\nusr={\"tz\":\"\",\"h\":null,\"work\":null,\"delay\":35.0,\"polite\":0.2,\"terse\":0.35,\"prior\":{\"urgency\":0.132,\"frustration\":0.1,\"confusion\":0.04,\"skepticism\":0.159,\"satisfaction\":0.12,\"cautiousness\":0.134,\"openness\":0.18},\"persona\":{\"patience\":0.5,\"skepticism\":0.35,\"caution\":0.35,\"openness\":0.5,\"assertiveness\":0.4}}\nscreen_labels=[\"neutral\"]\nposthoc_style=full_decompose"
+  },
+  {
+    "id": "gem13734_03",
+    "source_url": "https://github.com/google-gemini/gemini-cli/issues/13734",
+    "message": "Auto-update should not brick a working install without warning.",
+    "expected_labels": [
+      "frustrated",
+      "skeptical"
+    ],
+    "front_labels": [
+      "neutral"
+    ],
+    "front_emotion_vector": {
+      "urgency": 0.0872,
+      "frustration": 0.0551,
+      "confusion": 0.3375,
+      "skepticism": 0.189,
+      "satisfaction": 0.0446,
+      "cautiousness": 0.0324,
+      "openness": 0.0362
+    },
+    "weight_schedule": {
+      "stage": "bootstrap",
+      "maturity": 0.0,
+      "observed_turns": 0,
+      "posthoc_samples": 0,
+      "consistency_samples": 0,
+      "stable_prediction_hits": 0,
+      "prediction_agreement": 0.0,
+      "consistency_rate": 0.0,
+      "agreement_confidence": 0.0,
+      "effective_consistency": 0.0,
+      "consistency_shift": -0.08,
+      "screen_weight": 0.18,
+      "screen_semantic_weight": 0.12,
+      "prior_weight": 0.08,
+      "posthoc_weight": 0.62,
+      "carryover_weight": 0.12,
+      "front_trust": 0.225,
+      "posthoc_trust": 0.775
+    },
+    "posthoc_plan": {
+      "should_run": true,
+      "style": "full_decompose",
+      "target_ms": 550,
+      "max_response_tokens": 180,
+      "weight": 0.62,
+      "reason": "cold-start or low front-back agreement"
+    },
+    "posthoc_reflection_prompt": "Decompose the latest user message into latent affect and stance cues for long-term calibration.\nExtract the exact wording, hedge, correction, punctuation, tempo clue, or stance marker that carries emotion.\nFocus on weak shifts such as hedging, correction, doubt, evidence-seeking, scope protection, frustration, urgency, satisfaction, and openness.\nReturn JSON only: {\"emotion_vector\":{\"urgency\":0.0,\"frustration\":0.0,\"confusion\":0.0,\"skepticism\":0.0,\"satisfaction\":0.0,\"cautiousness\":0.0,\"openness\":0.0},\"labels\":[\"skeptical\"],\"confidence\":0.0,\"cue_spans\":[{\"text\":\"不一定\",\"signal\":\"skepticism\",\"kind\":\"hedge\",\"strength\":0.4}],\"notes\":[\"light hedge\"]}\nstage=bootstrap\nfront_weight=0.18\nposthoc_weight=0.62\nfront_consistency=0.0\nlatest=Auto-update should not brick a working install without warning.\nhist=[]\nusr={\"tz\":\"\",\"h\":null,\"work\":null,\"delay\":35.0,\"polite\":0.2,\"terse\":0.35,\"prior\":{\"urgency\":0.132,\"frustration\":0.1,\"confusion\":0.04,\"skepticism\":0.159,\"satisfaction\":0.12,\"cautiousness\":0.134,\"openness\":0.18},\"persona\":{\"patience\":0.5,\"skepticism\":0.35,\"caution\":0.35,\"openness\":0.5,\"assertiveness\":0.4}}\nscreen_labels=[\"neutral\"]\nposthoc_style=full_decompose"
+  },
+  {
+    "id": "gem13734_04",
+    "source_url": "https://github.com/google-gemini/gemini-cli/issues/13734",
+    "message": "I need a downgrade path or a clear migration note right now.",
+    "expected_labels": [
+      "urgent",
+      "cautious"
+    ],
+    "front_labels": [
+      "neutral"
+    ],
+    "front_emotion_vector": {
+      "urgency": 0.1478,
+      "frustration": 0.0,
+      "confusion": 0.3626,
+      "skepticism": 0.0356,
+      "satisfaction": 0.06,
+      "cautiousness": 0.0325,
+      "openness": 0.0335
+    },
+    "weight_schedule": {
+      "stage": "bootstrap",
+      "maturity": 0.0,
+      "observed_turns": 0,
+      "posthoc_samples": 0,
+      "consistency_samples": 0,
+      "stable_prediction_hits": 0,
+      "prediction_agreement": 0.0,
+      "consistency_rate": 0.0,
+      "agreement_confidence": 0.0,
+      "effective_consistency": 0.0,
+      "consistency_shift": -0.08,
+      "screen_weight": 0.18,
+      "screen_semantic_weight": 0.12,
+      "prior_weight": 0.08,
+      "posthoc_weight": 0.62,
+      "carryover_weight": 0.12,
+      "front_trust": 0.225,
+      "posthoc_trust": 0.775
+    },
+    "posthoc_plan": {
+      "should_run": true,
+      "style": "full_decompose",
+      "target_ms": 550,
+      "max_response_tokens": 180,
+      "weight": 0.62,
+      "reason": "cold-start or low front-back agreement"
+    },
+    "posthoc_reflection_prompt": "Decompose the latest user message into latent affect and stance cues for long-term calibration.\nExtract the exact wording, hedge, correction, punctuation, tempo clue, or stance marker that carries emotion.\nFocus on weak shifts such as hedging, correction, doubt, evidence-seeking, scope protection, frustration, urgency, satisfaction, and openness.\nReturn JSON only: {\"emotion_vector\":{\"urgency\":0.0,\"frustration\":0.0,\"confusion\":0.0,\"skepticism\":0.0,\"satisfaction\":0.0,\"cautiousness\":0.0,\"openness\":0.0},\"labels\":[\"skeptical\"],\"confidence\":0.0,\"cue_spans\":[{\"text\":\"不一定\",\"signal\":\"skepticism\",\"kind\":\"hedge\",\"strength\":0.4}],\"notes\":[\"light hedge\"]}\nstage=bootstrap\nfront_weight=0.18\nposthoc_weight=0.62\nfront_consistency=0.0\nlatest=I need a downgrade path or a clear migration note right now.\nhist=[]\nusr={\"tz\":\"\",\"h\":null,\"work\":null,\"delay\":35.0,\"polite\":0.2,\"terse\":0.35,\"prior\":{\"urgency\":0.132,\"frustration\":0.1,\"confusion\":0.04,\"skepticism\":0.159,\"satisfaction\":0.12,\"cautiousness\":0.134,\"openness\":0.18},\"persona\":{\"patience\":0.5,\"skepticism\":0.35,\"caution\":0.35,\"openness\":0.5,\"assertiveness\":0.4}}\nscreen_labels=[\"neutral\"]\nposthoc_style=full_decompose"
+  },
+  {
+    "id": "cc8674_01",
+    "source_url": "https://github.com/anthropics/claude-code/issues/8674",
+    "message": "This fails despite correct Git Bash configuration.",
+    "expected_labels": [
+      "skeptical"
+    ],
+    "front_labels": [
+      "neutral"
+    ],
+    "front_emotion_vector": {
+      "urgency": 0.0328,
+      "frustration": 0.0,
+      "confusion": 0.3451,
+      "skepticism": 0.189,
+      "satisfaction": 0.06,
+      "cautiousness": 0.0325,
+      "openness": 0.0444
+    },
+    "weight_schedule": {
+      "stage": "bootstrap",
+      "maturity": 0.0,
+      "observed_turns": 0,
+      "posthoc_samples": 0,
+      "consistency_samples": 0,
+      "stable_prediction_hits": 0,
+      "prediction_agreement": 0.0,
+      "consistency_rate": 0.0,
+      "agreement_confidence": 0.0,
+      "effective_consistency": 0.0,
+      "consistency_shift": -0.08,
+      "screen_weight": 0.18,
+      "screen_semantic_weight": 0.12,
+      "prior_weight": 0.08,
+      "posthoc_weight": 0.62,
+      "carryover_weight": 0.12,
+      "front_trust": 0.225,
+      "posthoc_trust": 0.775
+    },
+    "posthoc_plan": {
+      "should_run": true,
+      "style": "full_decompose",
+      "target_ms": 550,
+      "max_response_tokens": 180,
+      "weight": 0.62,
+      "reason": "cold-start or low front-back agreement"
+    },
+    "posthoc_reflection_prompt": "Decompose the latest user message into latent affect and stance cues for long-term calibration.\nExtract the exact wording, hedge, correction, punctuation, tempo clue, or stance marker that carries emotion.\nFocus on weak shifts such as hedging, correction, doubt, evidence-seeking, scope protection, frustration, urgency, satisfaction, and openness.\nReturn JSON only: {\"emotion_vector\":{\"urgency\":0.0,\"frustration\":0.0,\"confusion\":0.0,\"skepticism\":0.0,\"satisfaction\":0.0,\"cautiousness\":0.0,\"openness\":0.0},\"labels\":[\"skeptical\"],\"confidence\":0.0,\"cue_spans\":[{\"text\":\"不一定\",\"signal\":\"skepticism\",\"kind\":\"hedge\",\"strength\":0.4}],\"notes\":[\"light hedge\"]}\nstage=bootstrap\nfront_weight=0.18\nposthoc_weight=0.62\nfront_consistency=0.0\nlatest=This fails despite correct Git Bash configuration.\nhist=[]\nusr={\"tz\":\"\",\"h\":null,\"work\":null,\"delay\":35.0,\"polite\":0.2,\"terse\":0.35,\"prior\":{\"urgency\":0.132,\"frustration\":0.1,\"confusion\":0.04,\"skepticism\":0.159,\"satisfaction\":0.12,\"cautiousness\":0.134,\"openness\":0.18},\"persona\":{\"patience\":0.5,\"skepticism\":0.35,\"caution\":0.35,\"openness\":0.5,\"assertiveness\":0.4}}\nscreen_labels=[\"neutral\"]\nposthoc_style=full_decompose"
+  },
+  {
+    "id": "cc8674_02",
+    "source_url": "https://github.com/anthropics/claude-code/issues/8674",
+    "message": "Show me the detection path before telling me to reinstall anything.",
+    "expected_labels": [
+      "skeptical",
+      "cautious"
+    ],
+    "front_labels": [
+      "confused"
+    ],
+    "front_emotion_vector": {
+      "urgency": 0.0736,
+      "frustration": 0.0551,
+      "confusion": 0.4273,
+      "skepticism": 0.189,
+      "satisfaction": 0.0446,
+      "cautiousness": 0.0324,
+      "openness": 0.0378
+    },
+    "weight_schedule": {
+      "stage": "bootstrap",
+      "maturity": 0.0,
+      "observed_turns": 0,
+      "posthoc_samples": 0,
+      "consistency_samples": 0,
+      "stable_prediction_hits": 0,
+      "prediction_agreement": 0.0,
+      "consistency_rate": 0.0,
+      "agreement_confidence": 0.0,
+      "effective_consistency": 0.0,
+      "consistency_shift": -0.08,
+      "screen_weight": 0.18,
+      "screen_semantic_weight": 0.12,
+      "prior_weight": 0.08,
+      "posthoc_weight": 0.62,
+      "carryover_weight": 0.12,
+      "front_trust": 0.225,
+      "posthoc_trust": 0.775
+    },
+    "posthoc_plan": {
+      "should_run": true,
+      "style": "full_decompose",
+      "target_ms": 550,
+      "max_response_tokens": 180,
+      "weight": 0.62,
+      "reason": "cold-start or low front-back agreement"
+    },
+    "posthoc_reflection_prompt": "Decompose the latest user message into latent affect and stance cues for long-term calibration.\nExtract the exact wording, hedge, correction, punctuation, tempo clue, or stance marker that carries emotion.\nFocus on weak shifts such as hedging, correction, doubt, evidence-seeking, scope protection, frustration, urgency, satisfaction, and openness.\nReturn JSON only: {\"emotion_vector\":{\"urgency\":0.0,\"frustration\":0.0,\"confusion\":0.0,\"skepticism\":0.0,\"satisfaction\":0.0,\"cautiousness\":0.0,\"openness\":0.0},\"labels\":[\"skeptical\"],\"confidence\":0.0,\"cue_spans\":[{\"text\":\"不一定\",\"signal\":\"skepticism\",\"kind\":\"hedge\",\"strength\":0.4}],\"notes\":[\"light hedge\"]}\nstage=bootstrap\nfront_weight=0.18\nposthoc_weight=0.62\nfront_consistency=0.0\nlatest=Show me the detection path before telling me to reinstall anything.\nhist=[]\nusr={\"tz\":\"\",\"h\":null,\"work\":null,\"delay\":35.0,\"polite\":0.2,\"terse\":0.35,\"prior\":{\"urgency\":0.132,\"frustration\":0.1,\"confusion\":0.04,\"skepticism\":0.159,\"satisfaction\":0.12,\"cautiousness\":0.134,\"openness\":0.18},\"persona\":{\"patience\":0.5,\"skepticism\":0.35,\"caution\":0.35,\"openness\":0.5,\"assertiveness\":0.4}}\nscreen_labels=[\"confused\"]\nposthoc_style=full_decompose"
+  },
+  {
+    "id": "cc8674_03",
+    "source_url": "https://github.com/anthropics/claude-code/issues/8674",
+    "message": "I already tried the env var, PATH, and symlink route. Same failure.",
+    "expected_labels": [
+      "frustrated",
+      "skeptical"
+    ],
+    "front_labels": [
+      "neutral"
+    ],
+    "front_emotion_vector": {
+      "urgency": 0.0328,
+      "frustration": 0.0,
+      "confusion": 0.3718,
+      "skepticism": 0.0356,
+      "satisfaction": 0.06,
+      "cautiousness": 0.0325,
+      "openness": 0.0454
+    },
+    "weight_schedule": {
+      "stage": "bootstrap",
+      "maturity": 0.0,
+      "observed_turns": 0,
+      "posthoc_samples": 0,
+      "consistency_samples": 0,
+      "stable_prediction_hits": 0,
+      "prediction_agreement": 0.0,
+      "consistency_rate": 0.0,
+      "agreement_confidence": 0.0,
+      "effective_consistency": 0.0,
+      "consistency_shift": -0.08,
+      "screen_weight": 0.18,
+      "screen_semantic_weight": 0.12,
+      "prior_weight": 0.08,
+      "posthoc_weight": 0.62,
+      "carryover_weight": 0.12,
+      "front_trust": 0.225,
+      "posthoc_trust": 0.775
+    },
+    "posthoc_plan": {
+      "should_run": true,
+      "style": "full_decompose",
+      "target_ms": 550,
+      "max_response_tokens": 180,
+      "weight": 0.62,
+      "reason": "cold-start or low front-back agreement"
+    },
+    "posthoc_reflection_prompt": "Decompose the latest user message into latent affect and stance cues for long-term calibration.\nExtract the exact wording, hedge, correction, punctuation, tempo clue, or stance marker that carries emotion.\nFocus on weak shifts such as hedging, correction, doubt, evidence-seeking, scope protection, frustration, urgency, satisfaction, and openness.\nReturn JSON only: {\"emotion_vector\":{\"urgency\":0.0,\"frustration\":0.0,\"confusion\":0.0,\"skepticism\":0.0,\"satisfaction\":0.0,\"cautiousness\":0.0,\"openness\":0.0},\"labels\":[\"skeptical\"],\"confidence\":0.0,\"cue_spans\":[{\"text\":\"不一定\",\"signal\":\"skepticism\",\"kind\":\"hedge\",\"strength\":0.4}],\"notes\":[\"light hedge\"]}\nstage=bootstrap\nfront_weight=0.18\nposthoc_weight=0.62\nfront_consistency=0.0\nlatest=I already tried the env var, PATH, and symlink route. Same failure.\nhist=[]\nusr={\"tz\":\"\",\"h\":null,\"work\":null,\"delay\":35.0,\"polite\":0.2,\"terse\":0.35,\"prior\":{\"urgency\":0.132,\"frustration\":0.1,\"confusion\":0.04,\"skepticism\":0.159,\"satisfaction\":0.12,\"cautiousness\":0.134,\"openness\":0.18},\"persona\":{\"patience\":0.5,\"skepticism\":0.35,\"caution\":0.35,\"openness\":0.5,\"assertiveness\":0.4}}\nscreen_labels=[\"neutral\"]\nposthoc_style=full_decompose"
+  },
+  {
+    "id": "cc8674_04",
+    "source_url": "https://github.com/anthropics/claude-code/issues/8674",
+    "message": "Keep the scope tight and verify the Windows path handling first.",
+    "expected_labels": [
+      "cautious",
+      "skeptical"
+    ],
+    "front_labels": [
+      "neutral"
+    ],
+    "front_emotion_vector": {
+      "urgency": 0.0328,
+      "frustration": 0.0,
+      "confusion": 0.3718,
+      "skepticism": 0.0556,
+      "satisfaction": 0.06,
+      "cautiousness": 0.0925,
+      "openness": 0.0452
+    },
+    "weight_schedule": {
+      "stage": "bootstrap",
+      "maturity": 0.0,
+      "observed_turns": 0,
+      "posthoc_samples": 0,
+      "consistency_samples": 0,
+      "stable_prediction_hits": 0,
+      "prediction_agreement": 0.0,
+      "consistency_rate": 0.0,
+      "agreement_confidence": 0.0,
+      "effective_consistency": 0.0,
+      "consistency_shift": -0.08,
+      "screen_weight": 0.18,
+      "screen_semantic_weight": 0.12,
+      "prior_weight": 0.08,
+      "posthoc_weight": 0.62,
+      "carryover_weight": 0.12,
+      "front_trust": 0.225,
+      "posthoc_trust": 0.775
+    },
+    "posthoc_plan": {
+      "should_run": true,
+      "style": "full_decompose",
+      "target_ms": 550,
+      "max_response_tokens": 180,
+      "weight": 0.62,
+      "reason": "cold-start or low front-back agreement"
+    },
+    "posthoc_reflection_prompt": "Decompose the latest user message into latent affect and stance cues for long-term calibration.\nExtract the exact wording, hedge, correction, punctuation, tempo clue, or stance marker that carries emotion.\nFocus on weak shifts such as hedging, correction, doubt, evidence-seeking, scope protection, frustration, urgency, satisfaction, and openness.\nReturn JSON only: {\"emotion_vector\":{\"urgency\":0.0,\"frustration\":0.0,\"confusion\":0.0,\"skepticism\":0.0,\"satisfaction\":0.0,\"cautiousness\":0.0,\"openness\":0.0},\"labels\":[\"skeptical\"],\"confidence\":0.0,\"cue_spans\":[{\"text\":\"不一定\",\"signal\":\"skepticism\",\"kind\":\"hedge\",\"strength\":0.4}],\"notes\":[\"light hedge\"]}\nstage=bootstrap\nfront_weight=0.18\nposthoc_weight=0.62\nfront_consistency=0.0\nlatest=Keep the scope tight and verify the Windows path handling first.\nhist=[]\nusr={\"tz\":\"\",\"h\":null,\"work\":null,\"delay\":35.0,\"polite\":0.2,\"terse\":0.35,\"prior\":{\"urgency\":0.132,\"frustration\":0.1,\"confusion\":0.04,\"skepticism\":0.159,\"satisfaction\":0.12,\"cautiousness\":0.134,\"openness\":0.18},\"persona\":{\"patience\":0.5,\"skepticism\":0.35,\"caution\":0.35,\"openness\":0.5,\"assertiveness\":0.4}}\nscreen_labels=[\"neutral\"]\nposthoc_style=full_decompose"
+  },
+  {
+    "id": "vsc238105_01",
+    "source_url": "https://github.com/microsoft/vscode/issues/238105",
+    "message": "I sign in, get redirected back, and nothing changes.",
+    "expected_labels": [
+      "frustrated",
+      "confused"
+    ],
+    "front_labels": [
+      "neutral"
+    ],
+    "front_emotion_vector": {
+      "urgency": 0.1264,
+      "frustration": 0.0551,
+      "confusion": 0.3493,
+      "skepticism": 0.0389,
+      "satisfaction": 0.0446,
+      "cautiousness": 0.0324,
+      "openness": 0.0317
+    },
+    "weight_schedule": {
+      "stage": "bootstrap",
+      "maturity": 0.0,
+      "observed_turns": 0,
+      "posthoc_samples": 0,
+      "consistency_samples": 0,
+      "stable_prediction_hits": 0,
+      "prediction_agreement": 0.0,
+      "consistency_rate": 0.0,
+      "agreement_confidence": 0.0,
+      "effective_consistency": 0.0,
+      "consistency_shift": -0.08,
+      "screen_weight": 0.18,
+      "screen_semantic_weight": 0.12,
+      "prior_weight": 0.08,
+      "posthoc_weight": 0.62,
+      "carryover_weight": 0.12,
+      "front_trust": 0.225,
+      "posthoc_trust": 0.775
+    },
+    "posthoc_plan": {
+      "should_run": true,
+      "style": "full_decompose",
+      "target_ms": 550,
+      "max_response_tokens": 180,
+      "weight": 0.62,
+      "reason": "cold-start or low front-back agreement"
+    },
+    "posthoc_reflection_prompt": "Decompose the latest user message into latent affect and stance cues for long-term calibration.\nExtract the exact wording, hedge, correction, punctuation, tempo clue, or stance marker that carries emotion.\nFocus on weak shifts such as hedging, correction, doubt, evidence-seeking, scope protection, frustration, urgency, satisfaction, and openness.\nReturn JSON only: {\"emotion_vector\":{\"urgency\":0.0,\"frustration\":0.0,\"confusion\":0.0,\"skepticism\":0.0,\"satisfaction\":0.0,\"cautiousness\":0.0,\"openness\":0.0},\"labels\":[\"skeptical\"],\"confidence\":0.0,\"cue_spans\":[{\"text\":\"不一定\",\"signal\":\"skepticism\",\"kind\":\"hedge\",\"strength\":0.4}],\"notes\":[\"light hedge\"]}\nstage=bootstrap\nfront_weight=0.18\nposthoc_weight=0.62\nfront_consistency=0.0\nlatest=I sign in, get redirected back, and nothing changes.\nhist=[]\nusr={\"tz\":\"\",\"h\":null,\"work\":null,\"delay\":35.0,\"polite\":0.2,\"terse\":0.35,\"prior\":{\"urgency\":0.132,\"frustration\":0.1,\"confusion\":0.04,\"skepticism\":0.159,\"satisfaction\":0.12,\"cautiousness\":0.134,\"openness\":0.18},\"persona\":{\"patience\":0.5,\"skepticism\":0.35,\"caution\":0.35,\"openness\":0.5,\"assertiveness\":0.4}}\nscreen_labels=[\"neutral\"]\nposthoc_style=full_decompose"
+  },
+  {
+    "id": "vsc238105_02",
+    "source_url": "https://github.com/microsoft/vscode/issues/238105",
+    "message": "The prompt keeps asking me to sign in again. I am stuck in a loop.",
+    "expected_labels": [
+      "urgent",
+      "frustrated"
+    ],
+    "front_labels": [
+      "neutral"
+    ],
+    "front_emotion_vector": {
+      "urgency": 0.0782,
+      "frustration": 0.1417,
+      "confusion": 0.337,
+      "skepticism": 0.0417,
+      "satisfaction": 0.0203,
+      "cautiousness": 0.0284,
+      "openness": 0.0342
+    },
+    "weight_schedule": {
+      "stage": "bootstrap",
+      "maturity": 0.0,
+      "observed_turns": 0,
+      "posthoc_samples": 0,
+      "consistency_samples": 0,
+      "stable_prediction_hits": 0,
+      "prediction_agreement": 0.0,
+      "consistency_rate": 0.0,
+      "agreement_confidence": 0.0,
+      "effective_consistency": 0.0,
+      "consistency_shift": -0.08,
+      "screen_weight": 0.18,
+      "screen_semantic_weight": 0.12,
+      "prior_weight": 0.08,
+      "posthoc_weight": 0.62,
+      "carryover_weight": 0.12,
+      "front_trust": 0.225,
+      "posthoc_trust": 0.775
+    },
+    "posthoc_plan": {
+      "should_run": true,
+      "style": "full_decompose",
+      "target_ms": 550,
+      "max_response_tokens": 180,
+      "weight": 0.62,
+      "reason": "cold-start or low front-back agreement"
+    },
+    "posthoc_reflection_prompt": "Decompose the latest user message into latent affect and stance cues for long-term calibration.\nExtract the exact wording, hedge, correction, punctuation, tempo clue, or stance marker that carries emotion.\nFocus on weak shifts such as hedging, correction, doubt, evidence-seeking, scope protection, frustration, urgency, satisfaction, and openness.\nReturn JSON only: {\"emotion_vector\":{\"urgency\":0.0,\"frustration\":0.0,\"confusion\":0.0,\"skepticism\":0.0,\"satisfaction\":0.0,\"cautiousness\":0.0,\"openness\":0.0},\"labels\":[\"skeptical\"],\"confidence\":0.0,\"cue_spans\":[{\"text\":\"不一定\",\"signal\":\"skepticism\",\"kind\":\"hedge\",\"strength\":0.4}],\"notes\":[\"light hedge\"]}\nstage=bootstrap\nfront_weight=0.18\nposthoc_weight=0.62\nfront_consistency=0.0\nlatest=The prompt keeps asking me to sign in again. I am stuck in a loop.\nhist=[]\nusr={\"tz\":\"\",\"h\":null,\"work\":null,\"delay\":35.0,\"polite\":0.2,\"terse\":0.35,\"prior\":{\"urgency\":0.132,\"frustration\":0.1,\"confusion\":0.04,\"skepticism\":0.159,\"satisfaction\":0.12,\"cautiousness\":0.134,\"openness\":0.18},\"persona\":{\"patience\":0.5,\"skepticism\":0.35,\"caution\":0.35,\"openness\":0.5,\"assertiveness\":0.4}}\nscreen_labels=[\"neutral\"]\nposthoc_style=full_decompose"
+  },
+  {
+    "id": "vsc238105_03",
+    "source_url": "https://github.com/microsoft/vscode/issues/238105",
+    "message": "This only happens over Remote SSH. Check that path before giving generic auth advice.",
+    "expected_labels": [
+      "skeptical",
+      "cautious"
+    ],
+    "front_labels": [
+      "neutral"
+    ],
+    "front_emotion_vector": {
+      "urgency": 0.0328,
+      "frustration": 0.0,
+      "confusion": 0.3718,
+      "skepticism": 0.0356,
+      "satisfaction": 0.06,
+      "cautiousness": 0.0325,
+      "openness": 0.0465
+    },
+    "weight_schedule": {
+      "stage": "bootstrap",
+      "maturity": 0.0,
+      "observed_turns": 0,
+      "posthoc_samples": 0,
+      "consistency_samples": 0,
+      "stable_prediction_hits": 0,
+      "prediction_agreement": 0.0,
+      "consistency_rate": 0.0,
+      "agreement_confidence": 0.0,
+      "effective_consistency": 0.0,
+      "consistency_shift": -0.08,
+      "screen_weight": 0.18,
+      "screen_semantic_weight": 0.12,
+      "prior_weight": 0.08,
+      "posthoc_weight": 0.62,
+      "carryover_weight": 0.12,
+      "front_trust": 0.225,
+      "posthoc_trust": 0.775
+    },
+    "posthoc_plan": {
+      "should_run": true,
+      "style": "full_decompose",
+      "target_ms": 550,
+      "max_response_tokens": 180,
+      "weight": 0.62,
+      "reason": "cold-start or low front-back agreement"
+    },
+    "posthoc_reflection_prompt": "Decompose the latest user message into latent affect and stance cues for long-term calibration.\nExtract the exact wording, hedge, correction, punctuation, tempo clue, or stance marker that carries emotion.\nFocus on weak shifts such as hedging, correction, doubt, evidence-seeking, scope protection, frustration, urgency, satisfaction, and openness.\nReturn JSON only: {\"emotion_vector\":{\"urgency\":0.0,\"frustration\":0.0,\"confusion\":0.0,\"skepticism\":0.0,\"satisfaction\":0.0,\"cautiousness\":0.0,\"openness\":0.0},\"labels\":[\"skeptical\"],\"confidence\":0.0,\"cue_spans\":[{\"text\":\"不一定\",\"signal\":\"skepticism\",\"kind\":\"hedge\",\"strength\":0.4}],\"notes\":[\"light hedge\"]}\nstage=bootstrap\nfront_weight=0.18\nposthoc_weight=0.62\nfront_consistency=0.0\nlatest=This only happens over Remote SSH. Check that path before giving generic auth advice.\nhist=[]\nusr={\"tz\":\"\",\"h\":null,\"work\":null,\"delay\":35.0,\"polite\":0.2,\"terse\":0.35,\"prior\":{\"urgency\":0.132,\"frustration\":0.1,\"confusion\":0.04,\"skepticism\":0.159,\"satisfaction\":0.12,\"cautiousness\":0.134,\"openness\":0.18},\"persona\":{\"patience\":0.5,\"skepticism\":0.35,\"caution\":0.35,\"openness\":0.5,\"assertiveness\":0.4}}\nscreen_labels=[\"neutral\"]\nposthoc_style=full_decompose"
+  },
+  {
+    "id": "vsc238105_04",
+    "source_url": "https://github.com/microsoft/vscode/issues/238105",
+    "message": "The token fetch fails after login. Give me the exact failing step.",
+    "expected_labels": [
+      "skeptical",
+      "confused"
+    ],
+    "front_labels": [
+      "neutral"
+    ],
+    "front_emotion_vector": {
+      "urgency": 0.0374,
+      "frustration": 0.0,
+      "confusion": 0.3488,
+      "skepticism": 0.0387,
+      "satisfaction": 0.06,
+      "cautiousness": 0.0325,
+      "openness": 0.0487
+    },
+    "weight_schedule": {
+      "stage": "bootstrap",
+      "maturity": 0.0,
+      "observed_turns": 0,
+      "posthoc_samples": 0,
+      "consistency_samples": 0,
+      "stable_prediction_hits": 0,
+      "prediction_agreement": 0.0,
+      "consistency_rate": 0.0,
+      "agreement_confidence": 0.0,
+      "effective_consistency": 0.0,
+      "consistency_shift": -0.08,
+      "screen_weight": 0.18,
+      "screen_semantic_weight": 0.12,
+      "prior_weight": 0.08,
+      "posthoc_weight": 0.62,
+      "carryover_weight": 0.12,
+      "front_trust": 0.225,
+      "posthoc_trust": 0.775
+    },
+    "posthoc_plan": {
+      "should_run": true,
+      "style": "full_decompose",
+      "target_ms": 550,
+      "max_response_tokens": 180,
+      "weight": 0.62,
+      "reason": "cold-start or low front-back agreement"
+    },
+    "posthoc_reflection_prompt": "Decompose the latest user message into latent affect and stance cues for long-term calibration.\nExtract the exact wording, hedge, correction, punctuation, tempo clue, or stance marker that carries emotion.\nFocus on weak shifts such as hedging, correction, doubt, evidence-seeking, scope protection, frustration, urgency, satisfaction, and openness.\nReturn JSON only: {\"emotion_vector\":{\"urgency\":0.0,\"frustration\":0.0,\"confusion\":0.0,\"skepticism\":0.0,\"satisfaction\":0.0,\"cautiousness\":0.0,\"openness\":0.0},\"labels\":[\"skeptical\"],\"confidence\":0.0,\"cue_spans\":[{\"text\":\"不一定\",\"signal\":\"skepticism\",\"kind\":\"hedge\",\"strength\":0.4}],\"notes\":[\"light hedge\"]}\nstage=bootstrap\nfront_weight=0.18\nposthoc_weight=0.62\nfront_consistency=0.0\nlatest=The token fetch fails after login. Give me the exact failing step.\nhist=[]\nusr={\"tz\":\"\",\"h\":null,\"work\":null,\"delay\":35.0,\"polite\":0.2,\"terse\":0.35,\"prior\":{\"urgency\":0.132,\"frustration\":0.1,\"confusion\":0.04,\"skepticism\":0.159,\"satisfaction\":0.12,\"cautiousness\":0.134,\"openness\":0.18},\"persona\":{\"patience\":0.5,\"skepticism\":0.35,\"caution\":0.35,\"openness\":0.5,\"assertiveness\":0.4}}\nscreen_labels=[\"neutral\"]\nposthoc_style=full_decompose"
+  },
+  {
+    "id": "gh154128_01",
+    "source_url": "https://github.com/orgs/community/discussions/154128",
+    "message": "I am still stuck in the sign-in loop and I am close to giving up.",
+    "expected_labels": [
+      "frustrated",
+      "urgent"
+    ],
+    "front_labels": [
+      "neutral"
+    ],
+    "front_emotion_vector": {
+      "urgency": 0.0736,
+      "frustration": 0.0551,
+      "confusion": 0.3652,
+      "skepticism": 0.0357,
+      "satisfaction": 0.0446,
+      "cautiousness": 0.0324,
+      "openness": 0.0377
+    },
+    "weight_schedule": {
+      "stage": "bootstrap",
+      "maturity": 0.0,
+      "observed_turns": 0,
+      "posthoc_samples": 0,
+      "consistency_samples": 0,
+      "stable_prediction_hits": 0,
+      "prediction_agreement": 0.0,
+      "consistency_rate": 0.0,
+      "agreement_confidence": 0.0,
+      "effective_consistency": 0.0,
+      "consistency_shift": -0.08,
+      "screen_weight": 0.18,
+      "screen_semantic_weight": 0.12,
+      "prior_weight": 0.08,
+      "posthoc_weight": 0.62,
+      "carryover_weight": 0.12,
+      "front_trust": 0.225,
+      "posthoc_trust": 0.775
+    },
+    "posthoc_plan": {
+      "should_run": true,
+      "style": "full_decompose",
+      "target_ms": 550,
+      "max_response_tokens": 180,
+      "weight": 0.62,
+      "reason": "cold-start or low front-back agreement"
+    },
+    "posthoc_reflection_prompt": "Decompose the latest user message into latent affect and stance cues for long-term calibration.\nExtract the exact wording, hedge, correction, punctuation, tempo clue, or stance marker that carries emotion.\nFocus on weak shifts such as hedging, correction, doubt, evidence-seeking, scope protection, frustration, urgency, satisfaction, and openness.\nReturn JSON only: {\"emotion_vector\":{\"urgency\":0.0,\"frustration\":0.0,\"confusion\":0.0,\"skepticism\":0.0,\"satisfaction\":0.0,\"cautiousness\":0.0,\"openness\":0.0},\"labels\":[\"skeptical\"],\"confidence\":0.0,\"cue_spans\":[{\"text\":\"不一定\",\"signal\":\"skepticism\",\"kind\":\"hedge\",\"strength\":0.4}],\"notes\":[\"light hedge\"]}\nstage=bootstrap\nfront_weight=0.18\nposthoc_weight=0.62\nfront_consistency=0.0\nlatest=I am still stuck in the sign-in loop and I am close to giving up.\nhist=[]\nusr={\"tz\":\"\",\"h\":null,\"work\":null,\"delay\":35.0,\"polite\":0.2,\"terse\":0.35,\"prior\":{\"urgency\":0.132,\"frustration\":0.1,\"confusion\":0.04,\"skepticism\":0.159,\"satisfaction\":0.12,\"cautiousness\":0.134,\"openness\":0.18},\"persona\":{\"patience\":0.5,\"skepticism\":0.35,\"caution\":0.35,\"openness\":0.5,\"assertiveness\":0.4}}\nscreen_labels=[\"neutral\"]\nposthoc_style=full_decompose"
+  },
+  {
+    "id": "gh154128_02",
+    "source_url": "https://github.com/orgs/community/discussions/154128",
+    "message": "The extension says I am logged in but the config page resets itself.",
+    "expected_labels": [
+      "confused",
+      "frustrated"
+    ],
+    "front_labels": [
+      "neutral"
+    ],
+    "front_emotion_vector": {
+      "urgency": 0.0328,
+      "frustration": 0.0,
+      "confusion": 0.3718,
+      "skepticism": 0.0356,
+      "satisfaction": 0.06,
+      "cautiousness": 0.0325,
+      "openness": 0.0455
+    },
+    "weight_schedule": {
+      "stage": "bootstrap",
+      "maturity": 0.0,
+      "observed_turns": 0,
+      "posthoc_samples": 0,
+      "consistency_samples": 0,
+      "stable_prediction_hits": 0,
+      "prediction_agreement": 0.0,
+      "consistency_rate": 0.0,
+      "agreement_confidence": 0.0,
+      "effective_consistency": 0.0,
+      "consistency_shift": -0.08,
+      "screen_weight": 0.18,
+      "screen_semantic_weight": 0.12,
+      "prior_weight": 0.08,
+      "posthoc_weight": 0.62,
+      "carryover_weight": 0.12,
+      "front_trust": 0.225,
+      "posthoc_trust": 0.775
+    },
+    "posthoc_plan": {
+      "should_run": true,
+      "style": "full_decompose",
+      "target_ms": 550,
+      "max_response_tokens": 180,
+      "weight": 0.62,
+      "reason": "cold-start or low front-back agreement"
+    },
+    "posthoc_reflection_prompt": "Decompose the latest user message into latent affect and stance cues for long-term calibration.\nExtract the exact wording, hedge, correction, punctuation, tempo clue, or stance marker that carries emotion.\nFocus on weak shifts such as hedging, correction, doubt, evidence-seeking, scope protection, frustration, urgency, satisfaction, and openness.\nReturn JSON only: {\"emotion_vector\":{\"urgency\":0.0,\"frustration\":0.0,\"confusion\":0.0,\"skepticism\":0.0,\"satisfaction\":0.0,\"cautiousness\":0.0,\"openness\":0.0},\"labels\":[\"skeptical\"],\"confidence\":0.0,\"cue_spans\":[{\"text\":\"不一定\",\"signal\":\"skepticism\",\"kind\":\"hedge\",\"strength\":0.4}],\"notes\":[\"light hedge\"]}\nstage=bootstrap\nfront_weight=0.18\nposthoc_weight=0.62\nfront_consistency=0.0\nlatest=The extension says I am logged in but the config page resets itself.\nhist=[]\nusr={\"tz\":\"\",\"h\":null,\"work\":null,\"delay\":35.0,\"polite\":0.2,\"terse\":0.35,\"prior\":{\"urgency\":0.132,\"frustration\":0.1,\"confusion\":0.04,\"skepticism\":0.159,\"satisfaction\":0.12,\"cautiousness\":0.134,\"openness\":0.18},\"persona\":{\"patience\":0.5,\"skepticism\":0.35,\"caution\":0.35,\"openness\":0.5,\"assertiveness\":0.4}}\nscreen_labels=[\"neutral\"]\nposthoc_style=full_decompose"
+  },
+  {
+    "id": "gh154128_03",
+    "source_url": "https://github.com/orgs/community/discussions/154128",
+    "message": "Before I wipe my setup, tell me which setting actually causes this.",
+    "expected_labels": [
+      "skeptical",
+      "cautious"
+    ],
+    "front_labels": [
+      "neutral"
+    ],
+    "front_emotion_vector": {
+      "urgency": 0.0328,
+      "frustration": 0.0,
+      "confusion": 0.3718,
+      "skepticism": 0.0356,
+      "satisfaction": 0.06,
+      "cautiousness": 0.0325,
+      "openness": 0.0454
+    },
+    "weight_schedule": {
+      "stage": "bootstrap",
+      "maturity": 0.0,
+      "observed_turns": 0,
+      "posthoc_samples": 0,
+      "consistency_samples": 0,
+      "stable_prediction_hits": 0,
+      "prediction_agreement": 0.0,
+      "consistency_rate": 0.0,
+      "agreement_confidence": 0.0,
+      "effective_consistency": 0.0,
+      "consistency_shift": -0.08,
+      "screen_weight": 0.18,
+      "screen_semantic_weight": 0.12,
+      "prior_weight": 0.08,
+      "posthoc_weight": 0.62,
+      "carryover_weight": 0.12,
+      "front_trust": 0.225,
+      "posthoc_trust": 0.775
+    },
+    "posthoc_plan": {
+      "should_run": true,
+      "style": "full_decompose",
+      "target_ms": 550,
+      "max_response_tokens": 180,
+      "weight": 0.62,
+      "reason": "cold-start or low front-back agreement"
+    },
+    "posthoc_reflection_prompt": "Decompose the latest user message into latent affect and stance cues for long-term calibration.\nExtract the exact wording, hedge, correction, punctuation, tempo clue, or stance marker that carries emotion.\nFocus on weak shifts such as hedging, correction, doubt, evidence-seeking, scope protection, frustration, urgency, satisfaction, and openness.\nReturn JSON only: {\"emotion_vector\":{\"urgency\":0.0,\"frustration\":0.0,\"confusion\":0.0,\"skepticism\":0.0,\"satisfaction\":0.0,\"cautiousness\":0.0,\"openness\":0.0},\"labels\":[\"skeptical\"],\"confidence\":0.0,\"cue_spans\":[{\"text\":\"不一定\",\"signal\":\"skepticism\",\"kind\":\"hedge\",\"strength\":0.4}],\"notes\":[\"light hedge\"]}\nstage=bootstrap\nfront_weight=0.18\nposthoc_weight=0.62\nfront_consistency=0.0\nlatest=Before I wipe my setup, tell me which setting actually causes this.\nhist=[]\nusr={\"tz\":\"\",\"h\":null,\"work\":null,\"delay\":35.0,\"polite\":0.2,\"terse\":0.35,\"prior\":{\"urgency\":0.132,\"frustration\":0.1,\"confusion\":0.04,\"skepticism\":0.159,\"satisfaction\":0.12,\"cautiousness\":0.134,\"openness\":0.18},\"persona\":{\"patience\":0.5,\"skepticism\":0.35,\"caution\":0.35,\"openness\":0.5,\"assertiveness\":0.4}}\nscreen_labels=[\"neutral\"]\nposthoc_style=full_decompose"
+  },
+  {
+    "id": "gh154128_04",
+    "source_url": "https://github.com/orgs/community/discussions/154128",
+    "message": "A clean profile fixed it for some people. Compare that path with my current settings.",
+    "expected_labels": [
+      "exploratory",
+      "skeptical"
+    ],
+    "front_labels": [
+      "neutral"
+    ],
+    "front_emotion_vector": {
+      "urgency": 0.0872,
+      "frustration": 0.0,
+      "confusion": 0.3518,
+      "skepticism": 0.0395,
+      "satisfaction": 0.1333,
+      "cautiousness": 0.0331,
+      "openness": 0.2677
+    },
+    "weight_schedule": {
+      "stage": "bootstrap",
+      "maturity": 0.0,
+      "observed_turns": 0,
+      "posthoc_samples": 0,
+      "consistency_samples": 0,
+      "stable_prediction_hits": 0,
+      "prediction_agreement": 0.0,
+      "consistency_rate": 0.0,
+      "agreement_confidence": 0.0,
+      "effective_consistency": 0.0,
+      "consistency_shift": -0.08,
+      "screen_weight": 0.18,
+      "screen_semantic_weight": 0.12,
+      "prior_weight": 0.08,
+      "posthoc_weight": 0.62,
+      "carryover_weight": 0.12,
+      "front_trust": 0.225,
+      "posthoc_trust": 0.775
+    },
+    "posthoc_plan": {
+      "should_run": true,
+      "style": "full_decompose",
+      "target_ms": 550,
+      "max_response_tokens": 180,
+      "weight": 0.62,
+      "reason": "cold-start or low front-back agreement"
+    },
+    "posthoc_reflection_prompt": "Decompose the latest user message into latent affect and stance cues for long-term calibration.\nExtract the exact wording, hedge, correction, punctuation, tempo clue, or stance marker that carries emotion.\nFocus on weak shifts such as hedging, correction, doubt, evidence-seeking, scope protection, frustration, urgency, satisfaction, and openness.\nReturn JSON only: {\"emotion_vector\":{\"urgency\":0.0,\"frustration\":0.0,\"confusion\":0.0,\"skepticism\":0.0,\"satisfaction\":0.0,\"cautiousness\":0.0,\"openness\":0.0},\"labels\":[\"skeptical\"],\"confidence\":0.0,\"cue_spans\":[{\"text\":\"不一定\",\"signal\":\"skepticism\",\"kind\":\"hedge\",\"strength\":0.4}],\"notes\":[\"light hedge\"]}\nstage=bootstrap\nfront_weight=0.18\nposthoc_weight=0.62\nfront_consistency=0.0\nlatest=A clean profile fixed it for some people. Compare that path with my current settings.\nhist=[]\nusr={\"tz\":\"\",\"h\":null,\"work\":null,\"delay\":35.0,\"polite\":0.2,\"terse\":0.35,\"prior\":{\"urgency\":0.132,\"frustration\":0.1,\"confusion\":0.04,\"skepticism\":0.159,\"satisfaction\":0.12,\"cautiousness\":0.134,\"openness\":0.18},\"persona\":{\"patience\":0.5,\"skepticism\":0.35,\"caution\":0.35,\"openness\":0.5,\"assertiveness\":0.4}}\nscreen_labels=[\"neutral\"]\nposthoc_style=full_decompose"
+  },
+  {
+    "id": "gh75346_01",
+    "source_url": "https://github.com/orgs/community/discussions/75346",
+    "message": "The extension has been activating for hours and I cannot use it at all.",
+    "expected_labels": [
+      "urgent",
+      "frustrated"
+    ],
+    "front_labels": [
+      "neutral"
+    ],
+    "front_emotion_vector": {
+      "urgency": 0.0328,
+      "frustration": 0.0,
+      "confusion": 0.3718,
+      "skepticism": 0.0356,
+      "satisfaction": 0.06,
+      "cautiousness": 0.0325,
+      "openness": 0.0456
+    },
+    "weight_schedule": {
+      "stage": "bootstrap",
+      "maturity": 0.0,
+      "observed_turns": 0,
+      "posthoc_samples": 0,
+      "consistency_samples": 0,
+      "stable_prediction_hits": 0,
+      "prediction_agreement": 0.0,
+      "consistency_rate": 0.0,
+      "agreement_confidence": 0.0,
+      "effective_consistency": 0.0,
+      "consistency_shift": -0.08,
+      "screen_weight": 0.18,
+      "screen_semantic_weight": 0.12,
+      "prior_weight": 0.08,
+      "posthoc_weight": 0.62,
+      "carryover_weight": 0.12,
+      "front_trust": 0.225,
+      "posthoc_trust": 0.775
+    },
+    "posthoc_plan": {
+      "should_run": true,
+      "style": "full_decompose",
+      "target_ms": 550,
+      "max_response_tokens": 180,
+      "weight": 0.62,
+      "reason": "cold-start or low front-back agreement"
+    },
+    "posthoc_reflection_prompt": "Decompose the latest user message into latent affect and stance cues for long-term calibration.\nExtract the exact wording, hedge, correction, punctuation, tempo clue, or stance marker that carries emotion.\nFocus on weak shifts such as hedging, correction, doubt, evidence-seeking, scope protection, frustration, urgency, satisfaction, and openness.\nReturn JSON only: {\"emotion_vector\":{\"urgency\":0.0,\"frustration\":0.0,\"confusion\":0.0,\"skepticism\":0.0,\"satisfaction\":0.0,\"cautiousness\":0.0,\"openness\":0.0},\"labels\":[\"skeptical\"],\"confidence\":0.0,\"cue_spans\":[{\"text\":\"不一定\",\"signal\":\"skepticism\",\"kind\":\"hedge\",\"strength\":0.4}],\"notes\":[\"light hedge\"]}\nstage=bootstrap\nfront_weight=0.18\nposthoc_weight=0.62\nfront_consistency=0.0\nlatest=The extension has been activating for hours and I cannot use it at all.\nhist=[]\nusr={\"tz\":\"\",\"h\":null,\"work\":null,\"delay\":35.0,\"polite\":0.2,\"terse\":0.35,\"prior\":{\"urgency\":0.132,\"frustration\":0.1,\"confusion\":0.04,\"skepticism\":0.159,\"satisfaction\":0.12,\"cautiousness\":0.134,\"openness\":0.18},\"persona\":{\"patience\":0.5,\"skepticism\":0.35,\"caution\":0.35,\"openness\":0.5,\"assertiveness\":0.4}}\nscreen_labels=[\"neutral\"]\nposthoc_style=full_decompose"
+  },
+  {
+    "id": "gh75346_02",
+    "source_url": "https://github.com/orgs/community/discussions/75346",
+    "message": "I already paid for this and it still will not activate.",
+    "expected_labels": [
+      "frustrated"
+    ],
+    "front_labels": [
+      "neutral"
+    ],
+    "front_emotion_vector": {
+      "urgency": 0.0328,
+      "frustration": 0.0,
+      "confusion": 0.3718,
+      "skepticism": 0.0356,
+      "satisfaction": 0.06,
+      "cautiousness": 0.0325,
+      "openness": 0.0447
+    },
+    "weight_schedule": {
+      "stage": "bootstrap",
+      "maturity": 0.0,
+      "observed_turns": 0,
+      "posthoc_samples": 0,
+      "consistency_samples": 0,
+      "stable_prediction_hits": 0,
+      "prediction_agreement": 0.0,
+      "consistency_rate": 0.0,
+      "agreement_confidence": 0.0,
+      "effective_consistency": 0.0,
+      "consistency_shift": -0.08,
+      "screen_weight": 0.18,
+      "screen_semantic_weight": 0.12,
+      "prior_weight": 0.08,
+      "posthoc_weight": 0.62,
+      "carryover_weight": 0.12,
+      "front_trust": 0.225,
+      "posthoc_trust": 0.775
+    },
+    "posthoc_plan": {
+      "should_run": true,
+      "style": "full_decompose",
+      "target_ms": 550,
+      "max_response_tokens": 180,
+      "weight": 0.62,
+      "reason": "cold-start or low front-back agreement"
+    },
+    "posthoc_reflection_prompt": "Decompose the latest user message into latent affect and stance cues for long-term calibration.\nExtract the exact wording, hedge, correction, punctuation, tempo clue, or stance marker that carries emotion.\nFocus on weak shifts such as hedging, correction, doubt, evidence-seeking, scope protection, frustration, urgency, satisfaction, and openness.\nReturn JSON only: {\"emotion_vector\":{\"urgency\":0.0,\"frustration\":0.0,\"confusion\":0.0,\"skepticism\":0.0,\"satisfaction\":0.0,\"cautiousness\":0.0,\"openness\":0.0},\"labels\":[\"skeptical\"],\"confidence\":0.0,\"cue_spans\":[{\"text\":\"不一定\",\"signal\":\"skepticism\",\"kind\":\"hedge\",\"strength\":0.4}],\"notes\":[\"light hedge\"]}\nstage=bootstrap\nfront_weight=0.18\nposthoc_weight=0.62\nfront_consistency=0.0\nlatest=I already paid for this and it still will not activate.\nhist=[]\nusr={\"tz\":\"\",\"h\":null,\"work\":null,\"delay\":35.0,\"polite\":0.2,\"terse\":0.35,\"prior\":{\"urgency\":0.132,\"frustration\":0.1,\"confusion\":0.04,\"skepticism\":0.159,\"satisfaction\":0.12,\"cautiousness\":0.134,\"openness\":0.18},\"persona\":{\"patience\":0.5,\"skepticism\":0.35,\"caution\":0.35,\"openness\":0.5,\"assertiveness\":0.4}}\nscreen_labels=[\"neutral\"]\nposthoc_style=full_decompose"
+  },
+  {
+    "id": "gh75346_03",
+    "source_url": "https://github.com/orgs/community/discussions/75346",
+    "message": "I need a concrete root cause, not another generic reinstall suggestion.",
+    "expected_labels": [
+      "skeptical",
+      "frustrated"
+    ],
+    "front_labels": [
+      "neutral"
+    ],
+    "front_emotion_vector": {
+      "urgency": 0.0736,
+      "frustration": 0.0551,
+      "confusion": 0.3652,
+      "skepticism": 0.0357,
+      "satisfaction": 0.0446,
+      "cautiousness": 0.0324,
+      "openness": 0.2647
+    },
+    "weight_schedule": {
+      "stage": "bootstrap",
+      "maturity": 0.0,
+      "observed_turns": 0,
+      "posthoc_samples": 0,
+      "consistency_samples": 0,
+      "stable_prediction_hits": 0,
+      "prediction_agreement": 0.0,
+      "consistency_rate": 0.0,
+      "agreement_confidence": 0.0,
+      "effective_consistency": 0.0,
+      "consistency_shift": -0.08,
+      "screen_weight": 0.18,
+      "screen_semantic_weight": 0.12,
+      "prior_weight": 0.08,
+      "posthoc_weight": 0.62,
+      "carryover_weight": 0.12,
+      "front_trust": 0.225,
+      "posthoc_trust": 0.775
+    },
+    "posthoc_plan": {
+      "should_run": true,
+      "style": "full_decompose",
+      "target_ms": 550,
+      "max_response_tokens": 180,
+      "weight": 0.62,
+      "reason": "cold-start or low front-back agreement"
+    },
+    "posthoc_reflection_prompt": "Decompose the latest user message into latent affect and stance cues for long-term calibration.\nExtract the exact wording, hedge, correction, punctuation, tempo clue, or stance marker that carries emotion.\nFocus on weak shifts such as hedging, correction, doubt, evidence-seeking, scope protection, frustration, urgency, satisfaction, and openness.\nReturn JSON only: {\"emotion_vector\":{\"urgency\":0.0,\"frustration\":0.0,\"confusion\":0.0,\"skepticism\":0.0,\"satisfaction\":0.0,\"cautiousness\":0.0,\"openness\":0.0},\"labels\":[\"skeptical\"],\"confidence\":0.0,\"cue_spans\":[{\"text\":\"不一定\",\"signal\":\"skepticism\",\"kind\":\"hedge\",\"strength\":0.4}],\"notes\":[\"light hedge\"]}\nstage=bootstrap\nfront_weight=0.18\nposthoc_weight=0.62\nfront_consistency=0.0\nlatest=I need a concrete root cause, not another generic reinstall suggestion.\nhist=[]\nusr={\"tz\":\"\",\"h\":null,\"work\":null,\"delay\":35.0,\"polite\":0.2,\"terse\":0.35,\"prior\":{\"urgency\":0.132,\"frustration\":0.1,\"confusion\":0.04,\"skepticism\":0.159,\"satisfaction\":0.12,\"cautiousness\":0.134,\"openness\":0.18},\"persona\":{\"patience\":0.5,\"skepticism\":0.35,\"caution\":0.35,\"openness\":0.5,\"assertiveness\":0.4}}\nscreen_labels=[\"neutral\"]\nposthoc_style=full_decompose"
+  },
+  {
+    "id": "gh75346_04",
+    "source_url": "https://github.com/orgs/community/discussions/75346",
+    "message": "Check extension conflicts and cache order, then tell me the shortest fix path.",
+    "expected_labels": [
+      "cautious",
+      "exploratory"
+    ],
+    "front_labels": [
+      "neutral"
+    ],
+    "front_emotion_vector": {
+      "urgency": 0.0902,
+      "frustration": 0.0,
+      "confusion": 0.3328,
+      "skepticism": 0.0419,
+      "satisfaction": 0.06,
+      "cautiousness": 0.0325,
+      "openness": 0.0442
+    },
+    "weight_schedule": {
+      "stage": "bootstrap",
+      "maturity": 0.0,
+      "observed_turns": 0,
+      "posthoc_samples": 0,
+      "consistency_samples": 0,
+      "stable_prediction_hits": 0,
+      "prediction_agreement": 0.0,
+      "consistency_rate": 0.0,
+      "agreement_confidence": 0.0,
+      "effective_consistency": 0.0,
+      "consistency_shift": -0.08,
+      "screen_weight": 0.18,
+      "screen_semantic_weight": 0.12,
+      "prior_weight": 0.08,
+      "posthoc_weight": 0.62,
+      "carryover_weight": 0.12,
+      "front_trust": 0.225,
+      "posthoc_trust": 0.775
+    },
+    "posthoc_plan": {
+      "should_run": true,
+      "style": "full_decompose",
+      "target_ms": 550,
+      "max_response_tokens": 180,
+      "weight": 0.62,
+      "reason": "cold-start or low front-back agreement"
+    },
+    "posthoc_reflection_prompt": "Decompose the latest user message into latent affect and stance cues for long-term calibration.\nExtract the exact wording, hedge, correction, punctuation, tempo clue, or stance marker that carries emotion.\nFocus on weak shifts such as hedging, correction, doubt, evidence-seeking, scope protection, frustration, urgency, satisfaction, and openness.\nReturn JSON only: {\"emotion_vector\":{\"urgency\":0.0,\"frustration\":0.0,\"confusion\":0.0,\"skepticism\":0.0,\"satisfaction\":0.0,\"cautiousness\":0.0,\"openness\":0.0},\"labels\":[\"skeptical\"],\"confidence\":0.0,\"cue_spans\":[{\"text\":\"不一定\",\"signal\":\"skepticism\",\"kind\":\"hedge\",\"strength\":0.4}],\"notes\":[\"light hedge\"]}\nstage=bootstrap\nfront_weight=0.18\nposthoc_weight=0.62\nfront_consistency=0.0\nlatest=Check extension conflicts and cache order, then tell me the shortest fix path.\nhist=[]\nusr={\"tz\":\"\",\"h\":null,\"work\":null,\"delay\":35.0,\"polite\":0.2,\"terse\":0.35,\"prior\":{\"urgency\":0.132,\"frustration\":0.1,\"confusion\":0.04,\"skepticism\":0.159,\"satisfaction\":0.12,\"cautiousness\":0.134,\"openness\":0.18},\"persona\":{\"patience\":0.5,\"skepticism\":0.35,\"caution\":0.35,\"openness\":0.5,\"assertiveness\":0.4}}\nscreen_labels=[\"neutral\"]\nposthoc_style=full_decompose"
+  },
+  {
+    "id": "cc3426_01",
+    "source_url": "https://github.com/anthropics/claude-code/issues/3426",
+    "message": "MCP tools work locally but the AI session cannot see them. This blocks my workflow.",
+    "expected_labels": [
+      "urgent",
+      "frustrated"
+    ],
+    "front_labels": [
+      "neutral"
+    ],
+    "front_emotion_vector": {
+      "urgency": 0.0465,
+      "frustration": 0.0,
+      "confusion": 0.3027,
+      "skepticism": 0.0448,
+      "satisfaction": 0.06,
+      "cautiousness": 0.0325,
+      "openness": 0.0565
+    },
+    "weight_schedule": {
+      "stage": "bootstrap",
+      "maturity": 0.0,
+      "observed_turns": 0,
+      "posthoc_samples": 0,
+      "consistency_samples": 0,
+      "stable_prediction_hits": 0,
+      "prediction_agreement": 0.0,
+      "consistency_rate": 0.0,
+      "agreement_confidence": 0.0,
+      "effective_consistency": 0.0,
+      "consistency_shift": -0.08,
+      "screen_weight": 0.18,
+      "screen_semantic_weight": 0.12,
+      "prior_weight": 0.08,
+      "posthoc_weight": 0.62,
+      "carryover_weight": 0.12,
+      "front_trust": 0.225,
+      "posthoc_trust": 0.775
+    },
+    "posthoc_plan": {
+      "should_run": true,
+      "style": "full_decompose",
+      "target_ms": 550,
+      "max_response_tokens": 180,
+      "weight": 0.62,
+      "reason": "cold-start or low front-back agreement"
+    },
+    "posthoc_reflection_prompt": "Decompose the latest user message into latent affect and stance cues for long-term calibration.\nExtract the exact wording, hedge, correction, punctuation, tempo clue, or stance marker that carries emotion.\nFocus on weak shifts such as hedging, correction, doubt, evidence-seeking, scope protection, frustration, urgency, satisfaction, and openness.\nReturn JSON only: {\"emotion_vector\":{\"urgency\":0.0,\"frustration\":0.0,\"confusion\":0.0,\"skepticism\":0.0,\"satisfaction\":0.0,\"cautiousness\":0.0,\"openness\":0.0},\"labels\":[\"skeptical\"],\"confidence\":0.0,\"cue_spans\":[{\"text\":\"不一定\",\"signal\":\"skepticism\",\"kind\":\"hedge\",\"strength\":0.4}],\"notes\":[\"light hedge\"]}\nstage=bootstrap\nfront_weight=0.18\nposthoc_weight=0.62\nfront_consistency=0.0\nlatest=MCP tools work locally but the AI session cannot see them. This blocks my workflow.\nhist=[]\nusr={\"tz\":\"\",\"h\":null,\"work\":null,\"delay\":35.0,\"polite\":0.2,\"terse\":0.35,\"prior\":{\"urgency\":0.132,\"frustration\":0.1,\"confusion\":0.04,\"skepticism\":0.159,\"satisfaction\":0.12,\"cautiousness\":0.134,\"openness\":0.18},\"persona\":{\"patience\":0.5,\"skepticism\":0.35,\"caution\":0.35,\"openness\":0.5,\"assertiveness\":0.4}}\nscreen_labels=[\"neutral\"]\nposthoc_style=full_decompose"
+  },
+  {
+    "id": "cc3426_02",
+    "source_url": "https://github.com/anthropics/claude-code/issues/3426",
+    "message": "The repro is 100 percent on WSL2. Start from the session exposure path.",
+    "expected_labels": [
+      "skeptical",
+      "cautious"
+    ],
+    "front_labels": [
+      "neutral"
+    ],
+    "front_emotion_vector": {
+      "urgency": 0.0374,
+      "frustration": 0.0,
+      "confusion": 0.3488,
+      "skepticism": 0.0387,
+      "satisfaction": 0.06,
+      "cautiousness": 0.0325,
+      "openness": 0.049
+    },
+    "weight_schedule": {
+      "stage": "bootstrap",
+      "maturity": 0.0,
+      "observed_turns": 0,
+      "posthoc_samples": 0,
+      "consistency_samples": 0,
+      "stable_prediction_hits": 0,
+      "prediction_agreement": 0.0,
+      "consistency_rate": 0.0,
+      "agreement_confidence": 0.0,
+      "effective_consistency": 0.0,
+      "consistency_shift": -0.08,
+      "screen_weight": 0.18,
+      "screen_semantic_weight": 0.12,
+      "prior_weight": 0.08,
+      "posthoc_weight": 0.62,
+      "carryover_weight": 0.12,
+      "front_trust": 0.225,
+      "posthoc_trust": 0.775
+    },
+    "posthoc_plan": {
+      "should_run": true,
+      "style": "full_decompose",
+      "target_ms": 550,
+      "max_response_tokens": 180,
+      "weight": 0.62,
+      "reason": "cold-start or low front-back agreement"
+    },
+    "posthoc_reflection_prompt": "Decompose the latest user message into latent affect and stance cues for long-term calibration.\nExtract the exact wording, hedge, correction, punctuation, tempo clue, or stance marker that carries emotion.\nFocus on weak shifts such as hedging, correction, doubt, evidence-seeking, scope protection, frustration, urgency, satisfaction, and openness.\nReturn JSON only: {\"emotion_vector\":{\"urgency\":0.0,\"frustration\":0.0,\"confusion\":0.0,\"skepticism\":0.0,\"satisfaction\":0.0,\"cautiousness\":0.0,\"openness\":0.0},\"labels\":[\"skeptical\"],\"confidence\":0.0,\"cue_spans\":[{\"text\":\"不一定\",\"signal\":\"skepticism\",\"kind\":\"hedge\",\"strength\":0.4}],\"notes\":[\"light hedge\"]}\nstage=bootstrap\nfront_weight=0.18\nposthoc_weight=0.62\nfront_consistency=0.0\nlatest=The repro is 100 percent on WSL2. Start from the session exposure path.\nhist=[]\nusr={\"tz\":\"\",\"h\":null,\"work\":null,\"delay\":35.0,\"polite\":0.2,\"terse\":0.35,\"prior\":{\"urgency\":0.132,\"frustration\":0.1,\"confusion\":0.04,\"skepticism\":0.159,\"satisfaction\":0.12,\"cautiousness\":0.134,\"openness\":0.18},\"persona\":{\"patience\":0.5,\"skepticism\":0.35,\"caution\":0.35,\"openness\":0.5,\"assertiveness\":0.4}}\nscreen_labels=[\"neutral\"]\nposthoc_style=full_decompose"
+  },
+  {
+    "id": "cc3426_03",
+    "source_url": "https://github.com/anthropics/claude-code/issues/3426",
+    "message": "High urgency here, this kills the core workflow.",
+    "expected_labels": [
+      "urgent"
+    ],
+    "front_labels": [
+      "neutral"
+    ],
+    "front_emotion_vector": {
+      "urgency": 0.0886,
+      "frustration": 0.0,
+      "confusion": 0.3447,
+      "skepticism": 0.0387,
+      "satisfaction": 0.06,
+      "cautiousness": 0.0325,
+      "openness": 0.0426
+    },
+    "weight_schedule": {
+      "stage": "bootstrap",
+      "maturity": 0.0,
+      "observed_turns": 0,
+      "posthoc_samples": 0,
+      "consistency_samples": 0,
+      "stable_prediction_hits": 0,
+      "prediction_agreement": 0.0,
+      "consistency_rate": 0.0,
+      "agreement_confidence": 0.0,
+      "effective_consistency": 0.0,
+      "consistency_shift": -0.08,
+      "screen_weight": 0.18,
+      "screen_semantic_weight": 0.12,
+      "prior_weight": 0.08,
+      "posthoc_weight": 0.62,
+      "carryover_weight": 0.12,
+      "front_trust": 0.225,
+      "posthoc_trust": 0.775
+    },
+    "posthoc_plan": {
+      "should_run": true,
+      "style": "full_decompose",
+      "target_ms": 550,
+      "max_response_tokens": 180,
+      "weight": 0.62,
+      "reason": "cold-start or low front-back agreement"
+    },
+    "posthoc_reflection_prompt": "Decompose the latest user message into latent affect and stance cues for long-term calibration.\nExtract the exact wording, hedge, correction, punctuation, tempo clue, or stance marker that carries emotion.\nFocus on weak shifts such as hedging, correction, doubt, evidence-seeking, scope protection, frustration, urgency, satisfaction, and openness.\nReturn JSON only: {\"emotion_vector\":{\"urgency\":0.0,\"frustration\":0.0,\"confusion\":0.0,\"skepticism\":0.0,\"satisfaction\":0.0,\"cautiousness\":0.0,\"openness\":0.0},\"labels\":[\"skeptical\"],\"confidence\":0.0,\"cue_spans\":[{\"text\":\"不一定\",\"signal\":\"skepticism\",\"kind\":\"hedge\",\"strength\":0.4}],\"notes\":[\"light hedge\"]}\nstage=bootstrap\nfront_weight=0.18\nposthoc_weight=0.62\nfront_consistency=0.0\nlatest=High urgency here, this kills the core workflow.\nhist=[]\nusr={\"tz\":\"\",\"h\":null,\"work\":null,\"delay\":35.0,\"polite\":0.2,\"terse\":0.35,\"prior\":{\"urgency\":0.132,\"frustration\":0.1,\"confusion\":0.04,\"skepticism\":0.159,\"satisfaction\":0.12,\"cautiousness\":0.134,\"openness\":0.18},\"persona\":{\"patience\":0.5,\"skepticism\":0.35,\"caution\":0.35,\"openness\":0.5,\"assertiveness\":0.4}}\nscreen_labels=[\"neutral\"]\nposthoc_style=full_decompose"
+  },
+  {
+    "id": "cc3426_04",
+    "source_url": "https://github.com/anthropics/claude-code/issues/3426",
+    "message": "I have logs and configs ready. Use them and show me what the session layer misses.",
+    "expected_labels": [
+      "exploratory",
+      "skeptical"
+    ],
+    "front_labels": [
+      "confused"
+    ],
+    "front_emotion_vector": {
+      "urgency": 0.0419,
+      "frustration": 0.0,
+      "confusion": 0.3879,
+      "skepticism": 0.195,
+      "satisfaction": 0.06,
+      "cautiousness": 0.0325,
+      "openness": 0.0531
+    },
+    "weight_schedule": {
+      "stage": "bootstrap",
+      "maturity": 0.0,
+      "observed_turns": 0,
+      "posthoc_samples": 0,
+      "consistency_samples": 0,
+      "stable_prediction_hits": 0,
+      "prediction_agreement": 0.0,
+      "consistency_rate": 0.0,
+      "agreement_confidence": 0.0,
+      "effective_consistency": 0.0,
+      "consistency_shift": -0.08,
+      "screen_weight": 0.18,
+      "screen_semantic_weight": 0.12,
+      "prior_weight": 0.08,
+      "posthoc_weight": 0.62,
+      "carryover_weight": 0.12,
+      "front_trust": 0.225,
+      "posthoc_trust": 0.775
+    },
+    "posthoc_plan": {
+      "should_run": true,
+      "style": "full_decompose",
+      "target_ms": 550,
+      "max_response_tokens": 180,
+      "weight": 0.62,
+      "reason": "cold-start or low front-back agreement"
+    },
+    "posthoc_reflection_prompt": "Decompose the latest user message into latent affect and stance cues for long-term calibration.\nExtract the exact wording, hedge, correction, punctuation, tempo clue, or stance marker that carries emotion.\nFocus on weak shifts such as hedging, correction, doubt, evidence-seeking, scope protection, frustration, urgency, satisfaction, and openness.\nReturn JSON only: {\"emotion_vector\":{\"urgency\":0.0,\"frustration\":0.0,\"confusion\":0.0,\"skepticism\":0.0,\"satisfaction\":0.0,\"cautiousness\":0.0,\"openness\":0.0},\"labels\":[\"skeptical\"],\"confidence\":0.0,\"cue_spans\":[{\"text\":\"不一定\",\"signal\":\"skepticism\",\"kind\":\"hedge\",\"strength\":0.4}],\"notes\":[\"light hedge\"]}\nstage=bootstrap\nfront_weight=0.18\nposthoc_weight=0.62\nfront_consistency=0.0\nlatest=I have logs and configs ready. Use them and show me what the session layer misses.\nhist=[]\nusr={\"tz\":\"\",\"h\":null,\"work\":null,\"delay\":35.0,\"polite\":0.2,\"terse\":0.35,\"prior\":{\"urgency\":0.132,\"frustration\":0.1,\"confusion\":0.04,\"skepticism\":0.159,\"satisfaction\":0.12,\"cautiousness\":0.134,\"openness\":0.18},\"persona\":{\"patience\":0.5,\"skepticism\":0.35,\"caution\":0.35,\"openness\":0.5,\"assertiveness\":0.4}}\nscreen_labels=[\"confused\"]\nposthoc_style=full_decompose"
+  },
+  {
+    "id": "gh145254_01",
+    "source_url": "https://github.com/orgs/community/discussions/145254",
+    "message": "It is painfully slow and the file handling is wrong. This feels broken.",
+    "expected_labels": [
+      "frustrated"
+    ],
+    "front_labels": [
+      "neutral"
+    ],
+    "front_emotion_vector": {
+      "urgency": 0.0328,
+      "frustration": 0.0,
+      "confusion": 0.3718,
+      "skepticism": 0.0356,
+      "satisfaction": 0.06,
+      "cautiousness": 0.0325,
+      "openness": 0.0456
+    },
+    "weight_schedule": {
+      "stage": "bootstrap",
+      "maturity": 0.0,
+      "observed_turns": 0,
+      "posthoc_samples": 0,
+      "consistency_samples": 0,
+      "stable_prediction_hits": 0,
+      "prediction_agreement": 0.0,
+      "consistency_rate": 0.0,
+      "agreement_confidence": 0.0,
+      "effective_consistency": 0.0,
+      "consistency_shift": -0.08,
+      "screen_weight": 0.18,
+      "screen_semantic_weight": 0.12,
+      "prior_weight": 0.08,
+      "posthoc_weight": 0.62,
+      "carryover_weight": 0.12,
+      "front_trust": 0.225,
+      "posthoc_trust": 0.775
+    },
+    "posthoc_plan": {
+      "should_run": true,
+      "style": "full_decompose",
+      "target_ms": 550,
+      "max_response_tokens": 180,
+      "weight": 0.62,
+      "reason": "cold-start or low front-back agreement"
+    },
+    "posthoc_reflection_prompt": "Decompose the latest user message into latent affect and stance cues for long-term calibration.\nExtract the exact wording, hedge, correction, punctuation, tempo clue, or stance marker that carries emotion.\nFocus on weak shifts such as hedging, correction, doubt, evidence-seeking, scope protection, frustration, urgency, satisfaction, and openness.\nReturn JSON only: {\"emotion_vector\":{\"urgency\":0.0,\"frustration\":0.0,\"confusion\":0.0,\"skepticism\":0.0,\"satisfaction\":0.0,\"cautiousness\":0.0,\"openness\":0.0},\"labels\":[\"skeptical\"],\"confidence\":0.0,\"cue_spans\":[{\"text\":\"不一定\",\"signal\":\"skepticism\",\"kind\":\"hedge\",\"strength\":0.4}],\"notes\":[\"light hedge\"]}\nstage=bootstrap\nfront_weight=0.18\nposthoc_weight=0.62\nfront_consistency=0.0\nlatest=It is painfully slow and the file handling is wrong. This feels broken.\nhist=[]\nusr={\"tz\":\"\",\"h\":null,\"work\":null,\"delay\":35.0,\"polite\":0.2,\"terse\":0.35,\"prior\":{\"urgency\":0.132,\"frustration\":0.1,\"confusion\":0.04,\"skepticism\":0.159,\"satisfaction\":0.12,\"cautiousness\":0.134,\"openness\":0.18},\"persona\":{\"patience\":0.5,\"skepticism\":0.35,\"caution\":0.35,\"openness\":0.5,\"assertiveness\":0.4}}\nscreen_labels=[\"neutral\"]\nposthoc_style=full_decompose"
+  },
+  {
+    "id": "gh145254_02",
+    "source_url": "https://github.com/orgs/community/discussions/145254",
+    "message": "It created a new file from scratch instead of modifying the existing one.",
+    "expected_labels": [
+      "frustrated",
+      "skeptical"
+    ],
+    "front_labels": [
+      "neutral"
+    ],
+    "front_emotion_vector": {
+      "urgency": 0.0328,
+      "frustration": 0.0,
+      "confusion": 0.3718,
+      "skepticism": 0.0356,
+      "satisfaction": 0.06,
+      "cautiousness": 0.0325,
+      "openness": 0.0458
+    },
+    "weight_schedule": {
+      "stage": "bootstrap",
+      "maturity": 0.0,
+      "observed_turns": 0,
+      "posthoc_samples": 0,
+      "consistency_samples": 0,
+      "stable_prediction_hits": 0,
+      "prediction_agreement": 0.0,
+      "consistency_rate": 0.0,
+      "agreement_confidence": 0.0,
+      "effective_consistency": 0.0,
+      "consistency_shift": -0.08,
+      "screen_weight": 0.18,
+      "screen_semantic_weight": 0.12,
+      "prior_weight": 0.08,
+      "posthoc_weight": 0.62,
+      "carryover_weight": 0.12,
+      "front_trust": 0.225,
+      "posthoc_trust": 0.775
+    },
+    "posthoc_plan": {
+      "should_run": true,
+      "style": "full_decompose",
+      "target_ms": 550,
+      "max_response_tokens": 180,
+      "weight": 0.62,
+      "reason": "cold-start or low front-back agreement"
+    },
+    "posthoc_reflection_prompt": "Decompose the latest user message into latent affect and stance cues for long-term calibration.\nExtract the exact wording, hedge, correction, punctuation, tempo clue, or stance marker that carries emotion.\nFocus on weak shifts such as hedging, correction, doubt, evidence-seeking, scope protection, frustration, urgency, satisfaction, and openness.\nReturn JSON only: {\"emotion_vector\":{\"urgency\":0.0,\"frustration\":0.0,\"confusion\":0.0,\"skepticism\":0.0,\"satisfaction\":0.0,\"cautiousness\":0.0,\"openness\":0.0},\"labels\":[\"skeptical\"],\"confidence\":0.0,\"cue_spans\":[{\"text\":\"不一定\",\"signal\":\"skepticism\",\"kind\":\"hedge\",\"strength\":0.4}],\"notes\":[\"light hedge\"]}\nstage=bootstrap\nfront_weight=0.18\nposthoc_weight=0.62\nfront_consistency=0.0\nlatest=It created a new file from scratch instead of modifying the existing one.\nhist=[]\nusr={\"tz\":\"\",\"h\":null,\"work\":null,\"delay\":35.0,\"polite\":0.2,\"terse\":0.35,\"prior\":{\"urgency\":0.132,\"frustration\":0.1,\"confusion\":0.04,\"skepticism\":0.159,\"satisfaction\":0.12,\"cautiousness\":0.134,\"openness\":0.18},\"persona\":{\"patience\":0.5,\"skepticism\":0.35,\"caution\":0.35,\"openness\":0.5,\"assertiveness\":0.4}}\nscreen_labels=[\"neutral\"]\nposthoc_style=full_decompose"
+  },
+  {
+    "id": "gh145254_03",
+    "source_url": "https://github.com/orgs/community/discussions/145254",
+    "message": "I expected a useful workspace flow, and this crawls without respecting the plan.",
+    "expected_labels": [
+      "frustrated",
+      "skeptical"
+    ],
+    "front_labels": [
+      "neutral"
+    ],
+    "front_emotion_vector": {
+      "urgency": 0.0328,
+      "frustration": 0.0,
+      "confusion": 0.3718,
+      "skepticism": 0.0353,
+      "satisfaction": 0.12,
+      "cautiousness": 0.033,
+      "openness": 0.0462
+    },
+    "weight_schedule": {
+      "stage": "bootstrap",
+      "maturity": 0.0,
+      "observed_turns": 0,
+      "posthoc_samples": 0,
+      "consistency_samples": 0,
+      "stable_prediction_hits": 0,
+      "prediction_agreement": 0.0,
+      "consistency_rate": 0.0,
+      "agreement_confidence": 0.0,
+      "effective_consistency": 0.0,
+      "consistency_shift": -0.08,
+      "screen_weight": 0.18,
+      "screen_semantic_weight": 0.12,
+      "prior_weight": 0.08,
+      "posthoc_weight": 0.62,
+      "carryover_weight": 0.12,
+      "front_trust": 0.225,
+      "posthoc_trust": 0.775
+    },
+    "posthoc_plan": {
+      "should_run": true,
+      "style": "full_decompose",
+      "target_ms": 550,
+      "max_response_tokens": 180,
+      "weight": 0.62,
+      "reason": "cold-start or low front-back agreement"
+    },
+    "posthoc_reflection_prompt": "Decompose the latest user message into latent affect and stance cues for long-term calibration.\nExtract the exact wording, hedge, correction, punctuation, tempo clue, or stance marker that carries emotion.\nFocus on weak shifts such as hedging, correction, doubt, evidence-seeking, scope protection, frustration, urgency, satisfaction, and openness.\nReturn JSON only: {\"emotion_vector\":{\"urgency\":0.0,\"frustration\":0.0,\"confusion\":0.0,\"skepticism\":0.0,\"satisfaction\":0.0,\"cautiousness\":0.0,\"openness\":0.0},\"labels\":[\"skeptical\"],\"confidence\":0.0,\"cue_spans\":[{\"text\":\"不一定\",\"signal\":\"skepticism\",\"kind\":\"hedge\",\"strength\":0.4}],\"notes\":[\"light hedge\"]}\nstage=bootstrap\nfront_weight=0.18\nposthoc_weight=0.62\nfront_consistency=0.0\nlatest=I expected a useful workspace flow, and this crawls without respecting the plan.\nhist=[]\nusr={\"tz\":\"\",\"h\":null,\"work\":null,\"delay\":35.0,\"polite\":0.2,\"terse\":0.35,\"prior\":{\"urgency\":0.132,\"frustration\":0.1,\"confusion\":0.04,\"skepticism\":0.159,\"satisfaction\":0.12,\"cautiousness\":0.134,\"openness\":0.18},\"persona\":{\"patience\":0.5,\"skepticism\":0.35,\"caution\":0.35,\"openness\":0.5,\"assertiveness\":0.4}}\nscreen_labels=[\"neutral\"]\nposthoc_style=full_decompose"
+  },
+  {
+    "id": "gh145254_04",
+    "source_url": "https://github.com/orgs/community/discussions/145254",
+    "message": "Explain why the file path or special character handling goes off the rails.",
+    "expected_labels": [
+      "skeptical",
+      "confused"
+    ],
+    "front_labels": [
+      "confused"
+    ],
+    "front_emotion_vector": {
+      "urgency": 0.0328,
+      "frustration": 0.0,
+      "confusion": 0.4606,
+      "skepticism": 0.0356,
+      "satisfaction": 0.06,
+      "cautiousness": 0.0325,
+      "openness": 0.0459
+    },
+    "weight_schedule": {
+      "stage": "bootstrap",
+      "maturity": 0.0,
+      "observed_turns": 0,
+      "posthoc_samples": 0,
+      "consistency_samples": 0,
+      "stable_prediction_hits": 0,
+      "prediction_agreement": 0.0,
+      "consistency_rate": 0.0,
+      "agreement_confidence": 0.0,
+      "effective_consistency": 0.0,
+      "consistency_shift": -0.08,
+      "screen_weight": 0.18,
+      "screen_semantic_weight": 0.12,
+      "prior_weight": 0.08,
+      "posthoc_weight": 0.62,
+      "carryover_weight": 0.12,
+      "front_trust": 0.225,
+      "posthoc_trust": 0.775
+    },
+    "posthoc_plan": {
+      "should_run": true,
+      "style": "full_decompose",
+      "target_ms": 550,
+      "max_response_tokens": 180,
+      "weight": 0.62,
+      "reason": "cold-start or low front-back agreement"
+    },
+    "posthoc_reflection_prompt": "Decompose the latest user message into latent affect and stance cues for long-term calibration.\nExtract the exact wording, hedge, correction, punctuation, tempo clue, or stance marker that carries emotion.\nFocus on weak shifts such as hedging, correction, doubt, evidence-seeking, scope protection, frustration, urgency, satisfaction, and openness.\nReturn JSON only: {\"emotion_vector\":{\"urgency\":0.0,\"frustration\":0.0,\"confusion\":0.0,\"skepticism\":0.0,\"satisfaction\":0.0,\"cautiousness\":0.0,\"openness\":0.0},\"labels\":[\"skeptical\"],\"confidence\":0.0,\"cue_spans\":[{\"text\":\"不一定\",\"signal\":\"skepticism\",\"kind\":\"hedge\",\"strength\":0.4}],\"notes\":[\"light hedge\"]}\nstage=bootstrap\nfront_weight=0.18\nposthoc_weight=0.62\nfront_consistency=0.0\nlatest=Explain why the file path or special character handling goes off the rails.\nhist=[]\nusr={\"tz\":\"\",\"h\":null,\"work\":null,\"delay\":35.0,\"polite\":0.2,\"terse\":0.35,\"prior\":{\"urgency\":0.132,\"frustration\":0.1,\"confusion\":0.04,\"skepticism\":0.159,\"satisfaction\":0.12,\"cautiousness\":0.134,\"openness\":0.18},\"persona\":{\"patience\":0.5,\"skepticism\":0.35,\"caution\":0.35,\"openness\":0.5,\"assertiveness\":0.4}}\nscreen_labels=[\"confused\"]\nposthoc_style=full_decompose"
+  },
+  {
+    "id": "rd_prog_01",
+    "source_url": "https://www.reddit.com/r/programming/comments/1nk8dmc",
+    "message": "The agent kept working for an hour and only added regressions.",
+    "expected_labels": [
+      "frustrated"
+    ],
+    "front_labels": [
+      "urgent"
+    ],
+    "front_emotion_vector": {
+      "urgency": 0.0774,
+      "frustration": 0.0,
+      "confusion": 0.3456,
+      "skepticism": 0.0387,
+      "satisfaction": 0.06,
+      "cautiousness": 0.0325,
+      "openness": 0.0445
+    },
+    "weight_schedule": {
+      "stage": "bootstrap",
+      "maturity": 0.0,
+      "observed_turns": 0,
+      "posthoc_samples": 0,
+      "consistency_samples": 0,
+      "stable_prediction_hits": 0,
+      "prediction_agreement": 0.0,
+      "consistency_rate": 0.0,
+      "agreement_confidence": 0.0,
+      "effective_consistency": 0.0,
+      "consistency_shift": -0.08,
+      "screen_weight": 0.18,
+      "screen_semantic_weight": 0.12,
+      "prior_weight": 0.08,
+      "posthoc_weight": 0.62,
+      "carryover_weight": 0.12,
+      "front_trust": 0.225,
+      "posthoc_trust": 0.775
+    },
+    "posthoc_plan": {
+      "should_run": true,
+      "style": "full_decompose",
+      "target_ms": 550,
+      "max_response_tokens": 180,
+      "weight": 0.62,
+      "reason": "cold-start or low front-back agreement"
+    },
+    "posthoc_reflection_prompt": "Decompose the latest user message into latent affect and stance cues for long-term calibration.\nExtract the exact wording, hedge, correction, punctuation, tempo clue, or stance marker that carries emotion.\nFocus on weak shifts such as hedging, correction, doubt, evidence-seeking, scope protection, frustration, urgency, satisfaction, and openness.\nReturn JSON only: {\"emotion_vector\":{\"urgency\":0.0,\"frustration\":0.0,\"confusion\":0.0,\"skepticism\":0.0,\"satisfaction\":0.0,\"cautiousness\":0.0,\"openness\":0.0},\"labels\":[\"skeptical\"],\"confidence\":0.0,\"cue_spans\":[{\"text\":\"不一定\",\"signal\":\"skepticism\",\"kind\":\"hedge\",\"strength\":0.4}],\"notes\":[\"light hedge\"]}\nstage=bootstrap\nfront_weight=0.18\nposthoc_weight=0.62\nfront_consistency=0.0\nlatest=The agent kept working for an hour and only added regressions.\nhist=[]\nusr={\"tz\":\"\",\"h\":null,\"work\":null,\"delay\":35.0,\"polite\":0.2,\"terse\":0.35,\"prior\":{\"urgency\":0.132,\"frustration\":0.1,\"confusion\":0.04,\"skepticism\":0.159,\"satisfaction\":0.12,\"cautiousness\":0.134,\"openness\":0.18},\"persona\":{\"patience\":0.5,\"skepticism\":0.35,\"caution\":0.35,\"openness\":0.5,\"assertiveness\":0.4}}\nscreen_labels=[\"urgent\"]\nposthoc_style=full_decompose"
+  },
+  {
+    "id": "rd_prog_02",
+    "source_url": "https://www.reddit.com/r/programming/comments/1nk8dmc",
+    "message": "It even damaged project files. I need guardrails before any more edits.",
+    "expected_labels": [
+      "cautious",
+      "frustrated"
+    ],
+    "front_labels": [
+      "neutral"
+    ],
+    "front_emotion_vector": {
+      "urgency": 0.0328,
+      "frustration": 0.0,
+      "confusion": 0.3718,
+      "skepticism": 0.0353,
+      "satisfaction": 0.12,
+      "cautiousness": 0.033,
+      "openness": 0.0456
+    },
+    "weight_schedule": {
+      "stage": "bootstrap",
+      "maturity": 0.0,
+      "observed_turns": 0,
+      "posthoc_samples": 0,
+      "consistency_samples": 0,
+      "stable_prediction_hits": 0,
+      "prediction_agreement": 0.0,
+      "consistency_rate": 0.0,
+      "agreement_confidence": 0.0,
+      "effective_consistency": 0.0,
+      "consistency_shift": -0.08,
+      "screen_weight": 0.18,
+      "screen_semantic_weight": 0.12,
+      "prior_weight": 0.08,
+      "posthoc_weight": 0.62,
+      "carryover_weight": 0.12,
+      "front_trust": 0.225,
+      "posthoc_trust": 0.775
+    },
+    "posthoc_plan": {
+      "should_run": true,
+      "style": "full_decompose",
+      "target_ms": 550,
+      "max_response_tokens": 180,
+      "weight": 0.62,
+      "reason": "cold-start or low front-back agreement"
+    },
+    "posthoc_reflection_prompt": "Decompose the latest user message into latent affect and stance cues for long-term calibration.\nExtract the exact wording, hedge, correction, punctuation, tempo clue, or stance marker that carries emotion.\nFocus on weak shifts such as hedging, correction, doubt, evidence-seeking, scope protection, frustration, urgency, satisfaction, and openness.\nReturn JSON only: {\"emotion_vector\":{\"urgency\":0.0,\"frustration\":0.0,\"confusion\":0.0,\"skepticism\":0.0,\"satisfaction\":0.0,\"cautiousness\":0.0,\"openness\":0.0},\"labels\":[\"skeptical\"],\"confidence\":0.0,\"cue_spans\":[{\"text\":\"不一定\",\"signal\":\"skepticism\",\"kind\":\"hedge\",\"strength\":0.4}],\"notes\":[\"light hedge\"]}\nstage=bootstrap\nfront_weight=0.18\nposthoc_weight=0.62\nfront_consistency=0.0\nlatest=It even damaged project files. I need guardrails before any more edits.\nhist=[]\nusr={\"tz\":\"\",\"h\":null,\"work\":null,\"delay\":35.0,\"polite\":0.2,\"terse\":0.35,\"prior\":{\"urgency\":0.132,\"frustration\":0.1,\"confusion\":0.04,\"skepticism\":0.159,\"satisfaction\":0.12,\"cautiousness\":0.134,\"openness\":0.18},\"persona\":{\"patience\":0.5,\"skepticism\":0.35,\"caution\":0.35,\"openness\":0.5,\"assertiveness\":0.4}}\nscreen_labels=[\"neutral\"]\nposthoc_style=full_decompose"
+  },
+  {
+    "id": "rd_prog_03",
+    "source_url": "https://www.reddit.com/r/programming/comments/1nk8dmc",
+    "message": "Do not touch anything destructive until you can prove the next step.",
+    "expected_labels": [
+      "cautious",
+      "skeptical"
+    ],
+    "front_labels": [
+      "neutral"
+    ],
+    "front_emotion_vector": {
+      "urgency": 0.0328,
+      "frustration": 0.0,
+      "confusion": 0.3451,
+      "skepticism": 0.1877,
+      "satisfaction": 0.0763,
+      "cautiousness": 0.1275,
+      "openness": 0.0455
+    },
+    "weight_schedule": {
+      "stage": "bootstrap",
+      "maturity": 0.0,
+      "observed_turns": 0,
+      "posthoc_samples": 0,
+      "consistency_samples": 0,
+      "stable_prediction_hits": 0,
+      "prediction_agreement": 0.0,
+      "consistency_rate": 0.0,
+      "agreement_confidence": 0.0,
+      "effective_consistency": 0.0,
+      "consistency_shift": -0.08,
+      "screen_weight": 0.18,
+      "screen_semantic_weight": 0.12,
+      "prior_weight": 0.08,
+      "posthoc_weight": 0.62,
+      "carryover_weight": 0.12,
+      "front_trust": 0.225,
+      "posthoc_trust": 0.775
+    },
+    "posthoc_plan": {
+      "should_run": true,
+      "style": "full_decompose",
+      "target_ms": 550,
+      "max_response_tokens": 180,
+      "weight": 0.62,
+      "reason": "cold-start or low front-back agreement"
+    },
+    "posthoc_reflection_prompt": "Decompose the latest user message into latent affect and stance cues for long-term calibration.\nExtract the exact wording, hedge, correction, punctuation, tempo clue, or stance marker that carries emotion.\nFocus on weak shifts such as hedging, correction, doubt, evidence-seeking, scope protection, frustration, urgency, satisfaction, and openness.\nReturn JSON only: {\"emotion_vector\":{\"urgency\":0.0,\"frustration\":0.0,\"confusion\":0.0,\"skepticism\":0.0,\"satisfaction\":0.0,\"cautiousness\":0.0,\"openness\":0.0},\"labels\":[\"skeptical\"],\"confidence\":0.0,\"cue_spans\":[{\"text\":\"不一定\",\"signal\":\"skepticism\",\"kind\":\"hedge\",\"strength\":0.4}],\"notes\":[\"light hedge\"]}\nstage=bootstrap\nfront_weight=0.18\nposthoc_weight=0.62\nfront_consistency=0.0\nlatest=Do not touch anything destructive until you can prove the next step.\nhist=[]\nusr={\"tz\":\"\",\"h\":null,\"work\":null,\"delay\":35.0,\"polite\":0.2,\"terse\":0.35,\"prior\":{\"urgency\":0.132,\"frustration\":0.1,\"confusion\":0.04,\"skepticism\":0.159,\"satisfaction\":0.12,\"cautiousness\":0.134,\"openness\":0.18},\"persona\":{\"patience\":0.5,\"skepticism\":0.35,\"caution\":0.35,\"openness\":0.5,\"assertiveness\":0.4}}\nscreen_labels=[\"neutral\"]\nposthoc_style=full_decompose"
+  },
+  {
+    "id": "rd_prog_04",
+    "source_url": "https://www.reddit.com/r/programming/comments/1nk8dmc",
+    "message": "This is exactly why I do not trust it with repo-wide changes.",
+    "expected_labels": [
+      "skeptical",
+      "cautious"
+    ],
+    "front_labels": [
+      "confused"
+    ],
+    "front_emotion_vector": {
+      "urgency": 0.1264,
+      "frustration": 0.0551,
+      "confusion": 0.4381,
+      "skepticism": 0.0389,
+      "satisfaction": 0.0446,
+      "cautiousness": 0.0324,
+      "openness": 0.0322
+    },
+    "weight_schedule": {
+      "stage": "bootstrap",
+      "maturity": 0.0,
+      "observed_turns": 0,
+      "posthoc_samples": 0,
+      "consistency_samples": 0,
+      "stable_prediction_hits": 0,
+      "prediction_agreement": 0.0,
+      "consistency_rate": 0.0,
+      "agreement_confidence": 0.0,
+      "effective_consistency": 0.0,
+      "consistency_shift": -0.08,
+      "screen_weight": 0.18,
+      "screen_semantic_weight": 0.12,
+      "prior_weight": 0.08,
+      "posthoc_weight": 0.62,
+      "carryover_weight": 0.12,
+      "front_trust": 0.225,
+      "posthoc_trust": 0.775
+    },
+    "posthoc_plan": {
+      "should_run": true,
+      "style": "full_decompose",
+      "target_ms": 550,
+      "max_response_tokens": 180,
+      "weight": 0.62,
+      "reason": "cold-start or low front-back agreement"
+    },
+    "posthoc_reflection_prompt": "Decompose the latest user message into latent affect and stance cues for long-term calibration.\nExtract the exact wording, hedge, correction, punctuation, tempo clue, or stance marker that carries emotion.\nFocus on weak shifts such as hedging, correction, doubt, evidence-seeking, scope protection, frustration, urgency, satisfaction, and openness.\nReturn JSON only: {\"emotion_vector\":{\"urgency\":0.0,\"frustration\":0.0,\"confusion\":0.0,\"skepticism\":0.0,\"satisfaction\":0.0,\"cautiousness\":0.0,\"openness\":0.0},\"labels\":[\"skeptical\"],\"confidence\":0.0,\"cue_spans\":[{\"text\":\"不一定\",\"signal\":\"skepticism\",\"kind\":\"hedge\",\"strength\":0.4}],\"notes\":[\"light hedge\"]}\nstage=bootstrap\nfront_weight=0.18\nposthoc_weight=0.62\nfront_consistency=0.0\nlatest=This is exactly why I do not trust it with repo-wide changes.\nhist=[]\nusr={\"tz\":\"\",\"h\":null,\"work\":null,\"delay\":35.0,\"polite\":0.2,\"terse\":0.35,\"prior\":{\"urgency\":0.132,\"frustration\":0.1,\"confusion\":0.04,\"skepticism\":0.159,\"satisfaction\":0.12,\"cautiousness\":0.134,\"openness\":0.18},\"persona\":{\"patience\":0.5,\"skepticism\":0.35,\"caution\":0.35,\"openness\":0.5,\"assertiveness\":0.4}}\nscreen_labels=[\"confused\"]\nposthoc_style=full_decompose"
+  },
+  {
+    "id": "rd_users_01",
+    "source_url": "https://www.reddit.com/r/AI_Agents/comments/1rx2s2y/shipped_an_ai_agent_last_month_real_users_broke/",
+    "message": "I said make that thing bigger and it had no idea what that thing was.",
+    "expected_labels": [
+      "confused"
+    ],
+    "front_labels": [
+      "neutral"
+    ],
+    "front_emotion_vector": {
+      "urgency": 0.0328,
+      "frustration": 0.0,
+      "confusion": 0.3718,
+      "skepticism": 0.0356,
+      "satisfaction": 0.06,
+      "cautiousness": 0.0325,
+      "openness": 0.0455
+    },
+    "weight_schedule": {
+      "stage": "bootstrap",
+      "maturity": 0.0,
+      "observed_turns": 0,
+      "posthoc_samples": 0,
+      "consistency_samples": 0,
+      "stable_prediction_hits": 0,
+      "prediction_agreement": 0.0,
+      "consistency_rate": 0.0,
+      "agreement_confidence": 0.0,
+      "effective_consistency": 0.0,
+      "consistency_shift": -0.08,
+      "screen_weight": 0.18,
+      "screen_semantic_weight": 0.12,
+      "prior_weight": 0.08,
+      "posthoc_weight": 0.62,
+      "carryover_weight": 0.12,
+      "front_trust": 0.225,
+      "posthoc_trust": 0.775
+    },
+    "posthoc_plan": {
+      "should_run": true,
+      "style": "full_decompose",
+      "target_ms": 550,
+      "max_response_tokens": 180,
+      "weight": 0.62,
+      "reason": "cold-start or low front-back agreement"
+    },
+    "posthoc_reflection_prompt": "Decompose the latest user message into latent affect and stance cues for long-term calibration.\nExtract the exact wording, hedge, correction, punctuation, tempo clue, or stance marker that carries emotion.\nFocus on weak shifts such as hedging, correction, doubt, evidence-seeking, scope protection, frustration, urgency, satisfaction, and openness.\nReturn JSON only: {\"emotion_vector\":{\"urgency\":0.0,\"frustration\":0.0,\"confusion\":0.0,\"skepticism\":0.0,\"satisfaction\":0.0,\"cautiousness\":0.0,\"openness\":0.0},\"labels\":[\"skeptical\"],\"confidence\":0.0,\"cue_spans\":[{\"text\":\"不一定\",\"signal\":\"skepticism\",\"kind\":\"hedge\",\"strength\":0.4}],\"notes\":[\"light hedge\"]}\nstage=bootstrap\nfront_weight=0.18\nposthoc_weight=0.62\nfront_consistency=0.0\nlatest=I said make that thing bigger and it had no idea what that thing was.\nhist=[]\nusr={\"tz\":\"\",\"h\":null,\"work\":null,\"delay\":35.0,\"polite\":0.2,\"terse\":0.35,\"prior\":{\"urgency\":0.132,\"frustration\":0.1,\"confusion\":0.04,\"skepticism\":0.159,\"satisfaction\":0.12,\"cautiousness\":0.134,\"openness\":0.18},\"persona\":{\"patience\":0.5,\"skepticism\":0.35,\"caution\":0.35,\"openness\":0.5,\"assertiveness\":0.4}}\nscreen_labels=[\"neutral\"]\nposthoc_style=full_decompose"
+  },
+  {
+    "id": "rd_users_02",
+    "source_url": "https://www.reddit.com/r/AI_Agents/comments/1rx2s2y/shipped_an_ai_agent_last_month_real_users_broke/",
+    "message": "Users interrupt mid-response and it drops the earlier context.",
+    "expected_labels": [
+      "frustrated",
+      "confused"
+    ],
+    "front_labels": [
+      "neutral"
+    ],
+    "front_emotion_vector": {
+      "urgency": 0.0328,
+      "frustration": 0.0,
+      "confusion": 0.3718,
+      "skepticism": 0.0356,
+      "satisfaction": 0.06,
+      "cautiousness": 0.0325,
+      "openness": 0.0451
+    },
+    "weight_schedule": {
+      "stage": "bootstrap",
+      "maturity": 0.0,
+      "observed_turns": 0,
+      "posthoc_samples": 0,
+      "consistency_samples": 0,
+      "stable_prediction_hits": 0,
+      "prediction_agreement": 0.0,
+      "consistency_rate": 0.0,
+      "agreement_confidence": 0.0,
+      "effective_consistency": 0.0,
+      "consistency_shift": -0.08,
+      "screen_weight": 0.18,
+      "screen_semantic_weight": 0.12,
+      "prior_weight": 0.08,
+      "posthoc_weight": 0.62,
+      "carryover_weight": 0.12,
+      "front_trust": 0.225,
+      "posthoc_trust": 0.775
+    },
+    "posthoc_plan": {
+      "should_run": true,
+      "style": "full_decompose",
+      "target_ms": 550,
+      "max_response_tokens": 180,
+      "weight": 0.62,
+      "reason": "cold-start or low front-back agreement"
+    },
+    "posthoc_reflection_prompt": "Decompose the latest user message into latent affect and stance cues for long-term calibration.\nExtract the exact wording, hedge, correction, punctuation, tempo clue, or stance marker that carries emotion.\nFocus on weak shifts such as hedging, correction, doubt, evidence-seeking, scope protection, frustration, urgency, satisfaction, and openness.\nReturn JSON only: {\"emotion_vector\":{\"urgency\":0.0,\"frustration\":0.0,\"confusion\":0.0,\"skepticism\":0.0,\"satisfaction\":0.0,\"cautiousness\":0.0,\"openness\":0.0},\"labels\":[\"skeptical\"],\"confidence\":0.0,\"cue_spans\":[{\"text\":\"不一定\",\"signal\":\"skepticism\",\"kind\":\"hedge\",\"strength\":0.4}],\"notes\":[\"light hedge\"]}\nstage=bootstrap\nfront_weight=0.18\nposthoc_weight=0.62\nfront_consistency=0.0\nlatest=Users interrupt mid-response and it drops the earlier context.\nhist=[]\nusr={\"tz\":\"\",\"h\":null,\"work\":null,\"delay\":35.0,\"polite\":0.2,\"terse\":0.35,\"prior\":{\"urgency\":0.132,\"frustration\":0.1,\"confusion\":0.04,\"skepticism\":0.159,\"satisfaction\":0.12,\"cautiousness\":0.134,\"openness\":0.18},\"persona\":{\"patience\":0.5,\"skepticism\":0.35,\"caution\":0.35,\"openness\":0.5,\"assertiveness\":0.4}}\nscreen_labels=[\"neutral\"]\nposthoc_style=full_decompose"
+  },
+  {
+    "id": "rd_users_03",
+    "source_url": "https://www.reddit.com/r/AI_Agents/comments/1rx2s2y/shipped_an_ai_agent_last_month_real_users_broke/",
+    "message": "You need shared context here. Pure prompt guessing will not cut it.",
+    "expected_labels": [
+      "skeptical",
+      "cautious"
+    ],
+    "front_labels": [
+      "neutral"
+    ],
+    "front_emotion_vector": {
+      "urgency": 0.0374,
+      "frustration": 0.0,
+      "confusion": 0.3488,
+      "skepticism": 0.0387,
+      "satisfaction": 0.06,
+      "cautiousness": 0.0325,
+      "openness": 0.0488
+    },
+    "weight_schedule": {
+      "stage": "bootstrap",
+      "maturity": 0.0,
+      "observed_turns": 0,
+      "posthoc_samples": 0,
+      "consistency_samples": 0,
+      "stable_prediction_hits": 0,
+      "prediction_agreement": 0.0,
+      "consistency_rate": 0.0,
+      "agreement_confidence": 0.0,
+      "effective_consistency": 0.0,
+      "consistency_shift": -0.08,
+      "screen_weight": 0.18,
+      "screen_semantic_weight": 0.12,
+      "prior_weight": 0.08,
+      "posthoc_weight": 0.62,
+      "carryover_weight": 0.12,
+      "front_trust": 0.225,
+      "posthoc_trust": 0.775
+    },
+    "posthoc_plan": {
+      "should_run": true,
+      "style": "full_decompose",
+      "target_ms": 550,
+      "max_response_tokens": 180,
+      "weight": 0.62,
+      "reason": "cold-start or low front-back agreement"
+    },
+    "posthoc_reflection_prompt": "Decompose the latest user message into latent affect and stance cues for long-term calibration.\nExtract the exact wording, hedge, correction, punctuation, tempo clue, or stance marker that carries emotion.\nFocus on weak shifts such as hedging, correction, doubt, evidence-seeking, scope protection, frustration, urgency, satisfaction, and openness.\nReturn JSON only: {\"emotion_vector\":{\"urgency\":0.0,\"frustration\":0.0,\"confusion\":0.0,\"skepticism\":0.0,\"satisfaction\":0.0,\"cautiousness\":0.0,\"openness\":0.0},\"labels\":[\"skeptical\"],\"confidence\":0.0,\"cue_spans\":[{\"text\":\"不一定\",\"signal\":\"skepticism\",\"kind\":\"hedge\",\"strength\":0.4}],\"notes\":[\"light hedge\"]}\nstage=bootstrap\nfront_weight=0.18\nposthoc_weight=0.62\nfront_consistency=0.0\nlatest=You need shared context here. Pure prompt guessing will not cut it.\nhist=[]\nusr={\"tz\":\"\",\"h\":null,\"work\":null,\"delay\":35.0,\"polite\":0.2,\"terse\":0.35,\"prior\":{\"urgency\":0.132,\"frustration\":0.1,\"confusion\":0.04,\"skepticism\":0.159,\"satisfaction\":0.12,\"cautiousness\":0.134,\"openness\":0.18},\"persona\":{\"patience\":0.5,\"skepticism\":0.35,\"caution\":0.35,\"openness\":0.5,\"assertiveness\":0.4}}\nscreen_labels=[\"neutral\"]\nposthoc_style=full_decompose"
+  },
+  {
+    "id": "rd_users_04",
+    "source_url": "https://www.reddit.com/r/AI_Agents/comments/1rx2s2y/shipped_an_ai_agent_last_month_real_users_broke/",
+    "message": "Give me two ways to reduce this ambiguity in real sessions.",
+    "expected_labels": [
+      "exploratory"
+    ],
+    "front_labels": [
+      "neutral"
+    ],
+    "front_emotion_vector": {
+      "urgency": 0.0374,
+      "frustration": 0.0,
+      "confusion": 0.3488,
+      "skepticism": 0.0387,
+      "satisfaction": 0.06,
+      "cautiousness": 0.0325,
+      "openness": 0.0483
+    },
+    "weight_schedule": {
+      "stage": "bootstrap",
+      "maturity": 0.0,
+      "observed_turns": 0,
+      "posthoc_samples": 0,
+      "consistency_samples": 0,
+      "stable_prediction_hits": 0,
+      "prediction_agreement": 0.0,
+      "consistency_rate": 0.0,
+      "agreement_confidence": 0.0,
+      "effective_consistency": 0.0,
+      "consistency_shift": -0.08,
+      "screen_weight": 0.18,
+      "screen_semantic_weight": 0.12,
+      "prior_weight": 0.08,
+      "posthoc_weight": 0.62,
+      "carryover_weight": 0.12,
+      "front_trust": 0.225,
+      "posthoc_trust": 0.775
+    },
+    "posthoc_plan": {
+      "should_run": true,
+      "style": "full_decompose",
+      "target_ms": 550,
+      "max_response_tokens": 180,
+      "weight": 0.62,
+      "reason": "cold-start or low front-back agreement"
+    },
+    "posthoc_reflection_prompt": "Decompose the latest user message into latent affect and stance cues for long-term calibration.\nExtract the exact wording, hedge, correction, punctuation, tempo clue, or stance marker that carries emotion.\nFocus on weak shifts such as hedging, correction, doubt, evidence-seeking, scope protection, frustration, urgency, satisfaction, and openness.\nReturn JSON only: {\"emotion_vector\":{\"urgency\":0.0,\"frustration\":0.0,\"confusion\":0.0,\"skepticism\":0.0,\"satisfaction\":0.0,\"cautiousness\":0.0,\"openness\":0.0},\"labels\":[\"skeptical\"],\"confidence\":0.0,\"cue_spans\":[{\"text\":\"不一定\",\"signal\":\"skepticism\",\"kind\":\"hedge\",\"strength\":0.4}],\"notes\":[\"light hedge\"]}\nstage=bootstrap\nfront_weight=0.18\nposthoc_weight=0.62\nfront_consistency=0.0\nlatest=Give me two ways to reduce this ambiguity in real sessions.\nhist=[]\nusr={\"tz\":\"\",\"h\":null,\"work\":null,\"delay\":35.0,\"polite\":0.2,\"terse\":0.35,\"prior\":{\"urgency\":0.132,\"frustration\":0.1,\"confusion\":0.04,\"skepticism\":0.159,\"satisfaction\":0.12,\"cautiousness\":0.134,\"openness\":0.18},\"persona\":{\"patience\":0.5,\"skepticism\":0.35,\"caution\":0.35,\"openness\":0.5,\"assertiveness\":0.4}}\nscreen_labels=[\"neutral\"]\nposthoc_style=full_decompose"
+  }
+]

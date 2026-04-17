@@ -1,0 +1,293 @@
+---
+name: 情绪.skill / Emotion Skill
+description: Detect user emotion and latent stance from wording, punctuation, retries, delay pressure, and dialogue history. Use when an agent should read the room, adapt work mode, change routing priority, tighten verification, prevent drift after success, and personalize behavior through consistency-driven front or posthoc weighting.
+---
+
+# 情绪.skill / Emotion Skill
+
+Use this skill to convert human emotion into execution policy.
+
+## Quick Start
+
+1. Run `scripts/emotion_engine.py run --input <turn.json> --pretty`.
+2. Insert `overlay_prompt` into the current run as a dynamic pre-prompt.
+3. Apply `routing.thread_interface` to queue, thread, heartbeat, and subagent decisions.
+4. Use `guidance.hidden_hook` first when `guidance.hook_mode` is `latent`. Use `guidance.question` only when an explicit probe is worth the interruption.
+5. Read `analysis.semantic_pass` first. Use the semantic prompt only when it is `fast`.
+6. If you want model-side semantic judgment, read `references/model-prompts.md` and pass the JSON result back as `llm_semantic`.
+7. Read `confirmed_state.emotion_vector` and `confirmed_state.mode_scores` together. Emotion axes coexist. `dominant_mode` is only the routing winner for the current turn.
+8. On cold start, keep `posthoc_semantic` weight above the front screen. Raise front weight only after `calibration_state.consistency_rate` and `consistency_samples` become credible.
+
+## Input Contract
+
+Pass a JSON object with any of these fields:
+
+```json
+{
+  "message": "latest user message",
+  "context": {
+    "timezone": "Asia/Shanghai",
+    "now_iso": "2026-04-17T14:20:00+08:00"
+  },
+  "history": [
+    {"role": "user", "text": "earlier user turn"},
+    {"role": "assistant", "text": "earlier assistant turn"}
+  ],
+  "user_profile": {
+    "id": "user-123",
+    "timezone": "Asia/Shanghai",
+    "work_hours_local": [9, 22],
+    "persona_traits": {
+      "patience": 0.55,
+      "skepticism": 0.48,
+      "caution": 0.52,
+      "openness": 0.44,
+      "assertiveness": 0.38
+    },
+    "big5": {
+      "openness": 0.7,
+      "conscientiousness": 0.62,
+      "extraversion": 0.41,
+      "agreeableness": 0.56,
+      "neuroticism": 0.36
+    },
+    "affective_prior": {
+      "urgency": 0.12,
+      "frustration": 0.1,
+      "confusion": 0.08,
+      "skepticism": 0.42,
+      "satisfaction": 0.12,
+      "cautiousness": 0.28,
+      "openness": 0.2
+    },
+    "baseline": {
+      "response_delay_seconds": 35,
+      "politeness": 0.2,
+      "terseness": 0.35,
+      "punctuation": 0.15,
+      "directness": 0.3
+    }
+  },
+  "runtime": {
+    "response_delay_seconds": 18,
+    "unresolved_turns": 4,
+    "bug_retries": 2,
+    "task_age_minutes": 25,
+    "queue_depth": 1,
+    "background_tasks_running": 2,
+    "same_issue_mentions": 2
+  },
+  "last_state": {
+    "vector": {
+      "urgency": 0.4,
+      "frustration": 0.2,
+      "clarity": 0.6,
+      "satisfaction": 0.1,
+      "trust": 0.5,
+      "engagement": 0.7
+    },
+    "emotion_vector": {
+      "urgency": 0.4,
+      "frustration": 0.2,
+      "confusion": 0.3,
+      "skepticism": 0.35,
+      "satisfaction": 0.1,
+      "cautiousness": 0.2,
+      "openness": 0.5
+    },
+    "ttl_seconds": 1200
+  },
+  "calibration_state": {
+    "observed_turns": 18,
+    "posthoc_samples": 11,
+    "consistency_samples": 9,
+    "stable_prediction_hits": 6,
+    "prediction_agreement": 0.58,
+    "consistency_rate": 0.63
+  },
+  "llm_semantic": {
+    "labels": ["urgent", "frustrated"],
+    "confidence": 0.78,
+    "emotion_vector": {
+      "urgency": 0.88,
+      "frustration": 0.82,
+      "confusion": 0.41,
+      "skepticism": 0.28,
+      "satisfaction": 0.08,
+      "cautiousness": 0.12,
+      "openness": 0.2
+    }
+  },
+  "posthoc_semantic": {
+    "labels": ["skeptical"],
+    "confidence": 0.71,
+    "emotion_vector": {
+      "urgency": 0.14,
+      "frustration": 0.18,
+      "confusion": 0.12,
+      "skepticism": 0.58,
+      "satisfaction": 0.05,
+      "cautiousness": 0.26,
+      "openness": 0.18
+    },
+    "cue_spans": [
+      {"text": "不一定", "signal": "skepticism", "kind": "hedge", "strength": 0.4}
+    ]
+  }
+}
+```
+
+## Workflow
+
+### 1. Screen
+
+Run `screen` when you need a fast deterministic first pass from text, history, and runtime hints.
+
+```bash
+python scripts/emotion_engine.py screen --input turn.json --pretty
+```
+
+Use this stage to get:
+
+- `features`
+- `initial_vector`
+- `emotion_vector`
+- `evidence`
+- `labels`
+
+### 2. Confirm
+
+Run `confirm` after you have either:
+
+- the `screen` result only
+- the `screen` result plus an LLM semantic judgment
+
+```bash
+python scripts/emotion_engine.py confirm --input turn.json --pretty
+```
+
+Use this stage to produce the final state that should drive behavior:
+
+- `confirmed_state`
+- `dominant_mode`
+- `emotion_vector`
+- `mode_scores`
+- `confidence`
+- `ttl_seconds`
+- `weight_schedule`
+- `consistency_snapshot`
+
+### 3. Predict
+
+Run `predict` or `run` to estimate where the conversation is heading.
+
+Prediction covers:
+
+- task complexity
+- frustration risk
+- stall risk
+- patience window
+- next update deadline
+- semantic pass budget
+- baseline-aware delay budget
+- hidden hook mode
+
+### 4. Guide
+
+Use `guidance.question` only when the user state is unclear or tension is rising and a short probe can improve alignment.
+
+Keep the question short. Ask for one dimension at a time:
+
+- result first vs explanation first
+- speed vs certainty
+- where the user is stuck
+
+### 5. Route
+
+Use `routing.thread_interface` to drive orchestration.
+
+Key fields:
+
+- `queue_mode`
+- `prefer_main_thread`
+- `defer_heartbeat`
+- `allow_parallel_subagents`
+- `progress_update_interval_sec`
+- `openclaw`
+- `hermes`
+
+## Emotion Model
+
+The engine keeps three layers:
+
+- `emotion_vector`: concurrent affect axes. Current axes are `urgency`, `frustration`, `confusion`, `skepticism`, `satisfaction`, `cautiousness`, `openness`.
+- `interaction_state`: task-reading axes. Current axes are `clarity`, `trust`, `engagement`.
+- `constraint_signals`: execution constraints. Current axes are `boundary_strength`, `verification_preference`, `scope_tightness`, `evidence_requirement`.
+
+Each axis is continuous and concurrent.
+`0.8` means the axis is currently dominant enough to steer runtime behavior.
+
+Intensity bands:
+
+- `0.00-0.29`: background
+- `0.30-0.54`: present
+- `0.55-0.74`: strong
+- `0.75-1.00`: dominant
+
+Use `mode_scores` to decide which mode should win orchestration when several emotions are present at once.
+
+## Dynamic Pre-Prompt
+
+Insert `overlay_prompt` as a compact dynamic system or developer overlay for the next turn.
+
+Use it for:
+
+- reply style changes
+- verification intensity
+- update cadence
+- background work suppression
+- guard mode after success
+
+Use `debug_overlay_prompt` only for inspection or logging.
+
+Use `profile_state` as the session-global baseline snapshot.
+Use `constraint_signals` for boundary strength, verification preference, and scope tightness.
+Use `memory_update` as the persistence payload for `USER.md`, sqlite, or another durable profile store.
+It tracks:
+
+- user timezone and local hour
+- work-hours window
+- effective delay budget
+- current style shift versus baseline
+- EMA-ready baseline update proposal
+- EMA-ready `proposed_calibration_state`
+
+`consistency_rate` is the long-run front versus posthoc吻合率。
+系统会在冷启动阶段优先采信后置反问，当 `consistency_rate` 和 `consistency_samples` 升高后，自动抬升前置情绪标签的采信权重。
+
+`USER.md` can feed the engine through `user_profile.persona_traits`, `user_profile.big5`, and `user_profile.affective_prior`.
+These are treated as low-weight priors for the current turn.
+
+Do not make it the permanent personality. Treat it as per-turn state.
+
+## OpenClaw And Hermes
+
+Read `references/integration-openclaw-hermes.md` when wiring the output into runtime hooks.
+
+Use this mapping:
+
+- OpenClaw: `message_received` or `before_agent_start` computes state, `agent:bootstrap` or `before_agent_start` injects the overlay, queue and subagent logic consume `thread_interface`.
+- Hermes: keep the stable baseline in `SOUL.md`, store durable user tendencies in `USER.md`, and apply the per-turn state through `/personality`, local orchestration, or tool-driven overlays.
+
+## Resources
+
+- `scripts/emotion_engine.py`: screening, confirmation, prediction, guidance, overlay, and routing CLI.
+- `scripts/ablation_test.py`: real-world community-case ablation against a no-skill baseline.
+- `scripts/posthoc_calibration_pack.py`: build a cold-start 56-case posthoc calibration pack from community issue samples.
+- `assets/community-posthoc-calibration-56.jsonl`: 56 community-style issue and post samples for posthoc calibration.
+- `references/examples.md`: side-by-side examples that show how the layer changes agent behavior.
+- `references/model-prompts.md`: prompt blocks for initial screen, confirmation, and guidance.
+- `references/prompt-chain-audit.md`: condensed design logic for external review and critique.
+- `references/emotion-value-model.md`: what this layer changes in routing, work quality, guard mode, and user alignment.
+- `references/emotion-policy-matrix.md`: mapping from emotion state to behavior.
+- `references/integration-openclaw-hermes.md`: runtime wiring notes and example flow.

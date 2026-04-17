@@ -1,0 +1,7 @@
+interface:
+  display_name: "情绪.skill / Emotion Skill"
+  short_description: "Emotion-aware orchestration, work-mode routing, and posthoc calibration"
+  default_prompt: "Use $emotion-skill to detect user emotion, classify latent stance, render a dynamic emotion overlay, and adjust the next-turn routing and work mode."
+
+policy:
+  allow_implicit_invocation: true
