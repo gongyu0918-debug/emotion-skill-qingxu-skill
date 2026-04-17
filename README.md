@@ -31,8 +31,8 @@ The goal is simple: make an agent notice the human state behind the prompt.
 ### GitHub
 
 ```bash
-git clone https://github.com/gongyu0918-debug/emotion-skill-情绪.skill.git
-cd emotion-skill-情绪.skill
+git clone https://github.com/gongyu0918-debug/emotion-skill-qingxu-skill.git
+cd emotion-skill-qingxu-skill
 ```
 
 ### Local skill install
@@ -40,13 +40,13 @@ cd emotion-skill-情绪.skill
 macOS / Linux:
 
 ```bash
-cp -r emotion-skill-情绪.skill ~/.codex/skills/emotion-skill
+cp -r emotion-skill-qingxu-skill ~/.codex/skills/emotion-skill
 ```
 
 PowerShell:
 
 ```powershell
-Copy-Item -LiteralPath .\emotion-skill-情绪.skill -Destination $HOME\.codex\skills\emotion-skill -Recurse -Force
+Copy-Item -LiteralPath .\emotion-skill-qingxu-skill -Destination $HOME\.codex\skills\emotion-skill -Recurse -Force
 ```
 
 ### Run the engine directly
