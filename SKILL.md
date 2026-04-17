@@ -1,11 +1,31 @@
 ---
 name: 情绪.skill / Emotion Skill
-description: Detect user emotion and latent stance from wording, punctuation, retries, delay pressure, and dialogue history. Use when an agent should read the room, adapt work mode, change routing priority, tighten verification, prevent drift after success, and personalize behavior through consistency-driven front or posthoc weighting.
+description: Teach an agent to read the room. Detect urgency, frustration, skepticism, confusion, caution, satisfaction, and openness from wording, punctuation, retries, delay pressure, and dialogue history, then turn that signal into work-mode changes such as routing priority, verification depth, explanation style, and guard behavior after success.
 ---
 
 # 情绪.skill / Emotion Skill
 
-Use this skill to convert human emotion into execution policy.
+让 Agent 听懂空气，不只是听懂任务。
+
+这个 skill 做的事情很简单：
+
+- 用户开始急了，它少铺垫，先动手
+- 用户开始怀疑，它先拿依据再开工
+- 用户很谨慎，它把 scope 收紧
+- 用户已经满意，它别继续乱改，直接收口
+
+它不是语气美化器，它更像一个后台导演。
+
+它盯着一轮对话里那些细小但真实的东西：
+
+- 词汇的硬度
+- 标点的密度
+- 错别字和赶打感
+- 同一个问题反复出现
+- 长时间没响应后的语气变化
+- 那种用户自己都没留意到的轻微修正，比如 `不一定`
+
+然后把这些信号翻译成 Agent 的工作模式。
 
 ## Quick Start
 
