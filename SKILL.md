@@ -51,14 +51,37 @@ Then it turns those signals into execution policy.
 
 ## Quick Start
 
-1. Run `scripts/emotion_engine.py run --input <turn.json> --pretty`.
-2. Insert `overlay_prompt` into the current run as a dynamic pre-prompt.
-3. Apply `routing.thread_interface` to queue, thread, heartbeat, and subagent decisions.
-4. Use `guidance.hidden_hook` first when `guidance.hook_mode` is `latent`. Use `guidance.question` only when an explicit probe is worth the interruption.
-5. Read `analysis.semantic_pass` first. Use the semantic prompt only when it is `fast`.
-6. If you want model-side semantic judgment, read `references/model-prompts.md` and pass the JSON result back as `llm_semantic`.
-7. Read `confirmed_state.emotion_vector` and `confirmed_state.mode_scores` together. Emotion axes coexist. `dominant_mode` is only the routing winner for the current turn.
-8. On cold start, keep `posthoc_semantic` weight above the front screen. Raise front weight only after `calibration_state.consistency_rate` and `consistency_samples` become credible.
+先跑一轮，把当前用户消息丢进引擎里看看它怎么读空气：
+
+```bash
+python scripts/emotion_engine.py run --input <turn.json> --pretty
+```
+
+Start with one run. Feed the latest turn in and see how the engine reads the room:
+
+```bash
+python scripts/emotion_engine.py run --input <turn.json> --pretty
+```
+
+然后按这个顺序接进去：
+
+1. 把 `overlay_prompt` 塞进当前这一轮，当成一个很小的动态前置提示。
+2. 把 `routing.thread_interface` 接到队列、线程、heartbeat 和子任务路由。
+3. 如果 `guidance.hook_mode` 是 `latent`，先用 `guidance.hidden_hook`。只有真的值得打断用户时，再用 `guidance.question`。
+4. 先看 `analysis.semantic_pass`。它是 `fast` 的时候，再去跑模型语义复核。
+5. 如果你想让模型也参与判断，去看 `references/model-prompts.md`，把结果按 `llm_semantic` 回填。
+6. 看状态时别只盯一个标签，要一起看 `confirmed_state.emotion_vector` 和 `mode_scores`。情绪可以并存，`dominant_mode` 只负责决定这轮谁来主导编排。
+7. 冷启动时，先多信后置反问。等 `calibration_state.consistency_rate` 和 `consistency_samples` 长起来，再慢慢抬高前置权重。
+
+Then wire it in like this:
+
+1. Drop `overlay_prompt` into the current turn as a small dynamic pre-prompt.
+2. Feed `routing.thread_interface` into queueing, thread priority, heartbeat, and subagent routing.
+3. If `guidance.hook_mode` is `latent`, start with `guidance.hidden_hook`. Reach for `guidance.question` only when the interruption is worth it.
+4. Check `analysis.semantic_pass` first. Only run the semantic model pass when it says `fast`.
+5. If you want model-side judgment, read `references/model-prompts.md` and feed the result back as `llm_semantic`.
+6. Do not stare at one label in isolation. Read `confirmed_state.emotion_vector` and `mode_scores` together. Emotions can coexist. `dominant_mode` only decides who drives the turn.
+7. On cold start, trust posthoc reflection more. Raise front weight only after `calibration_state.consistency_rate` and `consistency_samples` become believable.
 
 ## Input Contract
 
