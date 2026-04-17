@@ -7,6 +7,8 @@ description: Teach an agent to read the room. Detect urgency, frustration, skept
 
 让 Agent 听懂空气，不只是听懂任务。
 
+Teach an agent to read the room, not just the task.
+
 这个 skill 做的事情很简单：
 
 - 用户开始急了，它少铺垫，先动手
@@ -14,7 +16,16 @@ description: Teach an agent to read the room. Detect urgency, frustration, skept
 - 用户很谨慎，它把 scope 收紧
 - 用户已经满意，它别继续乱改，直接收口
 
+What this skill does:
+
+- when the user turns urgent, it cuts the padding and acts first
+- when the user turns skeptical, it shows the basis before making moves
+- when the user turns cautious, it tightens scope
+- when the user is already satisfied, it stops pushing and switches to closing mode
+
 它不是语气美化器，它更像一个后台导演。
+
+It is not a tone-polisher. It is a backstage director.
 
 它盯着一轮对话里那些细小但真实的东西：
 
@@ -25,7 +36,18 @@ description: Teach an agent to read the room. Detect urgency, frustration, skept
 - 长时间没响应后的语气变化
 - 那种用户自己都没留意到的轻微修正，比如 `不一定`
 
+It watches the small but real signals inside a turn:
+
+- how hard the wording feels
+- how dense the punctuation gets
+- typos and rushed typing
+- the same issue showing up again
+- tone shifts after long silence
+- tiny corrections the user may not even notice, such as `not necessarily`
+
 然后把这些信号翻译成 Agent 的工作模式。
+
+Then it turns those signals into execution policy.
 
 ## Quick Start
 
