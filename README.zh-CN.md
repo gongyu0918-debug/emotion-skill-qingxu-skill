@@ -253,6 +253,8 @@ I will continue investigating the issue.
 
 我把这条思路链浓缩到了 [references/prompt-chain-audit.md](./references/prompt-chain-audit.md)。
 
+里面已经显式整理成 `VIBE CODING 思维链条 / PROMPT 整理版`。
+
 这份文档就是留给别人挑错的。你可以直接检查：
 
 - 哪些心理学映射太粗

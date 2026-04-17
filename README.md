@@ -254,6 +254,8 @@ The condensed review document is here:
 
 - [references/prompt-chain-audit.md](./references/prompt-chain-audit.md)
 
+It now explicitly contains the `VIBE CODING chain / prompt condensation` version of the design logic.
+
 It is written so other people can challenge the chain directly.
 
 ---
