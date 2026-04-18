@@ -1,0 +1,126 @@
+{
+  "version": "2026-04-18",
+  "policy": {
+    "core_entry_requirements": [
+      "research_support",
+      "community_recurrence",
+      "benchmark_gain_and_routing_change"
+    ],
+    "languages_specialized": [
+      "zh",
+      "en"
+    ],
+    "languages_generic_only": "all other languages"
+  },
+  "clusters": [
+    {
+      "id": "urgency_delay_burst",
+      "runtime_tier": "core",
+      "theme": "delay pressure and bursty urgency",
+      "languages": ["zh", "en"],
+      "support": {"research": true, "community": true, "benchmark": true},
+      "alignment_cases": ["urgent_short_cn", "urgent_typo_cn", "urgent_typo_en", "polite_high_pressure_cn"],
+      "ablation_cases": ["codex_still_not_fixed", "reminder_late_again_social", "google_tasks_manual_refresh_social"]
+    },
+    {
+      "id": "frustration_repeat_loop",
+      "runtime_tier": "core",
+      "theme": "same issue again, repeated failure, repair loops",
+      "languages": ["zh", "en"],
+      "support": {"research": true, "community": true, "benchmark": true},
+      "alignment_cases": ["frustrated_loop_en", "delay_stall_cn", "dismissive_pause_cn"],
+      "ablation_cases": ["claude_code_regression_loop", "kilocode_auto_hang", "gemini_feedback_hang"]
+    },
+    {
+      "id": "skepticism_evidence",
+      "runtime_tier": "core",
+      "theme": "evidence-seeking and root-cause challenge",
+      "languages": ["zh", "en"],
+      "support": {"research": true, "community": true, "benchmark": true},
+      "alignment_cases": ["skeptical_cn", "skeptical_en", "tempo_pause_skeptic_cn", "claude_doubts_user_evidence_en"],
+      "ablation_cases": ["gemini_windows_regression", "claude_gitbash_despite_config", "claude_posttooluse_never_executes", "claude_doubts_user_evidence"]
+    },
+    {
+      "id": "skepticism_guesswork",
+      "runtime_tier": "core",
+      "theme": "repo grounding and anti-guesswork",
+      "languages": ["zh", "en"],
+      "support": {"research": true, "community": true, "benchmark": true},
+      "alignment_cases": ["guesswork_repo_en", "ci_rules_guesswork_en"],
+      "ablation_cases": ["copilot_codebase_guesswork_discussion", "ci_rules_guesswork_social"]
+    },
+    {
+      "id": "cautious_boundary",
+      "runtime_tier": "core",
+      "theme": "scope protection and safe-path requests",
+      "languages": ["zh", "en"],
+      "support": {"research": true, "community": true, "benchmark": true},
+      "alignment_cases": ["cautious_prod_cn", "cautious_boundary_cn", "cautious_verify_en"],
+      "ablation_cases": ["claude_gitbash_despite_config"]
+    },
+    {
+      "id": "satisfaction_guard",
+      "runtime_tier": "core",
+      "theme": "closure, continue, and guard mode",
+      "languages": ["zh", "en"],
+      "support": {"research": true, "community": true, "benchmark": true},
+      "alignment_cases": ["satisfied_guard_cn", "satisfied_continue_cn", "satisfied_continue_en"],
+      "ablation_cases": []
+    },
+    {
+      "id": "dismissive_pause_surface",
+      "runtime_tier": "core",
+      "theme": "dismissive short replies and rhythmic pauses",
+      "languages": ["zh", "en"],
+      "support": {"research": true, "community": true, "benchmark": true},
+      "alignment_cases": ["dismissive_pause_cn", "sure_pause_en", "terse_period_en"],
+      "ablation_cases": ["codex_wsl_still_broken"]
+    },
+    {
+      "id": "typo_textism_rush",
+      "runtime_tier": "core",
+      "theme": "rushed typing, textisms, and nonstandard spelling",
+      "languages": ["zh", "en"],
+      "support": {"research": true, "community": true, "benchmark": true},
+      "alignment_cases": ["urgent_typo_cn", "urgent_typo_en", "textism_stall_en", "nonstandard_spelling_en"],
+      "ablation_cases": ["codex_still_not_fixed"]
+    },
+    {
+      "id": "silent_failure_timing",
+      "runtime_tier": "core",
+      "theme": "late reminder, no alert, silent failure",
+      "languages": ["zh", "en"],
+      "support": {"research": true, "community": true, "benchmark": true},
+      "alignment_cases": ["reminder_late_en", "manual_refresh_reminder_en", "scheduler_goes_quiet_en"],
+      "ablation_cases": ["silent_jobs_broke_for_days_social", "zombie_cron_no_alert_social", "bullmq_scheduler_goes_quiet"]
+    },
+    {
+      "id": "context_loss_memory",
+      "runtime_tier": "core",
+      "theme": "context loss, forgotten rules, fallback workspace",
+      "languages": ["en"],
+      "support": {"research": true, "community": true, "benchmark": true},
+      "alignment_cases": ["openclaw_context_loss_en", "codex_compaction_false_timeline_en", "openclaw_handoff_fallback_en", "hermes_forgets_rule_en"],
+      "ablation_cases": ["openclaw_context_loss_after_reset", "codex_compaction_false_timeline", "openclaw_handoff_fallback_workspace", "hermes_forgets_rule_between_sessions"]
+    },
+    {
+      "id": "execution_plumbing_gap",
+      "runtime_tier": "core",
+      "theme": "heartbeat, cron, socket, and automation chain does nothing",
+      "languages": ["en"],
+      "support": {"research": true, "community": true, "benchmark": true},
+      "alignment_cases": ["openclaw_heartbeat_ignores_params_en", "openclaw_socket_zero_events_en", "hermes_hindsight_hangs_en"],
+      "ablation_cases": ["openclaw_heartbeat_ignores_parameters", "openclaw_socket_zero_inbound_events", "hermes_hindsight_hangs_for_hours"]
+    },
+    {
+      "id": "token_bloat_context_creep",
+      "runtime_tier": "candidate",
+      "theme": "system prompt overhead, double injection, token tax",
+      "languages": ["en"],
+      "support": {"research": true, "community": true, "benchmark": false},
+      "alignment_cases": [],
+      "ablation_cases": [],
+      "note": "Kept out of runtime core until it changes routing or verification behavior reliably."
+    }
+  ]
+}

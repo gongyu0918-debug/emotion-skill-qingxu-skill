@@ -1,6 +1,8 @@
 # Model Prompts
 
 Use the semantic pass only when `analysis.semantic_pass` is `fast`.
+Emotion collection runs through four concurrent signals: front labels, hidden posthoc reflection, dialogue history, and time or runtime pressure.
+The posthoc reflection stays hidden and runs every turn. Cold start gives it more room. Stable users get a very short shadow reflection.
 
 ## 1. Fast Screen Prompt
 
@@ -17,6 +19,7 @@ Rules:
 - `emotion_vector` keeps only emotion axes. Do not use production, money, permission, deletion, or compliance domain words as direct emotion evidence.
 - Use `usr.prior` and `usr.persona` as low-weight priors.
 - Treat `still not fixed`, `same issue`, `stuck`, long delay, repeated emphasis, and abrupt short replies as strong task-state cues.
+- Treat nonstandard punctuation, deliberate typos, nonstandard spelling, textisms, and rhythmic pauses as low-confidence surface cues that need support from delay, retries, contradiction, or repeated failure.
 - Respect `usr.delay`, `usr.work`, `usr.terse`, and `usr.polite` as baseline hints instead of treating all users the same.
 - Keep the answer short and machine-readable.
 
@@ -33,6 +36,7 @@ Rules:
 - Prefer working-state pressure over surface politeness.
 - Keep `cautious` tied to care language, boundary language, and verification-first language.
 - Keep `skeptical` tied to evidence requests, contradiction, and challenge language.
+- Use `fine.`, `sure...`, `whatever`, `行吧`, `算了`, `呵`, `……`, `..`, `. . .`, and abrupt half-cut turns as weak stance cues, then confirm them against runtime pressure.
 - Recent success plus guard wording should raise `satisfied`.
 
 ## 3. Compact Overlay Prompt
@@ -47,18 +51,21 @@ signals:delay_pressure,repeated_user_emphasis; actions:act-first,short-first-rep
 
 This block is short enough for turn-local system or developer injection.
 
-## 4. Posthoc Reflection Prompt
+## 4. Hidden Posthoc Reflection Prompt
 
 ```text
-Decompose the latest user message into latent affect and stance cues for long-term calibration.
+Run a hidden posthoc reflection for the latest user message.
+Decompose latent affect and stance cues for long-term calibration.
 Extract the exact wording, hedge, correction, punctuation, tempo clue, or stance marker that carries emotion.
 Return JSON only:
-{"emotion_vector":{"urgency":0.0,"frustration":0.0,"confusion":0.0,"skepticism":0.0,"satisfaction":0.0,"cautiousness":0.0,"openness":0.0},"labels":["skeptical"],"confidence":0.0,"cue_spans":[{"text":"不一定","signal":"skepticism","kind":"hedge","strength":0.4}],"notes":["light hedge"]}
+{"emotion_vector":{"urgency":0.0,"frustration":0.0,"confusion":0.0,"skepticism":0.0,"satisfaction":0.0,"cautiousness":0.0,"openness":0.0},"labels":["skeptical"],"confidence":0.0,"emotionality":0.0,"composition":{"urgency":0.0,"frustration":0.0,"confusion":0.0,"skepticism":0.0,"satisfaction":0.0,"cautiousness":0.0,"openness":0.0},"cue_spans":[{"text":"不一定","signal":"skepticism","kind":"hedge","strength":0.4}],"notes":["light hedge"]}
 ```
 
 Rules:
 
 - Keep this pass focused on emotion wording and stance signals.
-- Look for hedges, soft corrections, repeated emphasis, impatience punctuation, abrupt closure, scope protection, and evidence-seeking language.
+- Look for hedges, soft corrections, repeated emphasis, impatience punctuation, abrupt closure, scope protection, evidence-seeking language, dismissive short phrases, deliberate misspellings, textisms, and rhythmic pause markers.
 - Use `front_weight`, `posthoc_weight`, and `front_consistency` only as calibration hints.
-- Cold start favors richer posthoc decomposition. High long-run consistency allows shorter reflection.
+- Cold start favors richer posthoc decomposition. High long-run consistency compresses the pass into a short shadow reflection instead of turning it off.
+- `emotionality` means the share of the sentence that carries emotional or stance pressure.
+- `composition` is the normalized share across emotion axes. Keep it short and machine-readable.

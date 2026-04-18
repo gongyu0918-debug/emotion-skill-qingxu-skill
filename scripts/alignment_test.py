@@ -272,6 +272,189 @@ CASES = [
             },
         },
     },
+    {
+        "id": "stable_shadow_posthoc_en",
+        "expected": ["exploratory"],
+        "posthoc_expect": {"should_run": True, "style_in": ["micro_reflection", "compact_decompose"]},
+        "payload": {
+            "message": "Give me two directions for the router and the tradeoffs.",
+            "runtime": {"response_delay_seconds": 4},
+            "calibration_state": {
+                "observed_turns": 44,
+                "posthoc_samples": 32,
+                "consistency_samples": 29,
+                "stable_prediction_hits": 22,
+                "prediction_agreement": 0.86,
+                "consistency_rate": 0.9,
+            },
+        },
+    },
+    {
+        "id": "dismissive_pause_cn",
+        "expected": ["frustrated"],
+        "payload": {
+            "message": "行吧……你继续。这个问题又回来了。",
+            "history": [
+                {"role": "assistant", "text": "我已经修好了"},
+                {"role": "user", "text": "还是这个问题"},
+            ],
+            "runtime": {"response_delay_seconds": 21, "unresolved_turns": 3, "bug_retries": 2, "same_issue_mentions": 2},
+        },
+    },
+    {
+        "id": "sure_pause_en",
+        "expected": ["skeptical"],
+        "payload": {
+            "message": "sure... show me why this is different from the last broken fix.",
+            "history": [{"role": "assistant", "text": "I fixed it in the last patch"}],
+            "runtime": {"response_delay_seconds": 14, "unresolved_turns": 2, "contradiction_signal": 0.4},
+        },
+    },
+    {
+        "id": "textism_stall_en",
+        "expected": ["urgent", "frustrated"],
+        "payload": {
+            "message": "idk man still broken again pls fix rn",
+            "runtime": {"response_delay_seconds": 24, "unresolved_turns": 3, "bug_retries": 2, "same_issue_mentions": 2},
+        },
+    },
+    {
+        "id": "nonstandard_spelling_en",
+        "expected": ["skeptical"],
+        "payload": {
+            "message": "gonna need the exact root cause cuz this brokn path keeps reoccuring",
+            "runtime": {"response_delay_seconds": 11, "unresolved_turns": 2, "contradiction_signal": 0.28},
+        },
+    },
+    {
+        "id": "tempo_pause_skeptic_cn",
+        "expected": ["skeptical"],
+        "payload": {
+            "message": "还是这个问题.. . . 先说依据，再动手。",
+            "history": [{"role": "assistant", "text": "我觉得已经定位到了"}],
+            "runtime": {"response_delay_seconds": 18, "unresolved_turns": 2, "same_issue_mentions": 2, "contradiction_signal": 0.34},
+        },
+    },
+    {
+        "id": "guesswork_repo_en",
+        "expected": ["skeptical", "frustrated"],
+        "payload": {
+            "message": "You analyzed a fraction of the codebase and guessed the rest. Stop speculating and ground the answer in the repo.",
+            "runtime": {"response_delay_seconds": 11, "unresolved_turns": 2, "contradiction_signal": 0.32},
+        },
+    },
+    {
+        "id": "reminder_late_en",
+        "expected": ["urgent", "frustrated"],
+        "payload": {
+            "message": "The reminder showed up late again. I needed this hours ago and nothing happened when it should have fired.",
+            "runtime": {"response_delay_seconds": 18, "unresolved_turns": 2, "task_age_minutes": 180},
+        },
+    },
+    {
+        "id": "silent_job_no_alert_en",
+        "expected": ["frustrated", "skeptical"],
+        "payload": {
+            "message": "My automated job silently broke for days and there was no alert. Show me where monitoring missed it before another patch.",
+            "runtime": {"response_delay_seconds": 13, "unresolved_turns": 3, "bug_retries": 2, "contradiction_signal": 0.28},
+        },
+    },
+    {
+        "id": "gateway_running_but_dead_en",
+        "expected": ["urgent", "frustrated"],
+        "payload": {
+            "message": "Status says running but nothing works. Cron jobs hang forever, messages do not deliver, no alert.",
+            "runtime": {"response_delay_seconds": 18, "unresolved_turns": 3, "bug_retries": 2, "same_issue_mentions": 2, "contradiction_signal": 0.42},
+        },
+    },
+    {
+        "id": "ci_rules_guesswork_en",
+        "expected": ["skeptical"],
+        "payload": {
+            "message": "These tools keep guessing my CI rules and wasting time with fixes that pass locally but fail CI.",
+            "runtime": {"response_delay_seconds": 12, "unresolved_turns": 2, "bug_retries": 1, "contradiction_signal": 0.34},
+        },
+    },
+    {
+        "id": "manual_refresh_reminder_en",
+        "expected": ["urgent", "frustrated"],
+        "payload": {
+            "message": "I needed this reminder for something important and there was no alert at all. If I manually open Tasks, it suddenly appears.",
+            "runtime": {"response_delay_seconds": 20, "unresolved_turns": 2, "task_age_minutes": 120},
+        },
+    },
+    {
+        "id": "scheduler_goes_quiet_en",
+        "expected": ["frustrated"],
+        "payload": {
+            "message": "CloudWatch stops receiving metrics because the scheduler silently stops producing jobs. It ends in drained and then just goes quiet.",
+            "runtime": {"response_delay_seconds": 14, "unresolved_turns": 3, "bug_retries": 2, "same_issue_mentions": 2},
+        },
+    },
+    {
+        "id": "openclaw_context_loss_en",
+        "expected": ["frustrated", "skeptical"],
+        "payload": {
+            "message": "After a compaction or a new session reset, the agent completely loses the conversational thread. The actual dialogue just vanishes and it starts fresh.",
+            "runtime": {"response_delay_seconds": 14, "unresolved_turns": 2, "bug_retries": 1, "same_issue_mentions": 2},
+        },
+    },
+    {
+        "id": "codex_compaction_false_timeline_en",
+        "expected": ["frustrated", "skeptical"],
+        "payload": {
+            "message": "Compaction reset the session, you forgot the edits you just made, and then you blamed previous sessions. Show me exactly what survived compaction before claiming anything.",
+            "runtime": {"response_delay_seconds": 14, "unresolved_turns": 3, "bug_retries": 2, "same_issue_mentions": 2, "contradiction_signal": 0.44, "task_age_minutes": 65},
+        },
+    },
+    {
+        "id": "openclaw_heartbeat_ignores_params_en",
+        "expected": ["frustrated", "skeptical"],
+        "payload": {
+            "message": "The heartbeat simply does not execute, or it ignores parameters like isolatedSession and lightContext.",
+            "runtime": {"response_delay_seconds": 15, "unresolved_turns": 3, "bug_retries": 2},
+        },
+    },
+    {
+        "id": "openclaw_socket_zero_events_en",
+        "expected": ["frustrated", "skeptical"],
+        "payload": {
+            "message": "Socket mode connected, then silence. No inbound events are ever logged, stale-socket restarts do nothing.",
+            "runtime": {"response_delay_seconds": 16, "unresolved_turns": 3, "bug_retries": 2, "contradiction_signal": 0.34},
+        },
+    },
+    {
+        "id": "openclaw_handoff_fallback_en",
+        "expected": ["frustrated", "skeptical"],
+        "payload": {
+            "message": "The handoff path is falling back to agent_home, projectId and workspaceId are null, and the context plumbing is lying to us. Stop guessing locally and check the handoff path.",
+            "runtime": {"response_delay_seconds": 12, "unresolved_turns": 2, "contradiction_signal": 0.34},
+        },
+    },
+    {
+        "id": "claude_doubts_user_evidence_en",
+        "expected": ["frustrated", "skeptical"],
+        "payload": {
+            "message": "I gave you a screenshot and clear evidence. Stop doubting the report and chasing imaginary causes. Inspect your own code and tell me the exact basis.",
+            "runtime": {"response_delay_seconds": 11, "unresolved_turns": 3, "bug_retries": 2, "same_issue_mentions": 2, "contradiction_signal": 0.5},
+        },
+    },
+    {
+        "id": "hermes_forgets_rule_en",
+        "expected": ["frustrated", "skeptical"],
+        "payload": {
+            "message": "This works within a session, but as soon as I start a new session, the agent completely forgets this rule.",
+            "runtime": {"response_delay_seconds": 12, "unresolved_turns": 2, "same_issue_mentions": 2},
+        },
+    },
+    {
+        "id": "hermes_hindsight_hangs_en",
+        "expected": ["frustrated"],
+        "payload": {
+            "message": "Hindsight is available, but on the first prompt it just hangs installing packages for hours.",
+            "runtime": {"response_delay_seconds": 22, "unresolved_turns": 3, "bug_retries": 1, "task_age_minutes": 180},
+        },
+    },
 ]
 
 
@@ -293,6 +476,13 @@ def main() -> int:
                 ok = ok and weights["posthoc_weight"] > weights["screen_weight"]
             if weight_expect.get("screen_gt_posthoc"):
                 ok = ok and weights["screen_weight"] > weights["posthoc_weight"]
+        posthoc_expect = case.get("posthoc_expect") or {}
+        if posthoc_expect:
+            posthoc_plan = result["posthoc_plan"]
+            if "should_run" in posthoc_expect:
+                ok = ok and bool(posthoc_plan["should_run"]) is bool(posthoc_expect["should_run"])
+            if "style_in" in posthoc_expect:
+                ok = ok and str(posthoc_plan["style"]) in posthoc_expect["style_in"]
         if ok:
             passed += 1
         rows.append(
@@ -309,6 +499,10 @@ def main() -> int:
                     "screen_weight": result["weight_schedule"]["screen_weight"],
                     "posthoc_weight": result["weight_schedule"]["posthoc_weight"],
                     "effective_consistency": result["weight_schedule"]["effective_consistency"],
+                },
+                "posthoc_plan": {
+                    "should_run": result["posthoc_plan"]["should_run"],
+                    "style": result["posthoc_plan"]["style"],
                 },
             }
         )

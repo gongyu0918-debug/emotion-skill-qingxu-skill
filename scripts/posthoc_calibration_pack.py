@@ -12,7 +12,7 @@ import emotion_engine as ee
 
 
 ROOT = Path(__file__).resolve().parents[1]
-DEFAULT_DATASET = ROOT / "assets" / "community-posthoc-calibration-56.jsonl"
+DEFAULT_DATASET = ROOT / "assets" / "community-posthoc-calibration-v2.jsonl"
 
 
 def load_jsonl(path: Path) -> list[dict[str, object]]:
@@ -51,6 +51,7 @@ def build_pack_row(case: dict[str, object]) -> dict[str, object]:
         "front_emotion_vector": result["initial_screen"]["emotion_vector"],
         "weight_schedule": result["weight_schedule"],
         "posthoc_plan": result["posthoc_plan"],
+        "posthoc_shadow": result["posthoc_shadow"],
         "posthoc_reflection_prompt": result["prompts"]["posthoc_reflection_prompt"],
     }
 

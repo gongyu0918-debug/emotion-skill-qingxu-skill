@@ -49,6 +49,56 @@ It watches the small but real signals inside a turn:
 
 Then it turns those signals into execution policy.
 
+## Language Coverage
+
+当前特化校准只覆盖两种语言：
+
+- 中文
+- 英文
+
+The current specialized calibration covers two languages:
+
+- Chinese
+- English
+
+这两条线有单独整理过的共性情绪表达、社区语料、标点习惯、节奏停顿、赶打错拼和 agent-coding 抱怨模式。
+
+These two tracks have explicit calibration for shared emotion cues, community phrasing, punctuation habits, rhythmic pauses, rushed typos, and agent-coding complaint patterns.
+
+其他语言目前只有弱支持：
+
+- 通用标点强度
+- 重复和停顿
+- 延迟压力
+- 多轮重复失败
+- 命令语气和结构性线索
+
+Other languages currently receive only light support:
+
+- generic punctuation intensity
+- repetition and pause rhythm
+- delay pressure
+- repeated failure across turns
+- imperative tone and structural cues
+
+发布说明里应该明确写这一点：当前版本没有对其他语言做专门特化训练或独立语料校准。
+
+The release notes should say this plainly: the current version does not include language-specific tuning or dedicated calibration corpora for languages beyond Chinese and English.
+
+采集层一直是四路并行：
+
+- 前置情绪标签 prompt
+- 后置反问 prompt
+- 历史上下文
+- 时间戳、延迟、重试和卡住状态
+
+The collection layer always runs four signals in parallel:
+
+- front emotion-label prompt
+- posthoc reflection prompt
+- dialogue history
+- timestamp, delay, retry, and stall state
+
 ## Quick Start
 
 先跑一轮，把当前用户消息丢进引擎里看看它怎么读空气：
@@ -71,7 +121,8 @@ python scripts/emotion_engine.py run --input <turn.json> --pretty
 4. 先看 `analysis.semantic_pass`。它是 `fast` 的时候，再去跑模型语义复核。
 5. 如果你想让模型也参与判断，去看 `references/model-prompts.md`，把结果按 `llm_semantic` 回填。
 6. 看状态时别只盯一个标签，要一起看 `confirmed_state.emotion_vector` 和 `mode_scores`。情绪可以并存，`dominant_mode` 只负责决定这轮谁来主导编排。
-7. 冷启动时，先多信后置反问。等 `calibration_state.consistency_rate` 和 `consistency_samples` 长起来，再慢慢抬高前置权重。
+7. 后置反问每轮都在后台跑。冷启动时它更长、更重；一致性升高后它缩成一个很短的 shadow reflection。
+8. 等 `calibration_state.consistency_rate` 和 `consistency_samples` 长起来，再慢慢抬高前置权重。
 
 Then wire it in like this:
 
@@ -81,7 +132,8 @@ Then wire it in like this:
 4. Check `analysis.semantic_pass` first. Only run the semantic model pass when it says `fast`.
 5. If you want model-side judgment, read `references/model-prompts.md` and feed the result back as `llm_semantic`.
 6. Do not stare at one label in isolation. Read `confirmed_state.emotion_vector` and `mode_scores` together. Emotions can coexist. `dominant_mode` only decides who drives the turn.
-7. On cold start, trust posthoc reflection more. Raise front weight only after `calibration_state.consistency_rate` and `consistency_samples` become believable.
+7. Posthoc reflection stays on in the background every turn. Cold start gives it more room and more weight. High consistency compresses it into a short shadow reflection.
+8. Raise front weight only after `calibration_state.consistency_rate` and `consistency_samples` become believable.
 
 ## Input Contract
 
@@ -348,11 +400,13 @@ Use this mapping:
 
 - `scripts/emotion_engine.py`: screening, confirmation, prediction, guidance, overlay, and routing CLI.
 - `scripts/ablation_test.py`: real-world community-case ablation against a no-skill baseline.
-- `scripts/posthoc_calibration_pack.py`: build a cold-start 56-case posthoc calibration pack from community issue samples.
-- `assets/community-posthoc-calibration-56.jsonl`: 56 community-style issue and post samples for posthoc calibration.
+- `scripts/posthoc_calibration_pack.py`: build the v2 cold-start posthoc calibration pack from community issue samples.
+- `assets/community-posthoc-calibration-v2.jsonl`: expanded community-style calibration set with GitHub issues, discussions, and forum-style failure reports.
+- `assets/community-posthoc-calibration-56.jsonl`: frozen first-pass snapshot for reproducibility.
 - `references/examples.md`: side-by-side examples that show how the layer changes agent behavior.
 - `references/model-prompts.md`: prompt blocks for initial screen, confirmation, and guidance.
 - `references/prompt-chain-audit.md`: condensed design logic for external review and critique.
+- `references/research-cues-v2.md`: source-backed notes for punctuation, textisms, pauses, misspellings, and confidence weighting.
 - `references/emotion-value-model.md`: what this layer changes in routing, work quality, guard mode, and user alignment.
 - `references/emotion-policy-matrix.md`: mapping from emotion state to behavior.
 - `references/integration-openclaw-hermes.md`: runtime wiring notes and example flow.

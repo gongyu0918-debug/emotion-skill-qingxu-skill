@@ -92,6 +92,27 @@ It quietly extracts emotional wording, stance shifts, and correction signals wit
 
 ---
 
+## Language coverage
+
+The current specialized calibration covers two languages:
+
+- Chinese
+- English
+
+These two tracks already include shared emotion cues, community corpora, punctuation habits, pause rhythm, rushed typos, misspellings, and agent-user complaint patterns.
+
+Other languages currently get light support through:
+
+- generic punctuation intensity
+- repetition and pause rhythm
+- delay pressure
+- repeated unresolved turns
+- imperative structure
+
+The repository and release notes should say this plainly: the current version does not include language-specific tuning for languages beyond Chinese and English.
+
+---
+
 ## What it changes
 
 | State | Agent behavior | Why it matters |
