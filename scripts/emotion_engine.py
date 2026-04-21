@@ -55,18 +55,20 @@ FRUSTRATION_TERMS = {
     "卡了很久", "没反应", "卡死", "卡住", "死循环", "修了又坏",
     "still not fixed", "still broken", "same issue", "same error", "again", "reoccurred",
     "keeps breaking", "endless", "time sink", "not this error", "stops responding", "bug-fixing loops",
+    "cannot use it", "cannot use it at all", "burned cpu", "comes back tomorrow", "back tomorrow", "fails silently",
     "stop doubting", "stop blaming previous sessions", "wasted time",
 }
 STALL_TERMS = {
     "卡住", "卡死", "没反应", "一直转", "卡这", "hang", "hung", "stuck", "stall",
     "spinner", "loading", "timeout", "no response", "stops responding",
+    "for hours", "activating for hours", "activating", "cannot use", "hangs installing", "installing packages for hours", "fails silently",
 }
 CONFUSION_TERMS = {
     "为什么", "怎么", "啥", "不懂", "看不懂", "迷糊", "不知道", "不清楚",
     "why", "how", "confused", "unclear",
 }
 SATISFACTION_TERMS = {
-    "好了", "可以", "不错", "满意", "继续", "谢谢", "太好了", "解决了",
+    "好了", "可以", "不错", "满意", "谢谢", "太好了", "解决了",
     "great", "nice", "works", "solved", "thanks", "good",
 }
 CONTINUE_TERMS = {
@@ -88,6 +90,7 @@ BOUNDARY_TERMS = {
 ASSURANCE_TERMS = {
     "验证", "确认", "检查一下", "过一遍", "保险一点", "稳一点", "最稳", "保守一点",
     "verify", "verify first", "double check", "check first", "safest", "safe path", "conservative",
+    "check that path", "before another workaround", "before telling me to",
 }
 SKEPTICISM_TERMS = {
     "你确定", "确定吗", "真的吗", "靠谱吗", "有把握吗", "凭什么", "依据", "证据", "给我证据",
@@ -96,7 +99,9 @@ SKEPTICISM_TERMS = {
     "despite correct configuration", "without warning", "misleading", "working perfectly yesterday",
     "are you sure", "how do you know", "based on what", "show me", "evidence", "proof", "prove", "cite", "root cause", "exact root cause",
     "source", "don't guess", "stop guessing", "back it up", "despite", "misleading error",
+    "generic auth advice", "check that path", "before another workaround", "before telling me to",
     "screenshot", "clear evidence", "user report", "user reports", "doubting the report", "doubt the report", "trust the user report", "check your own code",
+    "do not tell me it is gone", "comes back tomorrow",
 }
 SPECULATION_TERMS = {
     "猜的", "瞎猜", "脑补", "臆测", "别猜", "别编", "编的", "猜出来", "靠猜", "乱猜",
@@ -138,8 +143,15 @@ EXPLORATION_TERMS = {
     "brainstorm", "options", "tradeoff", "design", "architecture", "compare", "feasibility", "suggest", "direction", "directions", "ideas",
 }
 COMMAND_TERMS = {"修", "改", "做", "上", "给我", "继续", "直接", "fix", "ship", "do it", "change", "implement", "patch"}
-VAGUE_TERMS = {"这个", "那个", "随便", "差不多", "大概", "something", "whatever", "somehow"}
-SUCCESS_TERMS = {"完成", "成功", "通过", "跑通", "done", "fixed", "resolved", "green", "passed"}
+VAGUE_TERMS = {"随便", "差不多", "大概", "something", "whatever", "somehow"}
+TASK_OBJECT_TERMS = {
+    "问题", "文件", "配置", "流程", "主流程", "接口", "线程", "路由", "权限", "根因", "路径", "发布", "用例",
+    "issue", "error", "file", "config", "configuration", "flow", "main flow", "interface", "thread", "router", "path", "release", "case", "test", "build", "root cause",
+    "extension", "remote ssh", "ssh", "auth", "cron job", "packages",
+}
+SUCCESS_TERMS = {
+    "完成", "成功", "通过", "跑通", "通了", "稳了", "搞定", "done", "fixed", "resolved", "green", "passed", "works now", "working now",
+}
 GUARD_TERMS = {"收口", "守住", "稳住", "防漂移", "防回归", "guard", "stabilize", "lock it", "smoke check"}
 MISSED_EXPECTATION_TERMS = {
     "来不及", "错过了", "晚了", "太晚了", "又晚了", "没提醒", "提醒没来", "没告警", "静默失败", "没有任何提醒", "什么都没发生",
@@ -169,7 +181,7 @@ SOFT_CORRECTION_PATTERN = re.compile(r"(但|但是|不过|只是|然而|but|howe
 CLAIMED_RESOLUTION_PATTERN = re.compile(r"(fixed|resolved|done|solved|passed|green|works now|好了|解决了|完成了|跑通了|通过|通过了)")
 STILL_BROKEN_PATTERN = re.compile(
     r"(still (?:not fixed|broken|happening)|same (?:issue|error)|keeps? breaking|stuck|hang(?:s|ing)?|stop(?:s)? responding|not this error|"
-    r"还没好|还没修好|还是这个|同一个问题|卡住|卡死|没反应|一直转|又坏了)"
+    r"comes back tomorrow|still comes back|还没好|还没修好|还是这个|同一个问题|卡住|卡死|没反应|一直转|又坏了)"
 )
 
 
@@ -180,7 +192,10 @@ def clamp(value: float, low: float = 0.0, high: float = 1.0) -> float:
 def load_json_file(path: str | None) -> Any:
     if not path:
         return None
-    return json.loads(Path(path).read_text(encoding="utf-8"))
+    file_path = Path(path)
+    if not file_path.exists():
+        raise FileNotFoundError(f"JSON input file not found: {file_path}")
+    return json.loads(file_path.read_text(encoding="utf-8"))
 
 
 def dump_json(data: Any, pretty: bool) -> str:
@@ -530,6 +545,7 @@ def build_features(payload: dict[str, Any]) -> dict[str, Any]:
     explore_hits = count_terms(message, EXPLORATION_TERMS)
     command_hits = count_terms(message, COMMAND_TERMS)
     vague_hits = count_terms(message, VAGUE_TERMS)
+    task_object_hits = count_terms(message, TASK_OBJECT_TERMS)
     success_hits = count_terms(message, SUCCESS_TERMS)
     guard_hits = count_terms(message, GUARD_TERMS)
     missed_expectation_hits = count_terms(message, MISSED_EXPECTATION_TERMS)
@@ -549,6 +565,7 @@ def build_features(payload: dict[str, Any]) -> dict[str, Any]:
     praise_ratio = clamp((praise_hits + satisfaction_hits) / 4.0)
     polite_ratio = clamp(polite_hits / 3.0)
     explore_ratio = clamp(explore_hits / 3.0)
+    task_object_ratio = clamp(task_object_hits / 3.0)
     success_ratio = clamp(success_hits / 3.0)
     continue_ratio = clamp(continue_hits / 3.0)
     blocking_ratio = clamp(blocking_hits / 3.0)
@@ -583,11 +600,14 @@ def build_features(payload: dict[str, Any]) -> dict[str, Any]:
         + 0.14 * clamp(punctuation_runs / 2.0)
     )
     goal_specificity = clamp(
-        0.38 * technical_ratio
+        0.3 * technical_ratio
         + 0.24 * command_ratio
+        + 0.16 * task_object_ratio
         + 0.18 * clamp(file_refs / 2.0)
         + 0.12 * clamp(code_markers)
         + 0.08 * success_ratio
+        + 0.06 * boundary_ratio
+        + 0.04 * assurance_ratio
     )
     typing_chaos = clamp(
         0.34 * clamp(rush_typo_hits / 2.0)
@@ -665,6 +685,8 @@ def build_features(payload: dict[str, Any]) -> dict[str, Any]:
         evidence.append("textism_cue")
     if abrupt_period_reply:
         evidence.append("abrupt_short_reply")
+    if task_object_ratio >= 0.24:
+        evidence.append("task_object_anchor")
     if delay_pressure >= 0.35:
         evidence.append("delay_pressure")
     if stuck_pressure >= 0.42:
@@ -738,6 +760,7 @@ def build_features(payload: dict[str, Any]) -> dict[str, Any]:
         "explore_hits": explore_hits,
         "command_hits": command_hits,
         "vague_hits": vague_hits,
+        "task_object_hits": task_object_hits,
         "success_hits": success_hits,
         "guard_hits": guard_hits,
         "missed_expectation_hits": missed_expectation_hits,
@@ -754,6 +777,7 @@ def build_features(payload: dict[str, Any]) -> dict[str, Any]:
         "polite_ratio": round(polite_ratio, 4),
         "politeness_delta": round(politeness_delta, 4),
         "explore_ratio": round(explore_ratio, 4),
+        "task_object_ratio": round(task_object_ratio, 4),
         "success_ratio": round(success_ratio, 4),
         "continue_ratio": round(continue_ratio, 4),
         "blocking_ratio": round(blocking_ratio, 4),
@@ -821,6 +845,7 @@ def derive_emotion_vector(state_vector: dict[str, float], features: dict[str, An
         - 0.08 * features["execution_plumbing_ratio"]
         - 0.04 * features["contradiction_signal"]
         - 0.06 * features["goal_specificity"]
+        - 0.04 * features["task_object_ratio"]
     )
     skepticism = clamp(
         0.46 * features["skepticism_ratio"]
@@ -878,8 +903,8 @@ def build_mode_scores(emotion_vector: dict[str, float], features: dict[str, Any]
         "frustrated": round(clamp(emotion_vector["frustration"] * 1.1 + 0.1 * features["stuck_pressure"] + 0.08 * features["missed_expectation_ratio"] + 0.08 * features["context_loss_ratio"] + 0.08 * features["execution_plumbing_ratio"] + 0.06 * features["resolution_mismatch"] + 0.08 * features["abrupt_delta"] + 0.06 * features["delay_pressure"] + 0.08 * features["dismissive_pressure"] + 0.04 * features["tempo_pause_pressure"] + 0.06 * features["contradiction_signal"] + 0.04 * features["soft_correction"]), 4),
         "confused": round(clamp(emotion_vector["confusion"] * 1.04 + 0.08 * clamp(features["confusion_hits"] / 2.0) + 0.04 * features["vague_ratio"] - 0.08 * features["goal_specificity"] - 0.12 * features["speculation_ratio"] - 0.08 * features["context_loss_ratio"] - 0.08 * features["execution_plumbing_ratio"] - 0.06 * features["contradiction_signal"]), 4),
         "skeptical": round(clamp(emotion_vector["skepticism"] * 1.06 + 0.12 * features["speculation_ratio"] + 0.08 * features["context_loss_ratio"] + 0.1 * features["execution_plumbing_ratio"] + 0.08 * features["resolution_mismatch"] + 0.06 * features["contradiction_signal"] + 0.06 * features["stuck_pressure"] + 0.04 * features["delay_pressure"] + 0.04 * features["goal_specificity"] + 0.05 * features["dismissive_pressure"]), 4),
-        "satisfied": round(clamp(emotion_vector["satisfaction"] + 0.08 * features["guard_ratio"] + 0.05 * features["success_ratio"] + 0.06 * features["continue_ratio"]), 4),
-        "cautious": round(clamp(emotion_vector["cautiousness"] * 1.08 + 0.06 * features["goal_specificity"] + 0.04 * features["polite_ratio"] + 0.06 * features["assurance_ratio"]), 4),
+        "satisfied": round(clamp(emotion_vector["satisfaction"] + 0.1 * features["guard_ratio"] + 0.08 * features["success_ratio"] + 0.08 * features["continue_ratio"] + 0.06 * features["resolution_claimed"]), 4),
+        "cautious": round(clamp(emotion_vector["cautiousness"] * 1.08 + 0.06 * features["goal_specificity"] + 0.04 * features["polite_ratio"] + 0.08 * features["assurance_ratio"] + 0.06 * features["boundary_ratio"]), 4),
         "exploratory": round(clamp(emotion_vector["openness"] * 1.08 + 0.06 * features["explore_ratio"] + 0.04 * features["technical_ratio"]), 4),
         "neutral": 0.28,
     }
@@ -1039,18 +1064,18 @@ def build_weight_schedule(payload: dict[str, Any], features: dict[str, Any]) -> 
 
 def infer_labels(emotion_vector: dict[str, float], features: dict[str, Any]) -> list[str]:
     labels: list[str] = []
-    if emotion_vector["urgency"] >= 0.62 or features["blocking_ratio"] >= 0.25 or features["missed_expectation_ratio"] >= 0.34 or (features["typing_chaos"] >= 0.42 and (features["delay_pressure"] >= 0.4 or features["urgency_hits"] >= 1)) or (features["textism_pressure"] >= 0.34 and (features["delay_pressure"] >= 0.34 or features["urgency_hits"] >= 1)) or (features["delay_pressure"] >= 0.5 and (features["command_ratio"] >= 0.34 or features["directness_delta"] >= 0.34)) or (features["delay_pressure"] >= 0.8 and (features["stall_ratio"] >= 0.25 or features["stuck_pressure"] >= 0.8)):
+    if emotion_vector["urgency"] >= 0.62 or features["blocking_ratio"] >= 0.25 or features["missed_expectation_ratio"] >= 0.34 or (features["typing_chaos"] >= 0.42 and (features["delay_pressure"] >= 0.4 or features["urgency_hits"] >= 1)) or (features["textism_pressure"] >= 0.34 and (features["delay_pressure"] >= 0.34 or features["urgency_hits"] >= 1)) or (features["delay_pressure"] >= 0.5 and (features["command_ratio"] >= 0.34 or features["directness_delta"] >= 0.34)) or (features["delay_pressure"] >= 0.8 and (features["stall_ratio"] >= 0.25 or features["stuck_pressure"] >= 0.8)) or (features["stuck_pressure"] >= 0.9 and (features["delay_pressure"] >= 0.45 or features["same_issue_mentions"] >= 1 or features["stall_ratio"] >= 0.25)) or (features["short_burst"] >= 0.75 and features["urgency_hits"] >= 1 and features["frustration_hits"] >= 1):
         labels.append("urgent")
-    if emotion_vector["frustration"] >= 0.6 or features["frustration_ratio"] >= 0.34 or features["missed_expectation_ratio"] >= 0.34 or features["context_loss_ratio"] >= 0.34 or features["execution_plumbing_ratio"] >= 0.34 or features["resolution_mismatch"] >= 0.5 or (features["abrupt_delta"] >= 0.35 and features["delay_pressure"] >= 0.45) or (features["dismissive_pressure"] >= 0.38 and (features["delay_pressure"] >= 0.28 or features["stuck_pressure"] >= 0.42 or features["resolution_mismatch"] >= 0.5)) or (features["stuck_pressure"] >= 0.8 and (features["frustration_ratio"] >= 0.25 or features["stall_ratio"] >= 0.25)) or ((features["contradiction_signal"] >= 0.4 or features["soft_correction"] >= 0.8) and features["same_issue_mentions"] >= 1 and (features["skepticism_ratio"] >= 0.25 or features["speculation_ratio"] >= 0.25 or features["context_loss_ratio"] >= 0.25)):
+    if emotion_vector["frustration"] >= 0.6 or features["frustration_ratio"] >= 0.34 or features["missed_expectation_ratio"] >= 0.34 or features["context_loss_ratio"] >= 0.34 or features["execution_plumbing_ratio"] >= 0.34 or features["resolution_mismatch"] >= 0.5 or features["stall_ratio"] >= 0.5 or (features["abrupt_delta"] >= 0.35 and features["delay_pressure"] >= 0.45) or (features["dismissive_pressure"] >= 0.38 and (features["delay_pressure"] >= 0.28 or features["stuck_pressure"] >= 0.42 or features["resolution_mismatch"] >= 0.5)) or (features["stuck_pressure"] >= 0.8 and (features["frustration_ratio"] >= 0.25 or features["stall_ratio"] >= 0.25 or features["delay_pressure"] >= 0.35)) or ((features["contradiction_signal"] >= 0.4 or features["soft_correction"] >= 0.8) and features["same_issue_mentions"] >= 1 and (features["skepticism_ratio"] >= 0.25 or features["speculation_ratio"] >= 0.25 or features["context_loss_ratio"] >= 0.25)) or (features["speculation_ratio"] >= 0.75 and (features["delay_pressure"] >= 0.28 or features["contradiction_signal"] >= 0.28 or features["stuck_pressure"] >= 0.28)) or (features["skepticism_ratio"] >= 0.3 and features["stuck_pressure"] >= 0.52 and features["contradiction_signal"] >= 0.28):
         labels.append("frustrated")
     confused_signal = emotion_vector["confusion"] >= 0.54 or (features["confusion_hits"] >= 1 and features["goal_specificity"] <= 0.55)
     if confused_signal and emotion_vector["urgency"] <= 0.78 and emotion_vector["frustration"] <= 0.76:
         labels.append("confused")
     if emotion_vector["skepticism"] >= 0.42 or features["skepticism_ratio"] >= 0.32 or features["speculation_ratio"] >= 0.25 or features["context_loss_ratio"] >= 0.25 or features["execution_plumbing_ratio"] >= 0.25 or features["hedge_ratio"] >= 0.34 or features["resolution_mismatch"] >= 0.5 or features["contradiction_signal"] >= 0.45 or (features["dismissive_pressure"] >= 0.42 and (features["hedge_ratio"] >= 0.2 or features["contradiction_signal"] >= 0.25 or features["goal_specificity"] >= 0.28)):
         labels.append("skeptical")
-    if emotion_vector["satisfaction"] >= 0.6 or (features["guard_ratio"] >= 0.34 and features["success_ratio"] >= 0.34) or ((features["satisfaction_hits"] >= 1 or features["resolution_claimed"] >= 0.5) and features["continue_ratio"] >= 0.25):
+    if emotion_vector["satisfaction"] >= 0.6 or (features["guard_ratio"] >= 0.3 and (features["success_ratio"] >= 0.3 or features["satisfaction_hits"] >= 1 or features["resolution_claimed"] >= 0.5)) or ((features["satisfaction_hits"] >= 1 or features["resolution_claimed"] >= 0.5 or features["success_hits"] >= 1) and features["continue_ratio"] >= 0.25):
         labels.append("satisfied")
-    if emotion_vector["cautiousness"] >= 0.42 or features["caution_ratio"] >= 0.34 or features["boundary_ratio"] >= 0.34 or features["assurance_ratio"] >= 0.34:
+    if emotion_vector["cautiousness"] >= 0.42 or features["caution_ratio"] >= 0.3 or features["boundary_ratio"] >= 0.3 or features["assurance_ratio"] >= 0.3:
         labels.append("cautious")
     if emotion_vector["openness"] >= 0.46 and emotion_vector["urgency"] <= 0.68 and emotion_vector["frustration"] <= 0.62:
         labels.append("exploratory")
@@ -1103,10 +1128,13 @@ def initial_screen(features: dict[str, Any]) -> dict[str, Any]:
     clarity = clamp(
         0.48
         + 0.12 * features["goal_specificity"]
+        + 0.08 * features["task_object_ratio"]
         + 0.08 * features["technical_ratio"]
         + 0.06 * clamp(features["file_refs"] / 2.0)
         + 0.06 * clamp(features["code_markers"])
         + 0.05 * clamp(features["list_markers"] / 4.0)
+        + 0.04 * features["boundary_ratio"]
+        + 0.03 * features["guard_ratio"]
         - (0.04 if features["confusion_hits"] == 0 else 0.13) * features["question_density"]
         - 0.12 * features["vague_ratio"]
         - 0.08 * clamp(features["confusion_hits"] / 2.0)
@@ -1118,6 +1146,7 @@ def initial_screen(features: dict[str, Any]) -> dict[str, Any]:
         + 0.22 * features["success_ratio"]
         + 0.14 * features["continue_ratio"] * (1.0 if features["satisfaction_hits"] >= 1 or features["resolution_claimed"] >= 0.5 else 0.35)
         + 0.18 * features["guard_ratio"]
+        + 0.08 * features["resolution_claimed"]
         + 0.04 * features["polite_ratio"]
         + 0.06 * features["politeness_delta"]
         - 0.28 * frustration
@@ -1197,13 +1226,33 @@ def blend_vectors(base: dict[str, float], incoming: dict[str, Any], weight: floa
     return blend_named_vector(base, incoming, DIMS, weight)
 
 
+def derive_state_vector_from_emotion(emotion_vector: dict[str, Any], features: dict[str, Any]) -> dict[str, float]:
+    emotion = clamp_dict(emotion_vector, EMOTION_DIMS)
+    return {
+        "urgency": round(emotion["urgency"], 4),
+        "frustration": round(emotion["frustration"], 4),
+        "clarity": round(clamp(0.64 - 0.46 * emotion["confusion"] - 0.12 * emotion["urgency"] - 0.08 * emotion["frustration"] + 0.08 * emotion["openness"] + 0.06 * features["task_object_ratio"] + 0.04 * features["goal_specificity"]), 4),
+        "satisfaction": round(emotion["satisfaction"], 4),
+        "trust": round(clamp(0.56 - 0.34 * emotion["skepticism"] - 0.22 * emotion["frustration"] + 0.1 * emotion["cautiousness"] + 0.08 * emotion["satisfaction"] + 0.04 * features["assurance_ratio"]), 4),
+        "engagement": round(clamp(0.3 + 0.24 * emotion["urgency"] + 0.22 * emotion["frustration"] + 0.18 * emotion["openness"] + 0.08 * features["technical_ratio"]), 4),
+    }
+
+
 def dominant_mode(emotion_vector: dict[str, float], features: dict[str, Any], scores: dict[str, float] | None = None) -> str:
     scores = scores or build_mode_scores(emotion_vector, features)
     skeptical_gap = scores["confused"] - scores["skeptical"]
-    if (scores["satisfied"] >= 0.32 and features["continue_ratio"] >= 0.25 and (features["satisfaction_hits"] >= 1 or features["resolution_claimed"] >= 0.5)) or (scores["satisfied"] >= 0.62 and emotion_vector["frustration"] <= 0.42):
+    if (scores["satisfied"] >= 0.24 and features["guard_ratio"] >= 0.3 and (features["satisfaction_hits"] >= 1 or features["success_hits"] >= 1 or features["resolution_claimed"] >= 0.5)) or (scores["satisfied"] >= 0.28 and features["continue_ratio"] >= 0.25 and (features["satisfaction_hits"] >= 1 or features["resolution_claimed"] >= 0.5 or features["success_hits"] >= 1)) or (scores["satisfied"] >= 0.62 and emotion_vector["frustration"] <= 0.42):
         return "satisfied"
+    if scores["cautious"] >= 0.34 and (features["caution_ratio"] >= 0.25 or features["boundary_ratio"] >= 0.25 or features["assurance_ratio"] >= 0.25) and scores["urgent"] - scores["cautious"] <= 0.18:
+        return "cautious"
     if features["abrupt_delta"] >= 0.35 and features["delay_pressure"] >= 0.45:
         return "frustrated"
+    if features["dismissive_pressure"] >= 0.34 and (features["stuck_pressure"] >= 0.6 or features["delay_pressure"] >= 0.5):
+        return "frustrated"
+    if features["stall_ratio"] >= 0.6 and features["stuck_pressure"] >= 0.8 and features["blocking_ratio"] < 0.25 and scores["frustrated"] >= scores["urgent"] - 0.05:
+        return "frustrated"
+    if scores["urgent"] >= 0.72 and (features["blocking_ratio"] >= 0.25 or scores["urgent"] - scores["frustrated"] >= 0.08):
+        return "urgent"
     if scores["frustrated"] >= 0.64 and scores["frustrated"] >= scores["confused"] - 0.02:
         return "frustrated"
     if features["delay_pressure"] >= 0.8 and (features["stall_ratio"] >= 0.25 or features["stuck_pressure"] >= 0.8):
@@ -1221,7 +1270,7 @@ def dominant_mode(emotion_vector: dict[str, float], features: dict[str, Any], sc
         return "skeptical"
     if scores["skeptical"] >= 0.36 and (emotion_vector["skepticism"] >= 0.34 or features["skepticism_ratio"] >= 0.25 or features["context_loss_ratio"] >= 0.25 or features["execution_plumbing_ratio"] >= 0.25 or features["resolution_mismatch"] >= 0.4 or features["contradiction_signal"] >= 0.4):
         return "skeptical"
-    if scores["cautious"] >= 0.44 and (emotion_vector["cautiousness"] >= 0.34 or features["caution_ratio"] >= 0.25 or features["boundary_ratio"] >= 0.25 or features["assurance_ratio"] >= 0.25):
+    if scores["cautious"] >= 0.34 and (emotion_vector["cautiousness"] >= 0.3 or features["caution_ratio"] >= 0.25 or features["boundary_ratio"] >= 0.25 or features["assurance_ratio"] >= 0.25):
         return "cautious"
     if scores["exploratory"] >= 0.54:
         return "exploratory"
@@ -1233,13 +1282,16 @@ def dominant_mode(emotion_vector: dict[str, float], features: dict[str, Any], sc
 def confirm_state(payload: dict[str, Any], features: dict[str, Any], screen: dict[str, Any], weight_schedule: dict[str, Any]) -> dict[str, Any]:
     llm_semantic = payload.get("llm_semantic") or {}
     llm_confidence = clamp(float(llm_semantic.get("confidence", 0.0) or 0.0))
+    llm_state_vector = clamp_dict(llm_semantic.get("vector"), STATE_DIMS) if llm_semantic.get("vector") else {}
+    if not llm_state_vector and llm_semantic.get("emotion_vector"):
+        llm_state_vector = derive_state_vector_from_emotion(llm_semantic["emotion_vector"], features)
     last_state = payload.get("last_state") or {}
     previous_vector = last_state.get("vector") or {}
     ttl_seconds = int(last_state.get("ttl_seconds", 0) or 0)
     prev_weight = weight_schedule["carryover_weight"] if ttl_seconds > 0 else 0.0
     vector_inputs: list[tuple[dict[str, Any], float]] = [(screen["vector"], weight_schedule["screen_weight"])]
-    if llm_semantic.get("vector"):
-        vector_inputs.append((llm_semantic["vector"], weight_schedule["screen_semantic_weight"] * llm_confidence))
+    if llm_state_vector:
+        vector_inputs.append((llm_state_vector, weight_schedule["screen_semantic_weight"] * llm_confidence))
     if previous_vector:
         vector_inputs.append((previous_vector, prev_weight))
     vector = combine_named_vectors(vector_inputs, STATE_DIMS)
@@ -1746,6 +1798,7 @@ def render_overlay(features: dict[str, Any], confirmed: dict[str, Any], predicti
         "tempo_pause_cue": "tempo",
         "textism_cue": "textism",
         "abrupt_short_reply": "abrupt",
+        "task_object_anchor": "task",
         "delay_pressure": "delay",
         "stuck_issue_pressure": "stuck",
         "resolution_mismatch": "mismatch",
@@ -1823,7 +1876,7 @@ def build_model_prompts(payload: dict[str, Any], screen: dict[str, Any], confirm
     fast_screen_prompt = (
         "Classify current user work-state for an agent runtime.\n"
         "Prioritize delay against user baseline, same-issue pressure, hang/stuck wording, terse abrupt replies, dismissive short phrases, rhythmic pause cues, missed-expectation timing cues, success/guard signals, evidence-seeking skepticism, and anti-guesswork language.\n"
-        "Return JSON only: {\"m\":\"urgent\",\"labels\":[\"urgent\"],\"emotion_vector\":{\"urgency\":0.0,\"frustration\":0.0,\"confusion\":0.0,\"skepticism\":0.0,\"satisfaction\":0.0,\"cautiousness\":0.0,\"openness\":0.0},\"why\":[\"delay\"]}\n"
+        "Return JSON only: {\"m\":\"urgent\",\"labels\":[\"urgent\"],\"vector\":{\"urgency\":0.0,\"frustration\":0.0,\"clarity\":0.0,\"satisfaction\":0.0,\"trust\":0.0,\"engagement\":0.0},\"emotion_vector\":{\"urgency\":0.0,\"frustration\":0.0,\"confusion\":0.0,\"skepticism\":0.0,\"satisfaction\":0.0,\"cautiousness\":0.0,\"openness\":0.0},\"why\":[\"delay\"]}\n"
         f"latest={latest}\n"
         f"hist={json.dumps(history_excerpt, ensure_ascii=False, separators=(',', ':'))}\n"
         f"usr={json.dumps(profile_hint, ensure_ascii=False, separators=(',', ':'))}\n"
@@ -1832,7 +1885,7 @@ def build_model_prompts(payload: dict[str, Any], screen: dict[str, Any], confirm
     fast_confirmation_prompt = (
         "Fuse the rule screen with runtime pressure.\n"
         "Treat nonstandard punctuation, textisms, and deliberate misspellings as weak cues unless runtime pressure, retries, or contradiction support them.\n"
-        "Return JSON only: {\"m\":\"urgent\",\"labels\":[\"urgent\"],\"conf\":0.0,\"emotion_vector\":{\"urgency\":0.0,\"frustration\":0.0,\"confusion\":0.0,\"skepticism\":0.0,\"satisfaction\":0.0,\"cautiousness\":0.0,\"openness\":0.0},\"acts\":[\"act-first\"]}\n"
+        "Return JSON only: {\"m\":\"urgent\",\"labels\":[\"urgent\"],\"conf\":0.0,\"vector\":{\"urgency\":0.0,\"frustration\":0.0,\"clarity\":0.0,\"satisfaction\":0.0,\"trust\":0.0,\"engagement\":0.0},\"emotion_vector\":{\"urgency\":0.0,\"frustration\":0.0,\"confusion\":0.0,\"skepticism\":0.0,\"satisfaction\":0.0,\"cautiousness\":0.0,\"openness\":0.0},\"acts\":[\"act-first\"]}\n"
         f"screen={json.dumps(screen, ensure_ascii=False, separators=(',', ':'))}\n"
         f"usr={json.dumps(profile_hint, ensure_ascii=False, separators=(',', ':'))}\n"
         f"rt={json.dumps(runtime, ensure_ascii=False, separators=(',', ':'))}"
@@ -1981,7 +2034,12 @@ def build_parser() -> argparse.ArgumentParser:
 def main() -> int:
     parser = build_parser()
     args = parser.parse_args()
-    payload = parse_payload(args)
+    try:
+        payload = parse_payload(args)
+    except FileNotFoundError as exc:
+        parser.exit(2, f"{exc}\n")
+    except json.JSONDecodeError as exc:
+        parser.exit(2, f"Invalid JSON input: {exc}\n")
     if not payload.get("message"):
         parser.error("A message is required via --message, --input, or stdin JSON.")
     full = run_pipeline(payload)

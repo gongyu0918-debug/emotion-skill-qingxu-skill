@@ -20,6 +20,13 @@ CASES = [
         },
     },
     {
+        "id": "urgent_short_cn_no_runtime",
+        "expected": ["urgent"],
+        "payload": {
+            "message": "快一点，这个问题还没修好",
+        },
+    },
+    {
         "id": "urgent_typo_cn",
         "expected": ["urgent"],
         "payload": {
@@ -89,6 +96,13 @@ CASES = [
         "payload": {
             "message": "小心点，只改这个文件，别碰配置，也别搞砸现有流程。",
             "runtime": {"response_delay_seconds": 6},
+        },
+    },
+    {
+        "id": "cautious_boundary_cn_no_runtime",
+        "expected": ["cautious"],
+        "payload": {
+            "message": "只改这个文件，别碰配置",
         },
     },
     {
@@ -182,6 +196,13 @@ CASES = [
             "message": "Main flow works now. Keep going and tighten the last two cases.",
             "history": [{"role": "assistant", "text": "main flow is green now"}],
             "runtime": {"response_delay_seconds": 6},
+        },
+    },
+    {
+        "id": "satisfied_guard_cn_no_runtime",
+        "expected": ["satisfied"],
+        "payload": {
+            "message": "好了，主流程通了，开始收口",
         },
     },
     {
@@ -458,6 +479,38 @@ CASES = [
 ]
 
 
+def evaluate_case(case: dict[str, object], result: dict[str, object]) -> tuple[bool, dict[str, bool]]:
+    mode = str(result["confirmed_state"]["dominant_mode"])
+    labels = set(result["confirmed_state"]["labels"])
+    expected = list(case.get("expected", []))
+    mode_in = list(case.get("mode_in") or (expected if expected else []))
+    labels_all = list(case.get("labels_all") or expected)
+    checks: dict[str, bool] = {}
+    if mode_in:
+        checks["mode"] = mode in mode_in
+    if labels_all:
+        for label in labels_all:
+            checks[f"label:{label}"] = label in labels
+    weight_expect = case.get("weight_expect") or {}
+    if weight_expect:
+        weights = result["weight_schedule"]
+        if "stage" in weight_expect:
+            checks["weight:stage"] = weights["stage"] == weight_expect["stage"]
+        if weight_expect.get("posthoc_gt_screen"):
+            checks["weight:posthoc_gt_screen"] = weights["posthoc_weight"] > weights["screen_weight"]
+        if weight_expect.get("screen_gt_posthoc"):
+            checks["weight:screen_gt_posthoc"] = weights["screen_weight"] > weights["posthoc_weight"]
+    posthoc_expect = case.get("posthoc_expect") or {}
+    if posthoc_expect:
+        posthoc_plan = result["posthoc_plan"]
+        if "should_run" in posthoc_expect:
+            checks["posthoc:should_run"] = bool(posthoc_plan["should_run"]) is bool(posthoc_expect["should_run"])
+        if "style_in" in posthoc_expect:
+            checks["posthoc:style_in"] = str(posthoc_plan["style"]) in posthoc_expect["style_in"]
+    ok = all(checks.values()) if checks else True
+    return ok, checks
+
+
 def main() -> int:
     rows = []
     passed = 0
@@ -465,32 +518,18 @@ def main() -> int:
         result = ee.run_pipeline(case["payload"])
         mode = result["confirmed_state"]["dominant_mode"]
         labels = result["confirmed_state"]["labels"]
-        expected = case["expected"]
-        ok = True if not expected else mode in expected or any(label in expected for label in labels)
-        weight_expect = case.get("weight_expect") or {}
-        if weight_expect:
-            weights = result["weight_schedule"]
-            if "stage" in weight_expect:
-                ok = ok and weights["stage"] == weight_expect["stage"]
-            if weight_expect.get("posthoc_gt_screen"):
-                ok = ok and weights["posthoc_weight"] > weights["screen_weight"]
-            if weight_expect.get("screen_gt_posthoc"):
-                ok = ok and weights["screen_weight"] > weights["posthoc_weight"]
-        posthoc_expect = case.get("posthoc_expect") or {}
-        if posthoc_expect:
-            posthoc_plan = result["posthoc_plan"]
-            if "should_run" in posthoc_expect:
-                ok = ok and bool(posthoc_plan["should_run"]) is bool(posthoc_expect["should_run"])
-            if "style_in" in posthoc_expect:
-                ok = ok and str(posthoc_plan["style"]) in posthoc_expect["style_in"]
+        ok, checks = evaluate_case(case, result)
         if ok:
             passed += 1
         rows.append(
             {
                 "id": case["id"],
                 "expected": case["expected"],
+                "mode_in": case.get("mode_in"),
+                "labels_all": case.get("labels_all"),
                 "mode": mode,
                 "labels": labels,
+                "checks": checks,
                 "ok": ok,
                 "semantic_pass": result["analysis"]["semantic_pass"],
                 "overlay_chars": len(result["overlay_prompt"]),

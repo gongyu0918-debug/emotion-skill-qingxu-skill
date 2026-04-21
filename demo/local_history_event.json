@@ -1,0 +1,50 @@
+{
+  "message": "先别继续猜了。这个问题从昨晚到现在还没修好，主流程刚恢复就又回归。先给我依据，再动手。",
+  "context": {
+    "timezone": "Asia/Shanghai",
+    "now_iso": "2026-04-21T20:15:00+08:00"
+  },
+  "history": [
+    {
+      "role": "user",
+      "text": "先把主流程救回来，只改接口层。"
+    },
+    {
+      "role": "assistant",
+      "text": "我觉得已经修好了。"
+    },
+    {
+      "role": "user",
+      "text": "还是这个问题，而且你刚刚又动了我说别碰的配置。"
+    },
+    {
+      "role": "assistant",
+      "text": "我再检查一下触发链。"
+    }
+  ],
+  "runtime": {
+    "response_delay_seconds": 26,
+    "unresolved_turns": 4,
+    "bug_retries": 3,
+    "task_age_minutes": 95,
+    "same_issue_mentions": 3,
+    "queue_depth": 1,
+    "background_tasks_running": 1,
+    "contradiction_signal": 0.42
+  },
+  "user_profile": {
+    "id": "demo-user-shanghai",
+    "timezone": "Asia/Shanghai",
+    "work_hours_local": [
+      9,
+      22
+    ],
+    "baseline": {
+      "response_delay_seconds": 12,
+      "politeness": 0.18,
+      "terseness": 0.42,
+      "punctuation": 0.08,
+      "directness": 0.44
+    }
+  }
+}

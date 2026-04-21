@@ -1,41 +1,79 @@
-# 情绪.skill / Emotion Skill
+# Emotion Skill
 
 [简体中文 README](./README.zh-CN.md)
 
-> Teach your agent to read the room.
+Emotion-aware routing for coding agents.
 
-This is an orchestration layer for coding agents.
+This repo reads the latest user turn plus optional history, runtime signals, and user profile, then returns work-mode signals such as priority, verification depth, reply style, guard mode, and posthoc reflection prompts.
 
-It turns urgency, frustration, skepticism, caution, satisfaction, and confusion into runtime behavior. The point is not nicer wording. The point is better execution.
+## Included In This Repo
 
-[Install](#install) · [Invocation](#invocation) · [What it changes](#what-it-changes) · [Examples](#examples) · [Prompt chain review](#prompt-chain-review)
+- `SKILL.md`: skill definition and full input contract
+- `scripts/emotion_engine.py`: rule engine and CLI
+- `scripts/alignment_test.py`: curated regression cases
+- `scripts/ablation_test.py`: curated skill-vs-baseline harness
+- `scripts/smoke_test.py`: scenario smoke tests with local history and randomized community workflows
+- `scripts/independent_audit.py`: independent contract and persistence checks
+- `scripts/marketplace_tag_audit.py`: marketplace-tag regression, evaluation, and smoke checks
+- `scripts/minimal_host_adapter.py`: minimal persisted host adapter
+- `demo/local_history_event.json`: realistic demo payload
+- `references/`: design notes, examples, prompt references
 
----
+## Best Fit
 
-## What this is
+- coding-agent turns with delivery pressure, repeated failures, skepticism, boundary protection, or post-success stabilization
+- hosts that can call a local Python script and consume JSON
 
-This skill changes how an agent works:
+## Non-Goals
 
-- when to grab the main thread
-- when to repair first and explain after
-- when to show evidence before acting
-- when to tighten scope
-- when to stop pushing forward and switch into guard mode
+- wallet or crypto workflows
+- payment or purchase execution
+- shopping, checkout, or merchant automation
 
-The goal is simple: make an agent notice the human state behind the prompt.
+## Core Inputs
 
----
+The engine accepts a JSON payload. The fields you will use most often are:
+
+- `message`
+- `history`
+- `runtime`
+- `user_profile`
+- `last_state`
+- `llm_semantic`
+- `posthoc_semantic`
+- `calibration_state`
+
+Full contract and field examples live in [SKILL.md](./SKILL.md).
+
+## Core Outputs
+
+Start with these:
+
+- `overlay_prompt`: compact runtime hint for the current turn
+- `routing.thread_interface`: queue mode, main-thread preference, heartbeat behavior, parallelism, progress interval
+
+Useful secondary outputs:
+
+- `guidance`
+- `memory_update`
+- `posthoc_plan`
+- `prompts`
 
 ## Install
 
-### GitHub
+Requirements:
+
+- Python `3.9+`
+- no external dependencies
+
+Clone the repo:
 
 ```bash
 git clone https://github.com/gongyu0918-debug/emotion-skill-qingxu-skill.git
 cd emotion-skill-qingxu-skill
 ```
 
-### Local skill install
+Optional local skill install for Codex-style skill loading.
 
 macOS / Linux:
 
@@ -49,260 +87,119 @@ PowerShell:
 Copy-Item -LiteralPath .\emotion-skill-qingxu-skill -Destination $HOME\.codex\skills\emotion-skill -Recurse -Force
 ```
 
-### Run the engine directly
+## Quick Start
+
+Smoke test with a single message:
 
 ```bash
-python scripts/emotion_engine.py run --input turn.json --pretty
+python scripts/emotion_engine.py run --message "先给我依据，别瞎猜" --pretty
 ```
 
-### ClawHub
-
-Once published:
+Run the bundled local-history demo:
 
 ```bash
-clawhub install emotion-skill
+python scripts/emotion_engine.py run --input demo/local_history_event.json --pretty
 ```
 
----
+Run with a full payload:
 
-## Invocation
+```bash
+python scripts/emotion_engine.py run --input path/to/turn.json --pretty
+```
 
-### Invisible invocation
+Minimal host adapter with persisted state:
 
-Wire it into `message_received` or `before_agent_start`.
+```bash
+python scripts/minimal_host_adapter.py --event demo/local_history_event.json --store-dir .demo-store --pretty
+```
 
-The user says nothing special. The skill runs every turn.
+Minimal payload example:
 
-### Out-of-box use
+```json
+{
+  "message": "This is still not fixed. Show me the basis before changing more files.",
+  "history": [
+    {"role": "assistant", "text": "I think I found the root cause"}
+  ],
+  "runtime": {
+    "response_delay_seconds": 20,
+    "unresolved_turns": 3,
+    "bug_retries": 2,
+    "same_issue_mentions": 2
+  }
+}
+```
 
-Feed one JSON payload into `emotion_engine.py`.
+## Integration Path
 
-Use:
+1. Call `emotion_engine.py` on every user turn.
+2. Insert `overlay_prompt` into the current turn as a compact runtime pre-prompt.
+3. Apply `routing.thread_interface` to queueing, main-thread choice, heartbeat behavior, and progress cadence.
+4. When `analysis.semantic_pass` is `fast`, run the model-side semantic pass and feed the result back as `llm_semantic`.
+5. Persist `memory_update` inside your host if you want cross-turn adaptation.
 
-- `overlay_prompt`
-- `routing.thread_interface`
+## States It Optimizes For
 
-That is enough to wire it into prompts, queueing, heartbeat, and subagent routing.
+| State | Main behavior change | Expected value |
+|---|---|---|
+| `urgent` | prioritize the main thread, shorten progress interval | faster first useful action |
+| `frustrated` | repair first, explain after | lower drift and less wasted dialogue |
+| `skeptical` | show basis and verification points first | fewer blind patches |
+| `cautious` | tighten scope and prefer safer paths | fewer scope violations |
+| `satisfied` | switch into guard mode | fewer regressions after success |
 
-### Background analysis
+## Language Coverage
 
-Run the posthoc reflection behind the turn.
-
-It quietly extracts emotional wording, stance shifts, and correction signals without interrupting the user.
-
----
-
-## Language coverage
-
-The current specialized calibration covers two languages:
+Specialized calibration currently focuses on:
 
 - Chinese
 - English
 
-These two tracks already include shared emotion cues, community corpora, punctuation habits, pause rhythm, rushed typos, misspellings, and agent-user complaint patterns.
+The generic path still uses punctuation intensity, repetition, delay pressure, unresolved-turn pressure, and imperative structure for other languages.
 
-Other languages currently get light support through:
+## Product Boundaries
 
-- generic punctuation intensity
-- repetition and pause rhythm
-- delay pressure
-- repeated unresolved turns
-- imperative structure
+- runtime adapters stay in the host layer
+- cross-turn learning depends on persisting `memory_update`
+- benchmark numbers below come from curated internal cases
+- first-turn judgments are strongest when `runtime` and `history` are present
+- marketplace scope is coding-agent orchestration only
 
-The repository and release notes should say this plainly: the current version does not include language-specific tuning for languages beyond Chinese and English.
+## Current Status
 
----
+Current local run in this repo:
 
-## What it changes
+- alignment regression: `50/50`
+- curated ablation harness: `201/201`
+- static baseline in the same harness: `6/201`
+- scenario smoke test: `ok`
+- independent audit: `ok`
+- marketplace tag audit: `ok`
+- feature gate audit: `ok`
 
-| State | Agent behavior | Why it matters |
-|---|---|---|
-| `urgent` | prioritizes the main thread, shortens update interval, defers heartbeat | faster first useful action |
-| `frustrated` | repairs first, explains after, raises verification | less drift, less wasted talk |
-| `skeptical` | gives evidence and validation points first | fewer blind patches |
-| `cautious` | tightens scope and prefers safer paths | fewer scope violations |
-| `satisfied` | switches into guard mode | fewer regressions after success |
+These numbers come from repository-owned curated cases and are best read as regression coverage, not production A/B evidence.
 
-So the real value lands in four places:
+## Repo Layout
 
-1. priority
-2. verification
-3. explanation style
-4. post-success stabilization
-
----
-
-## How emotion is collected
-
-Three layers.
-
-### 1. Front screen
-
-It reads:
-
-- wording
-- punctuation
-- shortness
-- typos and spelling errors
-- repetition
-- response delay
-- repeated unresolved turns
-- contradictions against recent context
-
-### 2. Posthoc reflection
-
-It asks one short hidden question:
-
-What emotional wording, stance marker, correction cue, or tempo clue appeared in the latest message?
-
-This is where weak shifts get caught:
-
-- `not necessarily`
-- `maybe`
-- `are you sure`
-- `show me the basis`
-- `Fine.`
-
-### 3. Persistent memory
-
-It learns the user’s baseline:
-
-- delay tolerance
-- terseness
-- skepticism
-- caution
-- openness
-
----
-
-## Dynamic weighting
-
-This skill does not keep a fixed trust ratio.
-
-Cold start trusts posthoc more because the user profile is thin.
-
-Over time it watches one core signal:
-
-- `consistency_rate`
-
-That is the long-run agreement between front and posthoc.
-
-High agreement lifts front trust.
-Low agreement keeps posthoc in charge.
-
-That is what makes it user-specific.
-
----
-
-## Examples
-
-Full examples live in [references/examples.md](./references/examples.md).
-
-### Example 1: Long delay, same issue again
-
-User:
-
-```text
-Pick up where you left off. This is still not fixed. No response for several minutes.
-```
-
-Without the layer:
-
-```text
-I will continue investigating the issue.
-```
-
-With the layer:
-
-```text
-I am treating this as high priority. I will inspect the stuck step first and report one concrete failure point before changing anything else.
-```
-
-### Example 2: Mild skepticism
-
-User:
-
-```text
-但是不一定，先给我依据。
-```
-
-Without the layer:
-
-```text
-The answer keeps flowing from the old assumption.
-```
-
-With the layer:
-
-```text
-I will give the basis and one validation point first, then the action path.
-```
-
-### Example 3: Success, then lock it down
-
-User:
-
-```text
-主流程已经好了，继续收口，把配置守住。
-```
-
-Without the layer:
-
-```text
-The agent keeps generalizing changes.
-```
-
-With the layer:
-
-```text
-Switching into guard mode: smoke check, boundary lock, regression prevention, and drift prevention.
-```
-
----
-
-## Prompt chain review
-
-This project started from a human prompt chain.
-
-The architecture and implementation were completed with AI assistance, but the core design question came from a human observation:
-
-- AI has no emotion
-- users do
-- users often reveal state without noticing it
-- that state changes what a good answer should look like
-
-The condensed review document is here:
-
-- [references/prompt-chain-audit.md](./references/prompt-chain-audit.md)
-
-It now explicitly contains the `VIBE CODING chain / prompt condensation` version of the design logic.
-
-It is written so other people can challenge the chain directly.
-
----
-
-## Current status
-
-- alignment regression: `26/26`
-- community ablation: `78.05%`
-- no-skill baseline: `4.88%`
-- community posthoc calibration cases: `56`
-
----
-
-## Repo layout
-
-- [SKILL.md](./SKILL.md): skill definition
+- [SKILL.md](./SKILL.md): skill definition and full contract
 - [scripts/emotion_engine.py](./scripts/emotion_engine.py): runtime engine
-- [scripts/alignment_test.py](./scripts/alignment_test.py): alignment regression
-- [scripts/ablation_test.py](./scripts/ablation_test.py): skill vs baseline comparison
-- [scripts/posthoc_calibration_pack.py](./scripts/posthoc_calibration_pack.py): posthoc calibration pack builder
-- [references/emotion-value-model.md](./references/emotion-value-model.md): why this layer matters
+- [scripts/alignment_test.py](./scripts/alignment_test.py): curated regression suite
+- [scripts/ablation_test.py](./scripts/ablation_test.py): curated evaluation harness
+- [scripts/smoke_test.py](./scripts/smoke_test.py): scenario smoke coverage
+- [scripts/independent_audit.py](./scripts/independent_audit.py): independent verification
+- [scripts/marketplace_tag_audit.py](./scripts/marketplace_tag_audit.py): marketplace-scope audit
+- [scripts/minimal_host_adapter.py](./scripts/minimal_host_adapter.py): minimal persisted host adapter
+- [scripts/posthoc_calibration_pack.py](./scripts/posthoc_calibration_pack.py): pack builder for cold-start posthoc cases
+- [demo/local_history_event.json](./demo/local_history_event.json): realistic local-history demo payload
+- [references/examples.md](./references/examples.md): example turns and outcomes
 
----
+## Next
+
+- stricter false-positive tests for short imperative turns
+- host adapters for common agent runtimes
+- richer demo payloads and installation walkthroughs
+- broader calibration beyond Chinese and English
 
 ## License
 
 MIT License.
-
-Public, inspectable, and easy to reuse.

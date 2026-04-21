@@ -1,6 +1,13 @@
 ---
-name: 情绪.skill / Emotion Skill
-description: Teach an agent to read the room. Detect urgency, frustration, skepticism, confusion, caution, satisfaction, and openness from wording, punctuation, retries, delay pressure, and dialogue history, then turn that signal into work-mode changes such as routing priority, verification depth, explanation style, and guard behavior after success.
+name: emotion-skill
+description: Emotion-aware orchestration for coding agents. Detect urgency, frustration, skepticism, confusion, caution, satisfaction, and openness from coding-task wording, retries, delay pressure, and dialogue history, then route verification depth, queue priority, reply style, and post-success guard behavior. Use when: coding agent orchestration, repo debugging, scope protection, verification depth control, and post-success stabilization.
+license: MIT
+metadata:
+  openclaw:
+    emoji: "🎛️"
+    os: ["darwin", "linux", "win32"]
+    requires:
+      anyBins: ["python", "python3"]
 ---
 
 # 情绪.skill / Emotion Skill
@@ -48,6 +55,29 @@ It watches the small but real signals inside a turn:
 然后把这些信号翻译成 Agent 的工作模式。
 
 Then it turns those signals into execution policy.
+
+## Scope And Non-Goals
+
+这个 skill 的目标很窄：
+
+- coding agent 对话编排
+- repo 调试和修复过程里的情绪状态识别
+- scope、验证强度、线程优先级、收口策略调整
+
+This skill has a narrow scope:
+
+- coding-agent orchestration
+- emotion-state detection during repo debugging and repair work
+- scope control, verification depth, thread priority, and guard-mode shifts
+
+它面向代码工作流，不面向交易工作流。
+
+Marketplace scope should stay explicit:
+
+- no wallet behavior
+- no payments
+- no purchases
+- no crypto workflows
 
 ## Language Coverage
 
@@ -104,13 +134,37 @@ The collection layer always runs four signals in parallel:
 先跑一轮，把当前用户消息丢进引擎里看看它怎么读空气：
 
 ```bash
-python scripts/emotion_engine.py run --input <turn.json> --pretty
+python scripts/emotion_engine.py run --message "先给我依据，别瞎猜" --pretty
 ```
 
 Start with one run. Feed the latest turn in and see how the engine reads the room:
 
 ```bash
-python scripts/emotion_engine.py run --input <turn.json> --pretty
+python scripts/emotion_engine.py run --message "Show me the basis before changing more files." --pretty
+```
+
+再跑一个更真实的 demo payload：
+
+```bash
+python scripts/emotion_engine.py run --input demo/local_history_event.json --pretty
+```
+
+Run the bundled local-history demo payload:
+
+```bash
+python scripts/emotion_engine.py run --input demo/local_history_event.json --pretty
+```
+
+如果你要补一个最小宿主适配层，直接跑：
+
+```bash
+python scripts/minimal_host_adapter.py --event demo/local_history_event.json --store-dir .demo-store --pretty
+```
+
+For a minimal host-side persistence adapter, run:
+
+```bash
+python scripts/minimal_host_adapter.py --event demo/local_history_event.json --store-dir .demo-store --pretty
 ```
 
 然后按这个顺序接进去：
@@ -399,8 +453,13 @@ Use this mapping:
 ## Resources
 
 - `scripts/emotion_engine.py`: screening, confirmation, prediction, guidance, overlay, and routing CLI.
+- `scripts/minimal_host_adapter.py`: minimal host adapter with persisted `user_profile`, `last_state`, and `calibration_state`.
+- `scripts/smoke_test.py`: scenario smoke tests with local history, host-adapter round-trip, and randomized community-style samples.
+- `scripts/independent_audit.py`: independent audit checks for contracts, CLI ergonomics, persistence, and false-positive guards.
+- `scripts/marketplace_tag_audit.py`: marketplace-scope regression, evaluation, and smoke checks for listing metadata.
 - `scripts/ablation_test.py`: real-world community-case ablation against a no-skill baseline.
 - `scripts/posthoc_calibration_pack.py`: build the v2 cold-start posthoc calibration pack from community issue samples.
+- `demo/local_history_event.json`: realistic local-history payload for demo, smoke, and adapter testing.
 - `assets/community-posthoc-calibration-v2.jsonl`: expanded community-style calibration set with GitHub issues, discussions, and forum-style failure reports.
 - `assets/community-posthoc-calibration-56.jsonl`: frozen first-pass snapshot for reproducibility.
 - `references/examples.md`: side-by-side examples that show how the layer changes agent behavior.

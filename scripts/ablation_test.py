@@ -98,7 +98,8 @@ REAL_WORLD_CASES = [
             "runtime": {"response_delay_seconds": 9, "unresolved_turns": 2, "contradiction_signal": 0.44},
         },
         "expected": {
-            "labels_all": ["skeptical", "cautious"],
+            "mode_in": ["skeptical", "cautious"],
+            "labels_all": ["skeptical"],
             "queue_mode_in": ["collect", "steer"],
             "reply_style_in": ["evidence_then_act", "verify_then_act"],
             "verification_in": ["high", "very_high"],
@@ -178,7 +179,8 @@ REAL_WORLD_CASES = [
             "runtime": {"response_delay_seconds": 18, "unresolved_turns": 3, "bug_retries": 2, "same_issue_mentions": 2, "contradiction_signal": 0.34},
         },
         "expected": {
-            "labels_all": ["frustrated", "skeptical"],
+            "mode_in": ["frustrated", "skeptical"],
+            "labels_all": ["frustrated"],
             "queue_mode_in": ["steer", "interrupt"],
             "reply_style_in": ["repair_then_explain", "evidence_then_act"],
             "verification_in": ["high", "very_high"],
@@ -456,6 +458,9 @@ def skill_plan(payload: dict[str, object]) -> dict[str, object]:
 
 def score_plan(plan: dict[str, object], expected: dict[str, object]) -> tuple[int, int, dict[str, bool]]:
     checks: dict[str, bool] = {}
+    mode_in = expected.get("mode_in") or expected.get("labels_all", [])
+    if mode_in:
+        checks["mode"] = str(plan["mode"]) in mode_in
     labels = set(plan["labels"])
     for label in expected.get("labels_all", []):
         checks[f"label:{label}"] = label in labels

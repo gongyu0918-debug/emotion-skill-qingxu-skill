@@ -2,3 +2,5 @@ __pycache__/
 *.pyc
 *.pyo
 *.pyd
+.tmp-smoke-store/
+.demo-store/
