@@ -1,13 +1,11 @@
 ---
 name: emotion-skill
-description: Emotion-aware orchestration for coding agents. Detect urgency, frustration, skepticism, confusion, caution, satisfaction, and openness from coding-task wording, retries, delay pressure, and dialogue history, then route verification depth, queue priority, reply style, and post-success guard behavior. Use when: coding agent orchestration, repo debugging, scope protection, verification depth control, and post-success stabilization.
+description: Emotion-aware orchestration for coding agents. Detect urgency, frustration, skepticism, confusion, caution, satisfaction, and openness from coding-task wording, retries, delay pressure, and dialogue history, then route verification depth, queue priority, reply style, and stabilization strategy. Use when: coding agent orchestration, repo debugging, scope protection, verification depth control, and post-success stabilization.
 license: MIT
 metadata:
   openclaw:
     emoji: "🎛️"
     os: ["darwin", "linux", "win32"]
-    requires:
-      anyBins: ["python", "python3"]
 ---
 
 # 情绪.skill / Emotion Skill
@@ -30,9 +28,9 @@ What this skill does:
 - when the user turns cautious, it tightens scope
 - when the user is already satisfied, it stops pushing and switches to closing mode
 
-它不是语气美化器，它更像一个后台导演。
+它是一个编排层，负责把用户状态翻译成执行策略。
 
-It is not a tone-polisher. It is a backstage director.
+It is an orchestration layer that turns user state into execution policy.
 
 它盯着一轮对话里那些细小但真实的东西：
 
@@ -70,14 +68,21 @@ This skill has a narrow scope:
 - emotion-state detection during repo debugging and repair work
 - scope control, verification depth, thread priority, and guard-mode shifts
 
-它面向代码工作流，不面向交易工作流。
+市场文案要始终保持在开发者工作流这条线上：
 
-Marketplace scope should stay explicit:
+- repository debugging
+- agent runtime routing
+- verification depth control
+- thread and heartbeat coordination
+- stabilization after success
 
-- no wallet behavior
-- no payments
-- no purchases
-- no crypto workflows
+Marketplace copy should stay anchored to developer workflows:
+
+- repository debugging
+- agent runtime routing
+- verification depth control
+- thread and heartbeat coordination
+- stabilization after success
 
 ## Language Coverage
 
@@ -125,7 +130,7 @@ The release notes should say this plainly: the current version does not include 
 The collection layer always runs four signals in parallel:
 
 - front emotion-label prompt
-- posthoc reflection prompt
+- review-pass prompt
 - dialogue history
 - timestamp, delay, retry, and stall state
 
@@ -161,7 +166,7 @@ python scripts/emotion_engine.py run --input demo/local_history_event.json --pre
 python scripts/minimal_host_adapter.py --event demo/local_history_event.json --store-dir .demo-store --pretty
 ```
 
-For a minimal host-side persistence adapter, run:
+For a minimal host-side profile adapter, run:
 
 ```bash
 python scripts/minimal_host_adapter.py --event demo/local_history_event.json --store-dir .demo-store --pretty
@@ -171,22 +176,22 @@ python scripts/minimal_host_adapter.py --event demo/local_history_event.json --s
 
 1. 把 `overlay_prompt` 塞进当前这一轮，当成一个很小的动态前置提示。
 2. 把 `routing.thread_interface` 接到队列、线程、heartbeat 和子任务路由。
-3. 如果 `guidance.hook_mode` 是 `latent`，先用 `guidance.hidden_hook`。只有真的值得打断用户时，再用 `guidance.question`。
+3. 如果 `guidance.hook_mode` 是 `latent`，先用 `guidance.soft_probe_seed`。只有真的值得打断用户时，再用 `guidance.question`。
 4. 先看 `analysis.semantic_pass`。它是 `fast` 的时候，再去跑模型语义复核。
 5. 如果你想让模型也参与判断，去看 `references/model-prompts.md`，把结果按 `llm_semantic` 回填。
 6. 看状态时别只盯一个标签，要一起看 `confirmed_state.emotion_vector` 和 `mode_scores`。情绪可以并存，`dominant_mode` 只负责决定这轮谁来主导编排。
-7. 后置反问每轮都在后台跑。冷启动时它更长、更重；一致性升高后它缩成一个很短的 shadow reflection。
+7. 冷启动阶段建议让 review pass 跟随每轮一起运行；一致性升高后，把它压缩成一个很短的 shadow review。
 8. 等 `calibration_state.consistency_rate` 和 `consistency_samples` 长起来，再慢慢抬高前置权重。
 
 Then wire it in like this:
 
 1. Drop `overlay_prompt` into the current turn as a small dynamic pre-prompt.
 2. Feed `routing.thread_interface` into queueing, thread priority, heartbeat, and subagent routing.
-3. If `guidance.hook_mode` is `latent`, start with `guidance.hidden_hook`. Reach for `guidance.question` only when the interruption is worth it.
+3. If `guidance.hook_mode` is `latent`, start with `guidance.soft_probe_seed`. Reach for `guidance.question` only when the interruption is worth it.
 4. Check `analysis.semantic_pass` first. Only run the semantic model pass when it says `fast`.
 5. If you want model-side judgment, read `references/model-prompts.md` and feed the result back as `llm_semantic`.
 6. Do not stare at one label in isolation. Read `confirmed_state.emotion_vector` and `mode_scores` together. Emotions can coexist. `dominant_mode` only decides who drives the turn.
-7. Posthoc reflection stays on in the background every turn. Cold start gives it more room and more weight. High consistency compresses it into a short shadow reflection.
+7. During cold start, keep the review pass available on each turn. As consistency rises, compress it into a short shadow review.
 8. Raise front weight only after `calibration_state.consistency_rate` and `consistency_samples` become believable.
 
 ## Input Contract
@@ -423,7 +428,8 @@ Use `debug_overlay_prompt` only for inspection or logging.
 
 Use `profile_state` as the session-global baseline snapshot.
 Use `constraint_signals` for boundary strength, verification preference, and scope tightness.
-Use `memory_update` as the persistence payload for `USER.md`, sqlite, or another durable profile store.
+Use `memory_update` as an optional host-owned profile update payload.
+Recommended storage is a bounded local JSON or sqlite profile owned by the host runtime.
 It tracks:
 
 - user timezone and local hour
@@ -436,8 +442,11 @@ It tracks:
 `consistency_rate` is the long-run front versus posthoc吻合率。
 系统会在冷启动阶段优先采信后置反问，当 `consistency_rate` 和 `consistency_samples` 升高后，自动抬升前置情绪标签的采信权重。
 
-`USER.md` can feed the engine through `user_profile.persona_traits`, `user_profile.big5`, and `user_profile.affective_prior`.
-These are treated as low-weight priors for the current turn.
+宿主侧的 profile store 可以通过 `user_profile.persona_traits`、`user_profile.big5`、`user_profile.affective_prior` 回填这些字段。
+这些值只作为当前这一轮的低权重先验。
+
+The host profile store can feed the engine through `user_profile.persona_traits`, `user_profile.big5`, and `user_profile.affective_prior`.
+These values stay low-weight priors for the current turn.
 
 Do not make it the permanent personality. Treat it as per-turn state.
 
@@ -448,14 +457,14 @@ Read `references/integration-openclaw-hermes.md` when wiring the output into run
 Use this mapping:
 
 - OpenClaw: `message_received` or `before_agent_start` computes state, `agent:bootstrap` or `before_agent_start` injects the overlay, queue and subagent logic consume `thread_interface`.
-- Hermes: keep the stable baseline in `SOUL.md`, store durable user tendencies in `USER.md`, and apply the per-turn state through `/personality`, local orchestration, or tool-driven overlays.
+- Hermes: keep the stable baseline in your runtime personality config, keep longer-lived user tendencies in a host profile store, and apply the per-turn state through `/personality`, local orchestration, or tool-driven overlays.
 
 ## Resources
 
 - `scripts/emotion_engine.py`: screening, confirmation, prediction, guidance, overlay, and routing CLI.
-- `scripts/minimal_host_adapter.py`: minimal host adapter with persisted `user_profile`, `last_state`, and `calibration_state`.
+- `scripts/minimal_host_adapter.py`: minimal host adapter with host-owned local profile reuse for `user_profile`, `last_state`, and `calibration_state`.
 - `scripts/smoke_test.py`: scenario smoke tests with local history, host-adapter round-trip, and randomized community-style samples.
-- `scripts/independent_audit.py`: independent audit checks for contracts, CLI ergonomics, persistence, and false-positive guards.
+- `scripts/independent_audit.py`: independent audit checks for contracts, CLI ergonomics, host-profile boundaries, and false-positive guards.
 - `scripts/marketplace_tag_audit.py`: marketplace-scope regression, evaluation, and smoke checks for listing metadata.
 - `scripts/ablation_test.py`: real-world community-case ablation against a no-skill baseline.
 - `scripts/posthoc_calibration_pack.py`: build the v2 cold-start posthoc calibration pack from community issue samples.

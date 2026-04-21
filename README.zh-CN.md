@@ -4,7 +4,7 @@
 
 面向 Coding Agent 的情绪感知编排层。
 
-这个仓库会读取最新用户消息，以及可选的历史对话、运行时信号和用户画像，然后输出优先级、验证强度、回复风格、收口模式、后置反思提示这些工作模式信号。
+这个仓库会读取最新用户消息，以及可选的历史对话、运行时信号和用户画像，然后输出优先级、验证强度、回复风格、收口模式、review pass 提示这些工作模式信号。
 
 ## 仓库里有什么
 
@@ -13,9 +13,9 @@
 - `scripts/alignment_test.py`：回归样例集
 - `scripts/ablation_test.py`：skill 与静态基线的对比评测
 - `scripts/smoke_test.py`：带本地历史和随机社区工作流的场景烟测
-- `scripts/independent_audit.py`：独立契约与持久化审计
+- `scripts/independent_audit.py`：独立契约与宿主画像边界审计
 - `scripts/marketplace_tag_audit.py`：ClawHub 市场标签回归、评测与烟测
-- `scripts/minimal_host_adapter.py`：最小可用宿主适配器
+- `scripts/minimal_host_adapter.py`：带宿主本地画像复用的最小可用适配器
 - `demo/local_history_event.json`：真实感 demo payload
 - `references/`：设计说明、案例、提示词参考
 
@@ -24,11 +24,13 @@
 - Coding Agent 面对赶时间、重复失败、用户质疑、边界保护、成功后收口这类对话
 - 宿主侧能调用本地 Python 脚本，并消费 JSON 输出
 
-## 非目标能力
+## 市场定位
 
-- 钱包和 Crypto 工作流
-- 支付和购买执行
-- 下单、结账、商户自动化
+- repository debugging
+- coding-agent 编排
+- 验证强度控制
+- 队列、线程、heartbeat 协调
+- 成功后的稳定收口
 
 ## 核心输入
 
@@ -107,7 +109,7 @@ python scripts/emotion_engine.py run --input demo/local_history_event.json --pre
 python scripts/emotion_engine.py run --input path/to/turn.json --pretty
 ```
 
-如果你想直接接一个最小宿主：
+如果你想直接接一个带宿主本地画像的最小宿主：
 
 ```bash
 python scripts/minimal_host_adapter.py --event demo/local_history_event.json --store-dir .demo-store --pretty
@@ -136,7 +138,7 @@ python scripts/minimal_host_adapter.py --event demo/local_history_event.json --s
 2. 把 `overlay_prompt` 插进当前这轮 prompt，作为紧凑的动态前置提示。
 3. 把 `routing.thread_interface` 接到队列、主线程选择、heartbeat 和进度节奏控制。
 4. 当 `analysis.semantic_pass` 是 `fast` 时，再补跑模型语义判断，并把结果按 `llm_semantic` 回填。
-5. 如果你需要跨轮自适应，就把 `memory_update` 持久化到宿主侧。
+5. 如果你需要跨轮自适应，就把 `memory_update` 里的有限字段复用到宿主自有的本地画像里。
 
 ## 它重点优化哪些状态
 
@@ -160,7 +162,7 @@ python scripts/minimal_host_adapter.py --event demo/local_history_event.json --s
 ## 产品边界
 
 - 运行时适配层放在宿主侧
-- 跨轮学习依赖宿主持久化 `memory_update`
+- 跨轮自适应通过宿主自有本地画像复用 `memory_update` 的有限字段
 - 下方评测数字来自仓库内置的精选样例
 - 第一轮判断在带有 `runtime` 和 `history` 时更稳
 - 市场定位就是 coding-agent 编排层
@@ -188,7 +190,7 @@ python scripts/minimal_host_adapter.py --event demo/local_history_event.json --s
 - [scripts/smoke_test.py](./scripts/smoke_test.py)：场景烟测
 - [scripts/independent_audit.py](./scripts/independent_audit.py)：独立校验
 - [scripts/marketplace_tag_audit.py](./scripts/marketplace_tag_audit.py)：市场标签审计
-- [scripts/minimal_host_adapter.py](./scripts/minimal_host_adapter.py)：最小宿主适配器
+- [scripts/minimal_host_adapter.py](./scripts/minimal_host_adapter.py)：带宿主本地画像的最小宿主适配器
 - [scripts/posthoc_calibration_pack.py](./scripts/posthoc_calibration_pack.py)：冷启动 posthoc pack 构建器
 - [demo/local_history_event.json](./demo/local_history_event.json)：真实本地历史 demo payload
 - [references/examples.md](./references/examples.md)：案例输入输出

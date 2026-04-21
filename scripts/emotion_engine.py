@@ -391,6 +391,16 @@ def last_assistant_message(history: list[dict[str, Any]]) -> str:
     return ""
 
 
+def load_review_semantic(payload: dict[str, Any]) -> dict[str, Any]:
+    review_semantic = payload.get("review_semantic")
+    if isinstance(review_semantic, dict) and review_semantic:
+        return review_semantic
+    legacy_review = payload.get("posthoc_semantic")
+    if isinstance(legacy_review, dict) and legacy_review:
+        return legacy_review
+    return {}
+
+
 def max_similarity(text: str, candidates: list[str]) -> float:
     norm = normalize_text(text)
     if not norm or not candidates:
@@ -950,18 +960,18 @@ def build_emotionality_metrics(emotion_vector: dict[str, float], features: dict[
 
 
 def build_posthoc_shadow(payload: dict[str, Any], features: dict[str, Any], confirmed: dict[str, Any], analysis: dict[str, Any], posthoc_plan: dict[str, Any]) -> dict[str, Any]:
-    posthoc_semantic = payload.get("posthoc_semantic") or {}
-    source_vector = clamp_dict(posthoc_semantic.get("emotion_vector"), EMOTION_DIMS) if posthoc_semantic.get("emotion_vector") else confirmed["emotion_vector"]
-    source_labels = unique_labels(list(posthoc_semantic.get("labels") or [])) if posthoc_semantic.get("labels") else confirmed["labels"]
+    review_semantic = load_review_semantic(payload)
+    source_vector = clamp_dict(review_semantic.get("emotion_vector"), EMOTION_DIMS) if review_semantic.get("emotion_vector") else confirmed["emotion_vector"]
+    source_labels = unique_labels(list(review_semantic.get("labels") or [])) if review_semantic.get("labels") else confirmed["labels"]
     metrics = build_emotionality_metrics(source_vector, features)
     dominant_axis = max(EMOTION_DIMS, key=lambda dim: float(source_vector.get(dim, 0.0)))
-    available = bool(posthoc_semantic.get("emotion_vector") or posthoc_semantic.get("labels"))
+    available = bool(review_semantic.get("emotion_vector") or review_semantic.get("labels"))
     return {
         "enabled": True,
         "available": available,
-        "source": "posthoc_semantic" if available else "confirmed_estimate",
+        "source": "review_semantic" if available else "confirmed_estimate",
         "is_estimate": not available,
-        "mode": "hidden_shadow",
+        "mode": "shadow_review",
         "style": posthoc_plan["style"],
         "weight": round(float(posthoc_plan["weight"]), 4),
         "target_ms": int(posthoc_plan["target_ms"]),
@@ -971,18 +981,20 @@ def build_posthoc_shadow(payload: dict[str, Any], features: dict[str, Any], conf
         "dominant_axis": dominant_axis,
         "dominant_axis_score": round(float(source_vector.get(dominant_axis, 0.0)), 4),
         "labels": source_labels,
-        "confidence": round(clamp(float(posthoc_semantic.get("confidence", 0.0) or 0.0)), 4) if available else round(float(confirmed["confidence"]), 4),
+        "confidence": round(clamp(float(review_semantic.get("confidence", 0.0) or 0.0)), 4) if available else round(float(confirmed["confidence"]), 4),
         "stance_cues": analysis["priority_reason"][:3],
     }
 
 
 def build_collection_stack(weight_schedule: dict[str, Any], features: dict[str, Any], posthoc_plan: dict[str, Any]) -> dict[str, Any]:
     return {
-        "sources": ["front_prompt", "posthoc_prompt", "history_context", "time_runtime_context"],
+        "sources": ["front_prompt", "review_prompt", "history_context", "time_runtime_context"],
         "front_weight": round(float(weight_schedule["screen_weight"]), 4),
+        "review_weight": round(float(weight_schedule["posthoc_weight"]), 4),
         "posthoc_weight": round(float(weight_schedule["posthoc_weight"]), 4),
         "history_active": True,
         "time_runtime_active": True,
+        "review_mode": posthoc_plan["style"],
         "posthoc_mode": posthoc_plan["style"],
         "consistency_rate": round(float(weight_schedule["consistency_rate"]), 4),
         "effective_consistency": round(float(weight_schedule["effective_consistency"]), 4),
@@ -1298,16 +1310,16 @@ def confirm_state(payload: dict[str, Any], features: dict[str, Any], screen: dic
     emotion_vector = derive_emotion_vector(vector, features)
     profile_prior = features["user_profile"].get("affective_prior") or {}
     profile_prior_weight = clamp(float(features["user_profile"].get("affective_prior_weight", 0.0) or 0.0), 0.0, 0.24)
-    posthoc_semantic = payload.get("posthoc_semantic") or {}
-    posthoc_confidence = clamp(float(posthoc_semantic.get("confidence", 0.0) or 0.0))
+    review_semantic = load_review_semantic(payload)
+    posthoc_confidence = clamp(float(review_semantic.get("confidence", 0.0) or 0.0))
     previous_emotion_vector = last_state.get("emotion_vector") or {}
     emotion_inputs: list[tuple[dict[str, Any], float]] = [(emotion_vector, weight_schedule["screen_weight"])]
     if profile_prior:
         emotion_inputs.append((profile_prior, min(profile_prior_weight, weight_schedule["prior_weight"])))
     if llm_semantic.get("emotion_vector"):
         emotion_inputs.append((llm_semantic["emotion_vector"], weight_schedule["screen_semantic_weight"] * llm_confidence))
-    if posthoc_semantic.get("emotion_vector"):
-        emotion_inputs.append((posthoc_semantic["emotion_vector"], weight_schedule["posthoc_weight"] * max(posthoc_confidence, 0.55)))
+    if review_semantic.get("emotion_vector"):
+        emotion_inputs.append((review_semantic["emotion_vector"], weight_schedule["posthoc_weight"] * max(posthoc_confidence, 0.55)))
     if previous_emotion_vector:
         emotion_inputs.append((previous_emotion_vector, prev_weight))
     emotion_vector = combine_named_vectors(emotion_inputs, EMOTION_DIMS)
@@ -1316,8 +1328,8 @@ def confirm_state(payload: dict[str, Any], features: dict[str, Any], screen: dic
         for label in llm_semantic["labels"]:
             if label not in labels:
                 labels.append(label)
-    if posthoc_semantic.get("labels"):
-        for label in posthoc_semantic["labels"]:
+    if review_semantic.get("labels"):
+        for label in review_semantic["labels"]:
             if label not in labels:
                 labels.append(label)
     mode_scores = build_mode_scores(emotion_vector, features)
@@ -1358,8 +1370,8 @@ def confirm_state(payload: dict[str, Any], features: dict[str, Any], screen: dic
 
 
 def build_consistency_snapshot(payload: dict[str, Any], screen: dict[str, Any]) -> dict[str, Any]:
-    posthoc_semantic = payload.get("posthoc_semantic") or {}
-    if not posthoc_semantic:
+    review_semantic = load_review_semantic(payload)
+    if not review_semantic:
         return {
             "available": False,
             "consistency_rate": 0.0,
@@ -1370,9 +1382,9 @@ def build_consistency_snapshot(payload: dict[str, Any], screen: dict[str, Any]) 
             "posthoc_labels": [],
         }
     screen_vector = clamp_dict(screen.get("emotion_vector"), EMOTION_DIMS)
-    posthoc_vector = clamp_dict(posthoc_semantic.get("emotion_vector"), EMOTION_DIMS)
+    posthoc_vector = clamp_dict(review_semantic.get("emotion_vector"), EMOTION_DIMS)
     screen_labels = unique_labels(screen.get("labels", []))
-    posthoc_labels = unique_labels(list(posthoc_semantic.get("labels") or []))
+    posthoc_labels = unique_labels(list(review_semantic.get("labels") or []))
     label_overlap = label_overlap_score(screen_labels, posthoc_labels)
     vector_alignment = vector_alignment_score(screen_vector, posthoc_vector, EMOTION_DIMS)
     axis_overlap = axis_overlap_score(screen_vector, posthoc_vector, EMOTION_DIMS)
@@ -1565,6 +1577,7 @@ def build_memory_update(payload: dict[str, Any], features: dict[str, Any], confi
         "consistency_rate": proposed_consistency_rate,
     }
     return {
+        "host_profile_update_recommended": bool(confirmed["confidence"] >= 0.58),
         "should_persist": bool(confirmed["confidence"] >= 0.58),
         "learning_rate": learning_rate,
         "persona_learning_rate": persona_learning_rate,
@@ -1577,10 +1590,10 @@ def build_memory_update(payload: dict[str, Any], features: dict[str, Any], confi
         "proposed_affective_prior": proposed_affective_prior,
         "proposed_calibration_state": proposed_calibration_state,
         "notes": [
-            "use EMA merge into user_profile.baseline",
+            "use EMA merge into the host-owned baseline profile",
             "merge persona traits with a smaller EMA weight",
             "keep affective prior slower than persona traits",
-            "keep front or posthoc trust tied to long-run consistency",
+            "keep front or review-pass trust tied to long-run consistency",
             "high-pressure turns keep a lower learning weight",
         ],
     }
@@ -1676,7 +1689,7 @@ def build_guidance(features: dict[str, Any], confirmed: dict[str, Any], predicti
             "allow_emotion_hook": False,
             "probe_style": "none",
             "hook_mode": "none",
-            "hidden_hook": "",
+            "soft_probe_seed": "",
             "question": "",
             "reason": "state already clear enough",
         }
@@ -1685,69 +1698,69 @@ def build_guidance(features: dict[str, Any], confirmed: dict[str, Any], predicti
             question = "先给结果，还是先给报错定位？"
             probe_style = "priority_axis"
             hook_mode = "explicit"
-            hidden_hook = ""
+            soft_probe_seed = ""
         elif mode == "confused":
             question = ""
             probe_style = "latent_preference_probe"
             hook_mode = "latent"
-            hidden_hook = "在首句加入可纠正默认项，例如“我先按一条可落地路径推进”，引导用户自然暴露偏好。"
+            soft_probe_seed = "在首句加入可纠正默认项，例如“我先按一条可落地路径推进”，引导用户自然暴露偏好。"
         elif mode == "skeptical":
             question = ""
             probe_style = "latent_evidence_probe"
             hook_mode = "latent"
-            hidden_hook = "首句先给依据和校验点，再给动作，让用户自然暴露证据偏好。"
+            soft_probe_seed = "首句先给依据和校验点，再给动作，让用户自然暴露证据偏好。"
         elif mode == "cautious":
             question = ""
             probe_style = "latent_boundary_probe"
             hook_mode = "latent"
-            hidden_hook = "在首句先复述安全边界并给出保守默认项，让用户自然补充禁止项。"
+            soft_probe_seed = "在首句先复述安全边界并给出保守默认项，让用户自然补充禁止项。"
         elif prediction["guard_needed"]:
             question = ""
             probe_style = "latent_guard_probe"
             hook_mode = "latent"
-            hidden_hook = "在首句写成“我先按已达标进入收口检查”，让用户自然选择继续推进或结束。"
+            soft_probe_seed = "在首句写成“我先按已达标进入收口检查”，让用户自然选择继续推进或结束。"
         else:
             question = ""
             probe_style = "latent_choice_probe"
             hook_mode = "latent"
-            hidden_hook = "在首段同时放一个主建议和一个备选方向词，引导用户自然偏向其一。"
+            soft_probe_seed = "在首段同时放一个主建议和一个备选方向词，引导用户自然偏向其一。"
     else:
         if mode in {"urgent", "frustrated"}:
             question = "Fix first, or diagnosis first?"
             probe_style = "priority_axis"
             hook_mode = "explicit"
-            hidden_hook = ""
+            soft_probe_seed = ""
         elif mode == "confused":
             question = ""
             probe_style = "latent_preference_probe"
             hook_mode = "latent"
-            hidden_hook = "Open with a default path such as 'I will start with one concrete path' so the user can correct it naturally."
+            soft_probe_seed = "Open with a default path such as 'I will start with one concrete path' so the user can correct it naturally."
         elif mode == "skeptical":
             question = ""
             probe_style = "latent_evidence_probe"
             hook_mode = "latent"
-            hidden_hook = "Lead with the basis and one concrete verification point before the action plan."
+            soft_probe_seed = "Lead with the basis and one concrete verification point before the action plan."
         elif mode == "cautious":
             question = ""
             probe_style = "latent_boundary_probe"
             hook_mode = "latent"
-            hidden_hook = "State a conservative safety assumption in the first line so the user can refine boundaries without a hard stop."
+            soft_probe_seed = "State a conservative safety assumption in the first line so the user can refine boundaries without a hard stop."
         elif prediction["guard_needed"]:
             question = ""
             probe_style = "latent_guard_probe"
             hook_mode = "latent"
-            hidden_hook = "Frame the next step as a guard-mode default so the user can continue or close naturally."
+            soft_probe_seed = "Frame the next step as a guard-mode default so the user can continue or close naturally."
         else:
             question = ""
             probe_style = "latent_choice_probe"
             hook_mode = "latent"
-            hidden_hook = "Lead with one recommendation and mention one soft alternative to invite natural preference disclosure."
+            soft_probe_seed = "Lead with one recommendation and mention one soft alternative to invite natural preference disclosure."
     return {
         "should_probe": True,
         "allow_emotion_hook": allow_emotion_hook,
         "probe_style": probe_style,
         "hook_mode": hook_mode,
-        "hidden_hook": hidden_hook if allow_emotion_hook else "",
+        "soft_probe_seed": soft_probe_seed if allow_emotion_hook else "",
         "question": question,
         "reason": "clarity is low or frustration risk is rising",
     }
@@ -1764,21 +1777,21 @@ def build_posthoc_plan(features: dict[str, Any], confirmed: dict[str, Any], anal
         style = "full_decompose"
         max_response_tokens = 180
         target_ms = 550
-        reason = "cold-start shadow reflection runs every turn"
+        reason = "bootstrap review pass stays enabled while consistency is still cold"
     elif stage == "calibrating" or low_consistency or low_signal or weak_shift or mode in {"confused", "skeptical"}:
         style = "compact_decompose"
         max_response_tokens = 110
         target_ms = 360
-        reason = "calibration still leans on posthoc decomposition"
+        reason = "calibration still benefits from a richer review pass"
     else:
         style = "micro_reflection"
         max_response_tokens = 56
         target_ms = 140
-        reason = "front-posthoc agreement is stable so shadow reflection stays short"
+        reason = "front-versus-review agreement is stable so the review pass stays compact"
     return {
         "should_run": should_run,
-        "execution_mode": "hidden_shadow",
-        "user_visible": False,
+        "execution_mode": "shadow_review",
+        "surface": "runtime_internal",
         "style": style,
         "target_ms": target_ms,
         "max_response_tokens": max_response_tokens,
@@ -1890,9 +1903,9 @@ def build_model_prompts(payload: dict[str, Any], screen: dict[str, Any], confirm
         f"usr={json.dumps(profile_hint, ensure_ascii=False, separators=(',', ':'))}\n"
         f"rt={json.dumps(runtime, ensure_ascii=False, separators=(',', ':'))}"
     )
-    posthoc_reflection_prompt = (
-        "Run a hidden posthoc reflection for the latest user message.\n"
-        "Decompose latent affect and stance cues for long-term calibration.\n"
+    review_pass_prompt = (
+        "Run a runtime-only follow-up review for the latest user message.\n"
+        "Decompose latent affect and stance cues for bounded calibration.\n"
         "Extract the exact wording, hedge, correction, punctuation, tempo clue, textism, deliberate typo, nonstandard spelling, or stance marker that carries emotion.\n"
         "Focus on weak shifts such as hedging, correction, doubt, evidence-seeking, anti-guesswork language, scope protection, frustration, urgency, satisfaction, openness, dismissive short replies, rhythmic pauses, and missed-expectation timing language.\n"
         "Return JSON only: "
@@ -1915,7 +1928,8 @@ def build_model_prompts(payload: dict[str, Any], screen: dict[str, Any], confirm
     return {
         "fast_screen_prompt": fast_screen_prompt,
         "fast_confirmation_prompt": fast_confirmation_prompt,
-        "posthoc_reflection_prompt": posthoc_reflection_prompt,
+        "review_pass_prompt": review_pass_prompt,
+        "posthoc_reflection_prompt": review_pass_prompt,
         "overlay_prompt": render_overlay({}, confirmed, prediction, routing, analysis),
     }
 
@@ -1948,7 +1962,9 @@ def run_pipeline(payload: dict[str, Any]) -> dict[str, Any]:
         "weight_schedule": weight_schedule,
         "collection_stack": collection_stack,
         "consistency_snapshot": consistency_snapshot,
+        "review_plan": posthoc_plan,
         "posthoc_plan": posthoc_plan,
+        "review_shadow": posthoc_shadow,
         "posthoc_shadow": posthoc_shadow,
         "features": features,
         "initial_screen": screen,
@@ -1981,8 +1997,12 @@ def parse_payload(args: argparse.Namespace) -> dict[str, Any]:
         payload["last_state"] = load_json_file(args.state_file)
     if args.llm_file:
         payload["llm_semantic"] = load_json_file(args.llm_file)
+    if getattr(args, "review_file", None):
+        payload["review_semantic"] = load_json_file(args.review_file)
     if getattr(args, "posthoc_file", None):
-        payload["posthoc_semantic"] = load_json_file(args.posthoc_file)
+        legacy_review = load_json_file(args.posthoc_file)
+        payload["posthoc_semantic"] = legacy_review
+        payload.setdefault("review_semantic", legacy_review)
     if getattr(args, "calibration_file", None):
         payload["calibration_state"] = load_json_file(args.calibration_file)
     return payload
@@ -2002,10 +2022,13 @@ def select_output(command: str, full: dict[str, Any]) -> Any:
     if command == "posthoc":
         return {
             "collection_stack": full["collection_stack"],
+            "review_plan": full["review_plan"],
             "posthoc_plan": full["posthoc_plan"],
+            "review_shadow": full["review_shadow"],
             "posthoc_shadow": full["posthoc_shadow"],
             "weight_schedule": full["weight_schedule"],
             "consistency_snapshot": full["consistency_snapshot"],
+            "review_pass_prompt": full["prompts"]["review_pass_prompt"],
             "posthoc_reflection_prompt": full["prompts"]["posthoc_reflection_prompt"],
         }
     if command == "overlay":
@@ -2024,6 +2047,7 @@ def build_parser() -> argparse.ArgumentParser:
         sub.add_argument("--runtime-file", help="Path to runtime JSON.")
         sub.add_argument("--state-file", help="Path to last_state JSON.")
         sub.add_argument("--llm-file", help="Path to llm_semantic JSON.")
+        sub.add_argument("--review-file", help="Path to review_semantic JSON.")
         sub.add_argument("--posthoc-file", help="Path to posthoc_semantic JSON.")
         sub.add_argument("--calibration-file", help="Path to calibration_state JSON.")
         sub.add_argument("--output", help="Path to write JSON output.")

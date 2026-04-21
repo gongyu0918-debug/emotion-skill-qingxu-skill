@@ -36,7 +36,9 @@ def main() -> int:
         "weight_schedule",
         "collection_stack",
         "consistency_snapshot",
+        "review_plan",
         "posthoc_plan",
+        "review_shadow",
         "features",
         "confirmed_state",
         "prediction",
@@ -146,13 +148,15 @@ def main() -> int:
     except json.JSONDecodeError:
         market_parsed = {}
     market_ok = market_code == 0 and isinstance(market_parsed, dict) and bool(market_parsed.get("ok"))
+    listing = market_parsed.get("smoke", {}).get("listing_copy", {}) if isinstance(market_parsed, dict) else {}
+    full_surface = market_parsed.get("smoke", {}).get("full_surface", {}) if isinstance(market_parsed, dict) else {}
     record(
         "marketplace_tag_scope",
-        market_ok,
+        market_ok and listing.get("predicted_domain") == "development_orchestration" and full_surface.get("predicted_domain") == "development_orchestration" and not any((listing.get("capabilities") or {}).values()) and not any((full_surface.get("capabilities") or {}).values()),
         {
             "exit_code": market_code,
-            "predicted_domain": market_parsed.get("smoke", {}).get("predicted_domain"),
-            "capabilities": market_parsed.get("smoke", {}).get("capabilities"),
+            "listing_copy": listing,
+            "full_surface": full_surface,
         },
         findings,
     )

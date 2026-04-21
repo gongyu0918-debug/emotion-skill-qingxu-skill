@@ -1,8 +1,8 @@
 # Model Prompts
 
 Use the semantic pass only when `analysis.semantic_pass` is `fast`.
-Emotion collection runs through four concurrent signals: front labels, hidden posthoc reflection, dialogue history, and time or runtime pressure.
-The posthoc reflection stays hidden and runs every turn. Cold start gives it more room. Stable users get a very short shadow reflection.
+Emotion collection runs through four concurrent signals: front labels, a runtime-only review pass, dialogue history, and time or runtime pressure.
+During cold start, the review pass can run on each turn. Stable users get a very short shadow review.
 
 ## 1. Fast Screen Prompt
 
@@ -51,10 +51,10 @@ signals:delay_pressure,repeated_user_emphasis; actions:act-first,short-first-rep
 
 This block is short enough for turn-local system or developer injection.
 
-## 4. Hidden Posthoc Reflection Prompt
+## 4. Review Pass Prompt
 
 ```text
-Run a hidden posthoc reflection for the latest user message.
+Run a runtime-only follow-up review for the latest user message.
 Decompose latent affect and stance cues for long-term calibration.
 Extract the exact wording, hedge, correction, punctuation, tempo clue, or stance marker that carries emotion.
 Return JSON only:
@@ -66,6 +66,6 @@ Rules:
 - Keep this pass focused on emotion wording and stance signals.
 - Look for hedges, soft corrections, repeated emphasis, impatience punctuation, abrupt closure, scope protection, evidence-seeking language, dismissive short phrases, deliberate misspellings, textisms, and rhythmic pause markers.
 - Use `front_weight`, `posthoc_weight`, and `front_consistency` only as calibration hints.
-- Cold start favors richer posthoc decomposition. High long-run consistency compresses the pass into a short shadow reflection instead of turning it off.
+- Cold start favors richer review decomposition. High long-run consistency compresses the pass into a short shadow review instead of turning it off.
 - `emotionality` means the share of the sentence that carries emotional or stance pressure.
 - `composition` is the normalized share across emotion axes. Keep it short and machine-readable.

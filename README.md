@@ -4,7 +4,7 @@
 
 Emotion-aware routing for coding agents.
 
-This repo reads the latest user turn plus optional history, runtime signals, and user profile, then returns work-mode signals such as priority, verification depth, reply style, guard mode, and posthoc reflection prompts.
+This repo reads the latest user turn plus optional history, runtime signals, and user profile, then returns work-mode signals such as priority, verification depth, reply style, guard mode, and review-pass hints.
 
 ## Included In This Repo
 
@@ -13,9 +13,9 @@ This repo reads the latest user turn plus optional history, runtime signals, and
 - `scripts/alignment_test.py`: curated regression cases
 - `scripts/ablation_test.py`: curated skill-vs-baseline harness
 - `scripts/smoke_test.py`: scenario smoke tests with local history and randomized community workflows
-- `scripts/independent_audit.py`: independent contract and persistence checks
+- `scripts/independent_audit.py`: independent contract and host-profile checks
 - `scripts/marketplace_tag_audit.py`: marketplace-tag regression, evaluation, and smoke checks
-- `scripts/minimal_host_adapter.py`: minimal persisted host adapter
+- `scripts/minimal_host_adapter.py`: minimal host adapter with a host-owned local profile
 - `demo/local_history_event.json`: realistic demo payload
 - `references/`: design notes, examples, prompt references
 
@@ -24,11 +24,13 @@ This repo reads the latest user turn plus optional history, runtime signals, and
 - coding-agent turns with delivery pressure, repeated failures, skepticism, boundary protection, or post-success stabilization
 - hosts that can call a local Python script and consume JSON
 
-## Non-Goals
+## Marketplace Scope
 
-- wallet or crypto workflows
-- payment or purchase execution
-- shopping, checkout, or merchant automation
+- repository debugging
+- coding-agent orchestration
+- verification depth control
+- queue, thread, and heartbeat coordination
+- stabilization after success
 
 ## Core Inputs
 
@@ -107,7 +109,7 @@ Run with a full payload:
 python scripts/emotion_engine.py run --input path/to/turn.json --pretty
 ```
 
-Minimal host adapter with persisted state:
+Minimal host adapter with a host-owned local profile:
 
 ```bash
 python scripts/minimal_host_adapter.py --event demo/local_history_event.json --store-dir .demo-store --pretty
@@ -136,7 +138,7 @@ Minimal payload example:
 2. Insert `overlay_prompt` into the current turn as a compact runtime pre-prompt.
 3. Apply `routing.thread_interface` to queueing, main-thread choice, heartbeat behavior, and progress cadence.
 4. When `analysis.semantic_pass` is `fast`, run the model-side semantic pass and feed the result back as `llm_semantic`.
-5. Persist `memory_update` inside your host if you want cross-turn adaptation.
+5. Reuse the bounded fields from `memory_update` inside a host-owned local profile if you want cross-turn adaptation.
 
 ## States It Optimizes For
 
@@ -160,7 +162,7 @@ The generic path still uses punctuation intensity, repetition, delay pressure, u
 ## Product Boundaries
 
 - runtime adapters stay in the host layer
-- cross-turn learning depends on persisting `memory_update`
+- cross-turn adaptation reuses bounded fields from `memory_update` inside a host-owned local profile
 - benchmark numbers below come from curated internal cases
 - first-turn judgments are strongest when `runtime` and `history` are present
 - marketplace scope is coding-agent orchestration only
@@ -188,7 +190,7 @@ These numbers come from repository-owned curated cases and are best read as regr
 - [scripts/smoke_test.py](./scripts/smoke_test.py): scenario smoke coverage
 - [scripts/independent_audit.py](./scripts/independent_audit.py): independent verification
 - [scripts/marketplace_tag_audit.py](./scripts/marketplace_tag_audit.py): marketplace-scope audit
-- [scripts/minimal_host_adapter.py](./scripts/minimal_host_adapter.py): minimal persisted host adapter
+- [scripts/minimal_host_adapter.py](./scripts/minimal_host_adapter.py): minimal host adapter with a host-owned local profile
 - [scripts/posthoc_calibration_pack.py](./scripts/posthoc_calibration_pack.py): pack builder for cold-start posthoc cases
 - [demo/local_history_event.json](./demo/local_history_event.json): realistic local-history demo payload
 - [references/examples.md](./references/examples.md): example turns and outcomes

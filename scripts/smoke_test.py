@@ -171,10 +171,23 @@ def check_marketplace_scope(failures: list[dict[str, Any]]) -> dict[str, Any]:
         return {"exit_code": code, "raw": raw[:400]}
     assert_check("marketplace_scope_ok", bool(parsed.get("ok")), parsed, failures)
     smoke = parsed.get("smoke", {})
+    listing = smoke.get("listing_copy", {})
+    full_surface = smoke.get("full_surface", {})
+    assert_check(
+        "marketplace_listing_clear",
+        listing.get("predicted_domain") == "development_orchestration" and not any((listing.get("capabilities") or {}).values()),
+        listing,
+        failures,
+    )
+    assert_check(
+        "marketplace_full_surface_clear",
+        full_surface.get("predicted_domain") == "development_orchestration" and not any((full_surface.get("capabilities") or {}).values()),
+        full_surface,
+        failures,
+    )
     return {
-        "predicted_domain": smoke.get("predicted_domain"),
-        "capabilities": smoke.get("capabilities"),
-        "forbidden_hits": smoke.get("forbidden_hits"),
+        "listing_copy": listing,
+        "full_surface": full_surface,
     }
 
 

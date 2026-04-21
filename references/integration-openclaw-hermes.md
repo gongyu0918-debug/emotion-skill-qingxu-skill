@@ -22,7 +22,7 @@ python skills/emotion-orchestrator/scripts/emotion_engine.py run --input turn.js
    - heartbeat suppression or deferral
    - `sessions_spawn` policy
    - progress update cadence
-5. After posthoc reflection returns, merge `memory_update.proposed_calibration_state` into your durable calibration store.
+5. After the review pass returns, merge `memory_update.proposed_calibration_state` into a bounded host-owned calibration store.
 
 Suggested mapping:
 
@@ -36,14 +36,14 @@ Suggested mapping:
 
 Recommended flow:
 
-1. Keep the long-lived voice in `SOUL.md`.
-2. Keep durable user tendencies in `USER.md`.
+1. Keep the long-lived voice in your runtime personality config.
+2. Keep longer-lived user tendencies in a host-owned profile store.
 3. Treat emotion output as a turn-local overlay.
 4. Map `routing.thread_interface.hermes.personality` to a short-lived `/personality` or equivalent orchestration state.
 5. Use `guidance.question` only when the state is unclear enough to justify one short probe.
-6. Merge `memory_update.proposed_baseline` into `USER.md` or another durable store with EMA.
-7. Feed `USER.md` back through `user_profile.persona_traits`, `user_profile.big5`, and `user_profile.affective_prior`.
-8. Persist `memory_update.proposed_calibration_state` beside `USER.md` so front or posthoc trust can evolve per user.
+6. Merge `memory_update.proposed_baseline` into the host profile store with EMA.
+7. Feed the host profile store back through `user_profile.persona_traits`, `user_profile.big5`, and `user_profile.affective_prior`.
+8. Store `memory_update.proposed_calibration_state` beside that profile so front-versus-review trust can evolve per user.
 
 Suggested mapping:
 
