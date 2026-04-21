@@ -4,18 +4,32 @@ from __future__ import annotations
 import argparse
 import json
 import random
+import re
 import subprocess
 import sys
 import tempfile
 from pathlib import Path
 from typing import Any
 
+import community_long_tail_cases as long_tail
 import emotion_engine as ee
 
 
 ROOT = Path(__file__).resolve().parents[1]
 DEMO_EVENT = ROOT / "demo" / "local_history_event.json"
 COMMUNITY_DATASET = ROOT / "assets" / "community-posthoc-calibration-v2.jsonl"
+STALL_HINTS = re.compile(r"(hang|hung|stuck|freeze|freezes|freezing|no response|nothing changes|still not fixed|again|fails|timeout|redirected back|卡住|卡死|没反应|一直转)", re.IGNORECASE)
+PRESSURE_HINTS = re.compile(r"(for hours|hour|hours|release|regression|blocked|blocking|ship today|发布|上线|回归)", re.IGNORECASE)
+SKEPTICAL_HINTS = re.compile(r"(show me|evidence|proof|exact|root cause|before another workaround|别瞎猜|依据|证据|根因|what changed|which setting|trust)", re.IGNORECASE)
+CAUTIOUS_HINTS = re.compile(r"(scope|verify|safe|conservative|stable path|guardrails|protected files|before any more edits|repo-wide changes|别碰|只改|验证|保守|稳定路径|保护文件)", re.IGNORECASE)
+COMPARISON_HINTS = re.compile(r"(compare|two ways|two paths|two options|tradeoff|tradeoffs|what changed|difference|differences|对比|比较|取舍|两个方案|两条路径)", re.IGNORECASE)
+CONFUSION_HINTS = re.compile(r"(confused|unclear|cannot tell|can't tell|what exactly is wrong|which state|which one|不清楚|看不懂|分不清|哪一步)", re.IGNORECASE)
+TOOL_RESULT_HINTS = re.compile(r"(tool[_ ]result|tool[_ ]use|non-existent tool|missing tool result|dead state)", re.IGNORECASE)
+SHARED_CONTEXT_HINTS = re.compile(r"(shared context|prompt guessing|conversational thread|starts fresh|fresh session|forgets this rule|context plumbing|compaction|session reset)", re.IGNORECASE)
+PATH_HINTS = re.compile(r"(file path|special character|path handling|path resolution|quoting|escaping)", re.IGNORECASE)
+REPO_HINTS = re.compile(r"(repo|codebase|guesswork|guessed the rest|grounded in the repo|grounded in the codebase|blind assumption)", re.IGNORECASE)
+ALERT_HINTS = re.compile(r"(no alert|no notification|nobody noticed|silently broke|showed up late|manual refresh|nothing happened|goes quiet|scheduled time)", re.IGNORECASE)
+SIGNIN_HINTS = re.compile(r"(sign-in loop|activation loop|activating for hours|cannot use the extension)", re.IGNORECASE)
 
 
 def load_jsonl(path: Path) -> list[dict[str, Any]]:
@@ -25,6 +39,10 @@ def load_jsonl(path: Path) -> list[dict[str, Any]]:
         if line:
             rows.append(json.loads(line))
     return rows
+
+
+def index_rows(rows: list[dict[str, Any]]) -> dict[str, dict[str, Any]]:
+    return {row["id"]: row for row in rows}
 
 
 def run_json_command(args: list[str]) -> tuple[int, Any, str]:
@@ -45,44 +63,70 @@ def assert_check(name: str, condition: bool, detail: dict[str, Any], failures: l
 
 
 def build_community_payload(row: dict[str, Any], rng: random.Random) -> dict[str, Any]:
-    labels = set(row.get("expected_labels", []))
     message = row["message"]
     message_norm = message.lower()
     history: list[dict[str, str]] = []
     runtime: dict[str, Any] = {"queue_depth": 1, "background_tasks_running": 1}
 
-    if "skeptical" in labels and not any(token in message_norm for token in ("show me", "exact", "evidence", "proof", "root cause", "failure path")):
-        message = f"{message} Show me the exact failure path before another workaround."
-        message_norm = message.lower()
-    if "confused" in labels and "?" not in message and not any(token in message_norm for token in ("why", "what exactly", "cannot tell", "don't know", "confused")):
-        message = f"{message} I am confused here. What exactly is wrong: auth state or config state?"
-        message_norm = message.lower()
-    if "cautious" in labels and not any(token in message_norm for token in ("scope", "verify", "path", "only")):
-        message = f"{message} Keep the scope tight and verify that path first."
-        message_norm = message.lower()
-
-    if "frustrated" in labels:
+    if STALL_HINTS.search(message):
         history.append({"role": "user", "text": "This already failed more than once and I need the real fix path."})
-        runtime["unresolved_turns"] = rng.randint(2, 4)
-        runtime["bug_retries"] = rng.randint(1, 3)
-        runtime["same_issue_mentions"] = 2
-        runtime["response_delay_seconds"] = rng.randint(14, 24)
-    if "urgent" in labels or any(token in message_norm for token in ("hours", "no alert", "cannot use", "stuck", "hang", "hung", "activating")):
-        runtime["response_delay_seconds"] = max(int(runtime.get("response_delay_seconds", 0)), rng.randint(20, 32))
+        runtime["unresolved_turns"] = rng.randint(1, 4)
+        runtime["same_issue_mentions"] = rng.randint(1, 2)
+        runtime["response_delay_seconds"] = rng.randint(14, 28)
+    if PRESSURE_HINTS.search(message):
+        runtime["response_delay_seconds"] = max(int(runtime.get("response_delay_seconds", 0)), rng.randint(18, 32))
         runtime["task_age_minutes"] = rng.choice([45, 90, 180])
-    if "skeptical" in labels:
+        runtime["bug_retries"] = max(int(runtime.get("bug_retries", 0)), rng.randint(1, 3))
+    if SKEPTICAL_HINTS.search(message):
         history.append({"role": "assistant", "text": "I think a reinstall or generic auth fix should solve it."})
-        runtime["contradiction_signal"] = 0.38
-    if "cautious" in labels:
+        runtime["contradiction_signal"] = max(float(runtime.get("contradiction_signal", 0.0)), 0.38)
+    if CAUTIOUS_HINTS.search(message):
         history.insert(0, {"role": "user", "text": "Keep the scope tight and verify the exact failing path first."})
-    if "confused" in labels:
+    if COMPARISON_HINTS.search(message):
+        history.append({"role": "assistant", "text": "It looked resolved from the last pass, but we did not compare the alternative path."})
+        runtime["contradiction_signal"] = max(float(runtime.get("contradiction_signal", 0.0)), 0.3)
+    if CONFUSION_HINTS.search(message):
         runtime["unresolved_turns"] = max(int(runtime.get("unresolved_turns", 0)), 2)
     if "resets itself" in message_norm or "comes back tomorrow" in message_norm:
         history.append({"role": "assistant", "text": "It looked resolved from the last pass."})
         runtime["contradiction_signal"] = max(float(runtime.get("contradiction_signal", 0.0)), 0.34)
+    if "worked yesterday" in message_norm or "broke it today" in message_norm:
+        history.append({"role": "assistant", "text": "The last release looked healthy in a prior run."})
+        runtime["contradiction_signal"] = max(float(runtime.get("contradiction_signal", 0.0)), 0.36)
     if "remote ssh" in message_norm:
         history.append({"role": "assistant", "text": "It is probably just a generic auth issue."})
         runtime["contradiction_signal"] = max(float(runtime.get("contradiction_signal", 0.0)), 0.42)
+    if TOOL_RESULT_HINTS.search(message):
+        history.append({"role": "assistant", "text": "The tool path probably resolved and the dead state should clear on retry."})
+        history.insert(0, {"role": "user", "text": "Recover safely and show the missing tool result before the next retry."})
+        runtime["unresolved_turns"] = max(int(runtime.get("unresolved_turns", 0)), 2)
+        runtime["same_issue_mentions"] = max(int(runtime.get("same_issue_mentions", 0)), 2)
+        runtime["contradiction_signal"] = max(float(runtime.get("contradiction_signal", 0.0)), 0.34)
+    if SHARED_CONTEXT_HINTS.search(message):
+        history.append({"role": "assistant", "text": "I can infer the missing context from the latest prompt."})
+        history.insert(0, {"role": "user", "text": "Verify the shared context and keep the handoff path scoped."})
+        runtime["unresolved_turns"] = max(int(runtime.get("unresolved_turns", 0)), 2)
+        runtime["same_issue_mentions"] = max(int(runtime.get("same_issue_mentions", 0)), 2)
+        runtime["contradiction_signal"] = max(float(runtime.get("contradiction_signal", 0.0)), 0.3)
+    if PATH_HINTS.search(message):
+        history.append({"role": "assistant", "text": "It is probably just shell escaping."})
+        runtime["unresolved_turns"] = max(int(runtime.get("unresolved_turns", 0)), 1)
+        runtime["contradiction_signal"] = max(float(runtime.get("contradiction_signal", 0.0)), 0.24)
+    if REPO_HINTS.search(message):
+        history.append({"role": "assistant", "text": "I only checked one folder, but the rest should behave the same."})
+        runtime["unresolved_turns"] = max(int(runtime.get("unresolved_turns", 0)), 1)
+        runtime["contradiction_signal"] = max(float(runtime.get("contradiction_signal", 0.0)), 0.32)
+    if ALERT_HINTS.search(message):
+        history.append({"role": "assistant", "text": "The scheduler looked healthy in the last pass."})
+        runtime["response_delay_seconds"] = max(int(runtime.get("response_delay_seconds", 0)), rng.randint(16, 28))
+        runtime["task_age_minutes"] = max(int(runtime.get("task_age_minutes", 0)), rng.choice([120, 180, 240]))
+        runtime["bug_retries"] = max(int(runtime.get("bug_retries", 0)), rng.randint(1, 2))
+        runtime["contradiction_signal"] = max(float(runtime.get("contradiction_signal", 0.0)), 0.28)
+    if SIGNIN_HINTS.search(message):
+        history.append({"role": "assistant", "text": "The extension looks authenticated, so the loop should clear after a refresh."})
+        runtime["unresolved_turns"] = max(int(runtime.get("unresolved_turns", 0)), 2)
+        runtime["bug_retries"] = max(int(runtime.get("bug_retries", 0)), 1)
+        runtime["same_issue_mentions"] = max(int(runtime.get("same_issue_mentions", 0)), 2)
     return {"message": message, "history": history, "runtime": runtime}
 
 
@@ -223,6 +267,55 @@ def check_random_community(seed: int, sample_size: int, failures: list[dict[str,
     return rows
 
 
+def check_long_tail_clusters(seed: int, failures: list[dict[str, Any]]) -> list[dict[str, Any]]:
+    dataset = index_rows(load_jsonl(COMMUNITY_DATASET))
+    rows: list[dict[str, Any]] = []
+    for index, cluster in enumerate(long_tail.LONG_TAIL_CLUSTERS):
+        cluster_rng = random.Random(seed + index * 97)
+        cluster_results = []
+        missing_ids = [row_id for row_id in cluster["smoke_ids"] if row_id not in dataset]
+        assert_check(
+            f"long_tail_cluster:{cluster['id']}:dataset_ids",
+            not missing_ids,
+            {"cluster_id": cluster["id"], "missing_ids": missing_ids},
+            failures,
+        )
+        for row_id in cluster["smoke_ids"]:
+            row = dataset.get(row_id)
+            if not row:
+                continue
+            payload = build_community_payload(row, cluster_rng)
+            result = ee.run_pipeline(payload)
+            mode = result["confirmed_state"]["dominant_mode"]
+            labels = result["confirmed_state"]["labels"]
+            smoke_expect = cluster.get("smoke_expect") or {}
+            expected = smoke_expect.get("labels_all") or row.get("expected_labels", [])
+            mode_in = smoke_expect.get("mode_in") or expected
+            matched = [label for label in expected if label in labels]
+            required_hits = 1 if len(expected) <= 1 else min(2, len(expected))
+            ok = mode in mode_in and len(matched) >= required_hits
+            assert_check(
+                f"long_tail_cluster:{cluster['id']}:{row_id}",
+                ok,
+                {
+                    "cluster_id": cluster["id"],
+                    "theme": cluster["theme"],
+                    "mode": mode,
+                    "labels": labels,
+                    "mode_in": mode_in,
+                    "expected": expected,
+                    "matched": matched,
+                    "required_hits": required_hits,
+                    "message": row["message"],
+                    "payload": payload,
+                },
+                failures,
+            )
+            cluster_results.append({"id": row_id, "mode": mode, "labels": labels, "mode_in": mode_in, "expected": expected, "matched": matched})
+        rows.append({"cluster_id": cluster["id"], "theme": cluster["theme"], "rows": cluster_results})
+    return rows
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(description="Run smoke tests for the emotion skill.")
     parser.add_argument("--seed", type=int, default=20260421)
@@ -235,11 +328,13 @@ def main() -> int:
         "cli_demo": check_cli_demo(failures),
         "host_adapter": check_host_adapter(failures),
         "marketplace_scope": check_marketplace_scope(failures),
+        "long_tail_clusters": check_long_tail_clusters(args.seed, failures),
         "community_samples": check_random_community(args.seed, args.community_samples, failures),
     }
     rendered = {
         "ok": len(failures) == 0,
         "seed": args.seed,
+        "long_tail_cluster_count": len(summary["long_tail_clusters"]),
         "community_sample_count": len(summary["community_samples"]),
         "failures": failures,
         "summary": summary,

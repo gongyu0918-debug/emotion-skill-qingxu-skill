@@ -6,6 +6,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import community_long_tail_cases as long_tail
 import emotion_engine as ee
 
 
@@ -114,6 +115,14 @@ CASES = [
         },
     },
     {
+        "id": "explore_two_paths_en",
+        "expected": ["exploratory"],
+        "payload": {
+            "message": "Give me two ways to reduce this ambiguity in real sessions and compare the tradeoffs.",
+            "runtime": {"response_delay_seconds": 4},
+        },
+    },
+    {
         "id": "calm_ambiguous_cn",
         "expected": ["confused"],
         "payload": {
@@ -179,6 +188,14 @@ CASES = [
         "payload": {
             "message": "Please be careful here. Keep the scope tight and verify first.",
             "runtime": {"response_delay_seconds": 4},
+        },
+    },
+    {
+        "id": "cautious_stable_path_en",
+        "expected": ["cautious"],
+        "payload": {
+            "message": "Check extension conflicts and cache order, then pick one stable path and keep protected files untouched.",
+            "runtime": {"response_delay_seconds": 6},
         },
     },
     {
@@ -348,6 +365,14 @@ CASES = [
         },
     },
     {
+        "id": "skeptical_failure_path_en",
+        "expected": ["skeptical"],
+        "payload": {
+            "message": "The token fetch fails after login. Show me the exact failing step before another workaround.",
+            "runtime": {"response_delay_seconds": 9, "unresolved_turns": 2, "contradiction_signal": 0.24},
+        },
+    },
+    {
         "id": "tempo_pause_skeptic_cn",
         "expected": ["skeptical"],
         "payload": {
@@ -476,7 +501,7 @@ CASES = [
             "runtime": {"response_delay_seconds": 22, "unresolved_turns": 3, "bug_retries": 1, "task_age_minutes": 180},
         },
     },
-]
+] + long_tail.ALIGNMENT_CASES
 
 
 def evaluate_case(case: dict[str, object], result: dict[str, object]) -> tuple[bool, dict[str, bool]]:

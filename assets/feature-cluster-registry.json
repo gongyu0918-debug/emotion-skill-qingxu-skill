@@ -1,5 +1,5 @@
 {
-  "version": "2026-04-18",
+  "version": "2026-04-21",
   "policy": {
     "core_entry_requirements": [
       "research_support",
@@ -111,6 +111,69 @@
       "support": {"research": true, "community": true, "benchmark": true},
       "alignment_cases": ["openclaw_heartbeat_ignores_params_en", "openclaw_socket_zero_events_en", "hermes_hindsight_hangs_en"],
       "ablation_cases": ["openclaw_heartbeat_ignores_parameters", "openclaw_socket_zero_inbound_events", "hermes_hindsight_hangs_for_hours"]
+    },
+    {
+      "id": "tool_result_dead_state",
+      "runtime_tier": "core",
+      "theme": "missing tool_result blocks and dead-state recovery",
+      "languages": ["en"],
+      "support": {"research": true, "community": true, "benchmark": true},
+      "alignment_cases": ["tool_result_dead_state_en"],
+      "ablation_cases": ["copilot_tool_result_dead_state"]
+    },
+    {
+      "id": "shared_context_guesswork",
+      "runtime_tier": "core",
+      "theme": "shared context loss and prompt-only guesswork",
+      "languages": ["en"],
+      "support": {"research": true, "community": true, "benchmark": true},
+      "alignment_cases": ["shared_context_guesswork_en"],
+      "ablation_cases": ["agent_shared_context_guesswork"]
+    },
+    {
+      "id": "session_reset_memory_loss",
+      "runtime_tier": "core",
+      "theme": "session reset, compaction, and vanished continuity",
+      "languages": ["en"],
+      "support": {"research": true, "community": true, "benchmark": true},
+      "alignment_cases": ["session_reset_memory_loss_en"],
+      "ablation_cases": ["session_reset_rule_memory_loss"]
+    },
+    {
+      "id": "path_special_char_ambiguity",
+      "runtime_tier": "core",
+      "theme": "path handling ambiguity and special-character failures",
+      "languages": ["en"],
+      "support": {"research": true, "community": true, "benchmark": true},
+      "alignment_cases": ["path_special_char_ambiguity_en"],
+      "ablation_cases": ["workspace_path_special_chars_break"]
+    },
+    {
+      "id": "activation_signin_loop",
+      "runtime_tier": "core",
+      "theme": "activation and sign-in loops that reset state",
+      "languages": ["en"],
+      "support": {"research": true, "community": true, "benchmark": true},
+      "alignment_cases": ["activation_signin_loop_en"],
+      "ablation_cases": ["extension_signin_activation_loop"]
+    },
+    {
+      "id": "repo_grounding_limits",
+      "runtime_tier": "core",
+      "theme": "repo grounding, explicit uncertainty, and anti-guesswork",
+      "languages": ["en"],
+      "support": {"research": true, "community": true, "benchmark": true},
+      "alignment_cases": ["repo_grounding_limits_en"],
+      "ablation_cases": ["repo_grounding_limits_social"]
+    },
+    {
+      "id": "silent_alert_gap",
+      "runtime_tier": "core",
+      "theme": "scheduled work goes quiet and alerts never arrive",
+      "languages": ["en"],
+      "support": {"research": true, "community": true, "benchmark": true},
+      "alignment_cases": ["silent_alert_gap_en"],
+      "ablation_cases": ["automation_silent_alert_gap"]
     },
     {
       "id": "token_bloat_context_creep",

@@ -2,13 +2,16 @@
 from __future__ import annotations
 
 import json
+import random
 import subprocess
 import sys
 import tempfile
 from pathlib import Path
 from typing import Any
 
+import community_long_tail_cases as long_tail
 import emotion_engine as ee
+import smoke_test as smoke
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -95,6 +98,29 @@ def main() -> int:
         "friendly_missing_file_error",
         missing_file_ok,
         {"exit_code": missing_code, "raw": missing_raw},
+        findings,
+    )
+
+    oracle_row_a = {"message": "Compare the two paths and keep protected files untouched.", "expected_labels": ["skeptical", "cautious"]}
+    oracle_row_b = {"message": "Compare the two paths and keep protected files untouched.", "expected_labels": ["urgent", "frustrated"]}
+    payload_a = smoke.build_community_payload(oracle_row_a, random.Random(20260421))
+    payload_b = smoke.build_community_payload(oracle_row_b, random.Random(20260421))
+    oracle_guard_ok = payload_a == payload_b
+    record(
+        "community_payload_oracle_guard",
+        oracle_guard_ok,
+        {"payload_a": payload_a, "payload_b": payload_b},
+        findings,
+    )
+
+    community_index = smoke.index_rows(smoke.load_jsonl(smoke.COMMUNITY_DATASET))
+    missing_long_tail_ids = []
+    for cluster in long_tail.LONG_TAIL_CLUSTERS:
+        missing_long_tail_ids.extend([row_id for row_id in cluster["smoke_ids"] if row_id not in community_index])
+    record(
+        "long_tail_cluster_dataset_guard",
+        not missing_long_tail_ids,
+        {"missing_ids": missing_long_tail_ids, "cluster_count": len(long_tail.LONG_TAIL_CLUSTERS)},
         findings,
     )
 

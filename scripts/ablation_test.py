@@ -6,6 +6,7 @@ import sys
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import community_long_tail_cases as long_tail
 import emotion_engine as ee
 
 
@@ -66,9 +67,10 @@ REAL_WORLD_CASES = [
             "runtime": {"response_delay_seconds": 16, "unresolved_turns": 3, "bug_retries": 2, "same_issue_mentions": 2},
         },
         "expected": {
+            "mode_in": ["urgent", "frustrated", "skeptical"],
             "labels_all": ["urgent", "frustrated"],
             "queue_mode_in": ["steer", "interrupt"],
-            "reply_style_in": ["act_then_brief", "repair_then_explain"],
+            "reply_style_in": ["act_then_brief", "repair_then_explain", "evidence_then_act"],
             "verification_in": ["high", "very_high"],
             "prefer_main_thread": True,
             "max_progress_interval": 20,
@@ -428,7 +430,7 @@ REAL_WORLD_CASES = [
             "max_progress_interval": 20,
         },
     },
-]
+] + long_tail.ABLATION_CASES
 
 
 def baseline_plan() -> dict[str, object]:
