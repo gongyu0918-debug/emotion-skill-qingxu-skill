@@ -1,7 +1,6 @@
 ---
 name: emotion-skill
 description: Emotion-aware orchestration for coding agents. Detect urgency, frustration, skepticism, confusion, caution, satisfaction, and openness from coding-task wording, retries, delay pressure, and dialogue history, then route verification depth, queue priority, reply style, and stabilization strategy. Use when: coding agent orchestration, repo debugging, scope protection, verification depth control, and post-success stabilization.
-license: MIT
 metadata:
   openclaw:
     emoji: "🎛️"
@@ -83,6 +82,30 @@ Marketplace copy should stay anchored to developer workflows:
 - verification depth control
 - thread and heartbeat coordination
 - stabilization after success
+
+## Published Bundle
+
+ClawHub publish now ships the runtime-facing subset only:
+
+- `SKILL.md`
+- `README.md`
+- `README.zh-CN.md`
+- `agents/openai.yaml`
+- `scripts/emotion_engine.py`
+- `scripts/minimal_host_adapter.py`
+- `demo/local_history_event.json`
+- `references/examples.md`
+- `references/model-prompts.md`
+- `references/emotion-value-model.md`
+- `references/emotion-policy-matrix.md`
+- `references/integration-openclaw-hermes.md`
+
+The full GitHub repo keeps the heavier regression, audit, and calibration assets:
+
+- curated regression and ablation harnesses
+- marketplace audit scripts
+- internal prompt-chain notes
+- frozen community calibration snapshots
 
 ## Language Coverage
 
@@ -461,20 +484,25 @@ Use this mapping:
 
 ## Resources
 
+Bundled with the published skill:
+
 - `scripts/emotion_engine.py`: screening, confirmation, prediction, guidance, overlay, and routing CLI.
 - `scripts/minimal_host_adapter.py`: minimal host adapter with host-owned local profile reuse for `user_profile`, `last_state`, and `calibration_state`.
+- `demo/local_history_event.json`: realistic local-history payload for demo, smoke, and adapter testing.
+- `references/examples.md`: side-by-side examples that show how the layer changes agent behavior.
+- `references/model-prompts.md`: prompt blocks for initial screen, confirmation, and guidance.
+- `references/emotion-value-model.md`: what this layer changes in routing, work quality, guard mode, and user alignment.
+- `references/emotion-policy-matrix.md`: mapping from emotion state to behavior.
+- `references/integration-openclaw-hermes.md`: runtime wiring notes and example flow.
+
+Kept in the GitHub repo for deeper review and local validation:
+
 - `scripts/smoke_test.py`: scenario smoke tests with local history, host-adapter round-trip, and randomized community-style samples.
 - `scripts/independent_audit.py`: independent audit checks for contracts, CLI ergonomics, host-profile boundaries, and false-positive guards.
 - `scripts/marketplace_tag_audit.py`: marketplace-scope regression, evaluation, and smoke checks for listing metadata.
 - `scripts/ablation_test.py`: real-world community-case ablation against a no-skill baseline.
 - `scripts/posthoc_calibration_pack.py`: build the v2 cold-start posthoc calibration pack from community issue samples.
-- `demo/local_history_event.json`: realistic local-history payload for demo, smoke, and adapter testing.
 - `assets/community-posthoc-calibration-v2.jsonl`: expanded community-style calibration set with GitHub issues, discussions, and forum-style failure reports.
 - `assets/community-posthoc-calibration-56.jsonl`: frozen first-pass snapshot for reproducibility.
-- `references/examples.md`: side-by-side examples that show how the layer changes agent behavior.
-- `references/model-prompts.md`: prompt blocks for initial screen, confirmation, and guidance.
 - `references/prompt-chain-audit.md`: condensed design logic for external review and critique.
 - `references/research-cues-v2.md`: source-backed notes for punctuation, textisms, pauses, misspellings, and confidence weighting.
-- `references/emotion-value-model.md`: what this layer changes in routing, work quality, guard mode, and user alignment.
-- `references/emotion-policy-matrix.md`: mapping from emotion state to behavior.
-- `references/integration-openclaw-hermes.md`: runtime wiring notes and example flow.

@@ -181,19 +181,26 @@ python scripts/minimal_host_adapter.py --event demo/local_history_event.json --s
 
 这些数字更适合解读成回归覆盖率和规则稳定性，不适合直接当成线上 A/B 结论。
 
+ClawHub 发布包只带运行时所需子集。更重的回归、审计和校准资产继续留在 GitHub 仓库。
+
 ## 仓库结构
+
+ClawHub 发布包内：
 
 - [SKILL.md](./SKILL.md)：skill 定义和完整契约
 - [scripts/emotion_engine.py](./scripts/emotion_engine.py)：运行时引擎
+- [scripts/minimal_host_adapter.py](./scripts/minimal_host_adapter.py)：带宿主本地画像的最小宿主适配器
+- [demo/local_history_event.json](./demo/local_history_event.json)：真实本地历史 demo payload
+- [references/examples.md](./references/examples.md)：案例输入输出
+
+GitHub 仓库内额外保留：
+
 - [scripts/alignment_test.py](./scripts/alignment_test.py)：回归样例集
 - [scripts/ablation_test.py](./scripts/ablation_test.py)：评测脚本
 - [scripts/smoke_test.py](./scripts/smoke_test.py)：场景烟测
 - [scripts/independent_audit.py](./scripts/independent_audit.py)：独立校验
 - [scripts/marketplace_tag_audit.py](./scripts/marketplace_tag_audit.py)：市场标签审计
-- [scripts/minimal_host_adapter.py](./scripts/minimal_host_adapter.py)：带宿主本地画像的最小宿主适配器
 - [scripts/posthoc_calibration_pack.py](./scripts/posthoc_calibration_pack.py)：冷启动 posthoc pack 构建器
-- [demo/local_history_event.json](./demo/local_history_event.json)：真实本地历史 demo payload
-- [references/examples.md](./references/examples.md)：案例输入输出
 
 ## 下一步
 
@@ -204,4 +211,6 @@ python scripts/minimal_host_adapter.py --event demo/local_history_event.json --s
 
 ## License
 
-MIT License。
+ClawHub 发布包遵循平台统一的 `MIT-0` 条款。
+
+GitHub 仓库继续以 [LICENSE](./LICENSE) 文件为准。

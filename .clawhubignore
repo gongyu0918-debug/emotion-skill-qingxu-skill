@@ -1,0 +1,12 @@
+assets/**
+scripts/ablation_test.py
+scripts/alignment_test.py
+scripts/community_long_tail_cases.py
+scripts/feature_gate_audit.py
+scripts/independent_audit.py
+scripts/marketplace_tag_audit.py
+scripts/posthoc_calibration_pack.py
+scripts/smoke_test.py
+references/feature-admission-v1.md
+references/prompt-chain-audit.md
+references/research-cues-v2.md

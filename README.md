@@ -181,19 +181,26 @@ Current local run in this repo:
 
 These numbers come from repository-owned curated cases and are best read as regression coverage, not production A/B evidence.
 
+ClawHub publishes the runtime-facing subset only. The heavier regression, audit, and calibration assets stay in the GitHub repository.
+
 ## Repo Layout
+
+Published on ClawHub:
 
 - [SKILL.md](./SKILL.md): skill definition and full contract
 - [scripts/emotion_engine.py](./scripts/emotion_engine.py): runtime engine
+- [scripts/minimal_host_adapter.py](./scripts/minimal_host_adapter.py): minimal host adapter with a host-owned local profile
+- [demo/local_history_event.json](./demo/local_history_event.json): realistic local-history demo payload
+- [references/examples.md](./references/examples.md): example turns and outcomes
+
+Kept in the GitHub repository:
+
 - [scripts/alignment_test.py](./scripts/alignment_test.py): curated regression suite
 - [scripts/ablation_test.py](./scripts/ablation_test.py): curated evaluation harness
 - [scripts/smoke_test.py](./scripts/smoke_test.py): scenario smoke coverage
 - [scripts/independent_audit.py](./scripts/independent_audit.py): independent verification
 - [scripts/marketplace_tag_audit.py](./scripts/marketplace_tag_audit.py): marketplace-scope audit
-- [scripts/minimal_host_adapter.py](./scripts/minimal_host_adapter.py): minimal host adapter with a host-owned local profile
 - [scripts/posthoc_calibration_pack.py](./scripts/posthoc_calibration_pack.py): pack builder for cold-start posthoc cases
-- [demo/local_history_event.json](./demo/local_history_event.json): realistic local-history demo payload
-- [references/examples.md](./references/examples.md): example turns and outcomes
 
 ## Next
 
@@ -204,4 +211,6 @@ These numbers come from repository-owned curated cases and are best read as regr
 
 ## License
 
-MIT License.
+Published bundles on ClawHub follow the platform-wide `MIT-0` terms.
+
+The GitHub repository keeps its own [LICENSE](./LICENSE) file.
