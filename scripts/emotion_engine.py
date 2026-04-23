@@ -29,7 +29,8 @@ DEFAULT_PERSONA_TRAITS = {
     "openness": 0.5,
     "assertiveness": 0.4,
 }
-SCHEMA_VERSION = "1.1.0"
+SCHEMA_VERSION = "1.1.1"
+MAX_DEGRADATION_REASONS = 32
 LABEL_ORDER = ("urgent", "frustrated", "confused", "skeptical", "cautious", "exploratory", "satisfied", "neutral")
 LABEL_ORDER_INDEX = {label: index for index, label in enumerate(LABEL_ORDER)}
 
@@ -39,8 +40,9 @@ ANGER_TERMS = {
 }
 URGENCY_TERMS = {
     "快", "赶紧", "立刻", "马上", "现在", "别停", "直接", "先处理",
-    "asap", "urgent", "immediately", "right now", "hurry", "for several minutes", "forty minutes",
+    "asap", "urgent", "immediately", "right now", "hurry",
 }
+SOFT_URGENCY_TERMS = {"for several minutes", "forty minutes"}
 RUSH_TYPO_TERMS = {
     "pls", "plz", "plss", "urgnt", "stcuk", "brokn", "fixx", "fiex", "hlp", "tmrw", "rn",
     "w我", "n你", "t他", "d的", "b不",
@@ -406,6 +408,17 @@ def as_mapping(value: Any, diagnostics: dict[str, Any], reason: str) -> dict[str
         return {}
     if isinstance(value, dict):
         return value
+    if isinstance(value, str):
+        stripped = value.strip()
+        if stripped:
+            try:
+                parsed = json.loads(stripped)
+            except json.JSONDecodeError:
+                mark_degraded(diagnostics, reason)
+                return {}
+            if isinstance(parsed, dict):
+                mark_degraded(diagnostics, f"{reason}.parsed_from_json_string")
+                return parsed
     mark_degraded(diagnostics, reason)
     return {}
 
@@ -418,7 +431,10 @@ def normalize_string_list(value: Any, diagnostics: dict[str, Any], reason: str) 
         return []
     result: list[str] = []
     for item in value:
-        text = str(item).strip()
+        if not isinstance(item, str):
+            mark_degraded(diagnostics, f"{reason}.contains_non_string")
+            continue
+        text = item.strip()
         if text:
             result.append(text)
     return result
@@ -440,14 +456,37 @@ def normalize_history(value: Any, diagnostics: dict[str, Any]) -> list[dict[str,
         if not isinstance(item, dict):
             mark_degraded(diagnostics, f"history_item_{index}_not_mapping")
             continue
+        role = item.get("role", "")
+        if role is None:
+            role = ""
+        elif not isinstance(role, str):
+            mark_degraded(diagnostics, f"history_item_{index}_role_not_string")
+            role = str(role) if isinstance(role, (int, float, bool)) else ""
         text = item.get("text")
         if text is None:
             text = item.get("content")
+        if text is None:
+            text = ""
+        elif not isinstance(text, str):
+            mark_degraded(diagnostics, f"history_item_{index}_text_not_string")
+            text = str(text) if isinstance(text, (int, float, bool)) else ""
+        if not role and not text:
+            continue
         normalized.append({
-            "role": str(item.get("role", "")).strip(),
-            "text": str(text or ""),
+            "role": role.strip(),
+            "text": text,
         })
     return normalized
+
+
+def finalize_degradation_reasons(diagnostics: dict[str, Any]) -> list[str]:
+    reasons = [str(reason).strip() for reason in diagnostics.get("degradation_reasons", []) if str(reason).strip()]
+    if len(reasons) > MAX_DEGRADATION_REASONS:
+        overflow = len(reasons) - (MAX_DEGRADATION_REASONS - 1)
+        reasons = reasons[: MAX_DEGRADATION_REASONS - 1] + [f"...+{overflow} more"]
+    diagnostics["degradation_reasons"] = reasons
+    diagnostics["degraded"] = bool(reasons) or bool(diagnostics.get("degraded"))
+    return reasons
 
 
 def normalize_payload(payload: Any) -> tuple[dict[str, Any], dict[str, Any]]:
@@ -493,6 +532,7 @@ def normalize_payload(payload: Any) -> tuple[dict[str, Any], dict[str, Any]]:
 
 
 def combine_named_vectors(weighted_vectors: list[tuple[dict[str, Any], float]], dims: tuple[str, ...]) -> dict[str, float]:
+    """Combine partial vectors by per-dimension weight averages. Weights can sum to any positive value."""
     totals = {dim: 0.0 for dim in dims}
     weight_sum = {dim: 0.0 for dim in dims}
     for vector, weight in weighted_vectors:
@@ -723,6 +763,7 @@ def build_features(payload: dict[str, Any], diagnostics: dict[str, Any]) -> dict
 
     anger_hits = count_terms(message, ANGER_TERMS)
     urgency_hits = count_terms(message, URGENCY_TERMS)
+    soft_urgency_hits = count_terms(message, SOFT_URGENCY_TERMS)
     rush_typo_hits = count_hybrid_terms(message, RUSH_TYPO_TERMS)
     textism_hits = count_token_terms(message, TEXTISM_TERMS)
     nonstandard_spelling_hits = count_token_terms(message, NONSTANDARD_SPELLING_TERMS)
@@ -847,6 +888,8 @@ def build_features(payload: dict[str, Any], diagnostics: dict[str, Any]) -> dict
         + (repeat_similarity * 0.12)
         + (resolution_mismatch * 0.08)
     )
+    if soft_urgency_hits and (delay_pressure >= 0.34 or stall_hits >= 1 or blocking_hits >= 1 or frustration_hits >= 1 or stuck_pressure >= 0.42):
+        urgency_hits += soft_urgency_hits
     background_pressure = clamp((queue_depth * 0.2) + (background_tasks_running * 0.15))
     politeness_delta = clamp(polite_ratio - user_profile["baseline"]["politeness"] + 0.15)
     terseness_delta = clamp(short_burst - user_profile["baseline"]["terseness"] + 0.15)
@@ -2247,10 +2290,11 @@ def run_pipeline(payload: dict[str, Any]) -> dict[str, Any]:
     prompts = build_model_prompts(normalized_payload, screen, confirmed, routing, prediction, analysis, weight_schedule, posthoc_plan)
     prompts["overlay_prompt"] = overlay_prompt
     prompts["debug_overlay_prompt"] = debug_overlay_prompt
+    degradation_reasons = finalize_degradation_reasons(diagnostics)
     return {
         "schema_version": SCHEMA_VERSION,
         "degraded": bool(diagnostics["degraded"]),
-        "degradation_reasons": list(diagnostics["degradation_reasons"]),
+        "degradation_reasons": degradation_reasons,
         "profile_state": profile_state,
         "memory_update": memory_update,
         "constraint_signals": constraint_signals,

@@ -61,6 +61,10 @@
 - `posthoc_plan`
 - `prompts`
 
+读状态时记一条：
+
+- `confirmed_state.emotion_vector.confusion` 表示用户侧的不确定感，`confirmed_state.vector.clarity` 表示任务表述清晰度。这两个轴要一起看。
+
 ## 安装
 
 环境要求：
@@ -171,9 +175,9 @@ python scripts/minimal_host_adapter.py --event demo/local_history_event.json --s
 
 我在这个仓库里的本地运行结果：
 
-- alignment regression：`50/50`
-- curated ablation harness：`201/201`
-- 同一套评分下的静态基线：`6/201`
+- alignment regression：`70/70`
+- curated ablation harness：`333/333`
+- 同一套评分下的静态基线：`18/333`
 - 场景烟测：`ok`
 - 独立审计：`ok`
 - ClawHub 标签审计：`ok`

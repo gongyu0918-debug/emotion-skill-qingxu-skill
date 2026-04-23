@@ -132,6 +132,113 @@ def main() -> int:
         findings,
     )
 
+    recovered_mapping = ee.run_pipeline(
+        {
+            "message": "先给我依据，别瞎猜",
+            "context": "{\"timezone\":\"Asia/Shanghai\",\"now_iso\":\"2026-04-23T10:00:00+08:00\"}",
+            "user_profile": "{\"timezone\":\"Asia/Shanghai\",\"baseline\":{\"response_delay_seconds\":12},\"persona_traits\":{\"caution\":0.7}}",
+        }
+    )
+    recovered_mapping_ok = (
+        recovered_mapping.get("degraded") is True
+        and "context_not_mapping.parsed_from_json_string" in recovered_mapping.get("degradation_reasons", [])
+        and "user_profile_not_mapping.parsed_from_json_string" in recovered_mapping.get("degradation_reasons", [])
+        and recovered_mapping["profile_state"]["local_hour"] == 10
+        and recovered_mapping["profile_state"]["persona_source"] == "persona_traits"
+    )
+    record(
+        "json_string_mapping_recovery",
+        recovered_mapping_ok,
+        {
+            "degraded": recovered_mapping.get("degraded"),
+            "degradation_reasons": recovered_mapping.get("degradation_reasons"),
+            "profile_state": recovered_mapping.get("profile_state"),
+        },
+        findings,
+    )
+
+    label_input = ee.run_pipeline(
+        {
+            "message": "先给我依据，别瞎猜",
+            "llm_semantic": {
+                "labels": ["skeptical", None, {"bad": True}, "skeptical", ""],
+                "confidence": 0.88,
+                "emotion_vector": {
+                    "urgency": 0.1,
+                    "frustration": 0.1,
+                    "confusion": 0.06,
+                    "skepticism": 0.9,
+                    "satisfaction": 0.04,
+                    "cautiousness": 0.2,
+                    "openness": 0.08,
+                },
+            },
+        }
+    )
+    label_input_ok = (
+        label_input.get("degraded") is True
+        and "llm_semantic.labels_not_list.contains_non_string" in label_input.get("degradation_reasons", [])
+        and label_input["confirmed_state"]["labels"].count("skeptical") == 1
+    )
+    record(
+        "label_list_non_string_guard",
+        label_input_ok,
+        {
+            "degraded": label_input.get("degraded"),
+            "degradation_reasons": label_input.get("degradation_reasons"),
+            "labels": label_input["confirmed_state"]["labels"],
+        },
+        findings,
+    )
+
+    bad_history = ee.run_pipeline(
+        {
+            "message": "show me the exact failing path",
+            "history": [
+                {"role": {"bad": True}, "text": {"oops": 1}},
+                {"role": 7, "text": 12},
+                {"content": ["nested", "list"]},
+            ],
+        }
+    )
+    history_guard_ok = (
+        bad_history.get("degraded") is True
+        and any(reason.startswith("history_item_0_") for reason in bad_history.get("degradation_reasons", []))
+        and "{'oops': 1}" not in json.dumps(bad_history["features"], ensure_ascii=False)
+    )
+    record(
+        "history_non_string_guard",
+        history_guard_ok,
+        {
+            "degraded": bad_history.get("degraded"),
+            "degradation_reasons": bad_history.get("degradation_reasons"),
+            "history_count": len(bad_history.get("features", {}).get("recent_user_messages", []) or []),
+        },
+        findings,
+    )
+
+    degradation_flood = ee.run_pipeline(
+        {
+            "message": "show me the exact failing path",
+            "history": [object() for _ in range(40)],
+        }
+    )
+    flood_reasons = degradation_flood.get("degradation_reasons", [])
+    degradation_cap_ok = (
+        degradation_flood.get("degraded") is True
+        and len(flood_reasons) <= ee.MAX_DEGRADATION_REASONS
+        and any(reason.startswith("...+") for reason in flood_reasons)
+    )
+    record(
+        "degradation_reason_cap",
+        degradation_cap_ok,
+        {
+            "count": len(flood_reasons),
+            "tail": flood_reasons[-3:],
+        },
+        findings,
+    )
+
     deterministic_hour = ee.run_pipeline({"message": "ping", "user_profile": {"timezone": "Asia/Shanghai"}})
     deterministic_hour_ok = deterministic_hour["profile_state"]["local_hour"] is None and deterministic_hour.get("degraded") is False
     record(
@@ -142,6 +249,48 @@ def main() -> int:
             "degraded": deterministic_hour.get("degraded"),
             "degradation_reasons": deterministic_hour.get("degradation_reasons"),
         },
+        findings,
+    )
+
+    base_weight_features = {
+        "unresolved_turns": 0,
+        "user_profile": {
+            "affective_prior_source": "default",
+            "persona_source": "default",
+        },
+    }
+    weight_boundary_cases = [
+        (
+            "bootstrap_floor",
+            {"observed_turns": 0, "posthoc_samples": 0, "consistency_samples": 0, "prediction_agreement": 0.0, "consistency_rate": 1.0},
+            {"stage": "bootstrap", "effective_consistency": 0.0},
+        ),
+        (
+            "calibrating_mid",
+            {"observed_turns": 12, "posthoc_samples": 8, "consistency_samples": 8, "prediction_agreement": 0.0, "consistency_rate": 0.0},
+            {"stage": "calibrating"},
+        ),
+        (
+            "stable_ceiling",
+            {"observed_turns": 30, "posthoc_samples": 24, "consistency_samples": 18, "stable_prediction_hits": 18, "prediction_agreement": 1.0, "consistency_rate": 1.0},
+            {"stage": "stable", "effective_consistency": 1.0},
+        ),
+    ]
+    weight_boundary_results = []
+    for name, calibration_state, expected in weight_boundary_cases:
+        schedule = ee.build_weight_schedule({"calibration_state": calibration_state}, base_weight_features)
+        weight_boundary_results.append({"name": name, "schedule": schedule, "expected": expected})
+    weight_schedule_ok = (
+        weight_boundary_results[0]["schedule"]["stage"] == "bootstrap"
+        and weight_boundary_results[0]["schedule"]["effective_consistency"] == 0.0
+        and weight_boundary_results[1]["schedule"]["stage"] == "calibrating"
+        and weight_boundary_results[2]["schedule"]["stage"] == "stable"
+        and weight_boundary_results[2]["schedule"]["effective_consistency"] == 1.0
+    )
+    record(
+        "weight_schedule_boundaries",
+        weight_schedule_ok,
+        {"results": weight_boundary_results},
         findings,
     )
 

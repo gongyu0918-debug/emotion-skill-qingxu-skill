@@ -61,6 +61,10 @@ Useful secondary outputs:
 - `posthoc_plan`
 - `prompts`
 
+State reading rule:
+
+- `confirmed_state.emotion_vector.confusion` is the affect axis for user uncertainty, while `confirmed_state.vector.clarity` is the task-reading axis for how clear the request is. Read them together.
+
 ## Install
 
 Requirements:
@@ -171,9 +175,9 @@ The generic path still uses punctuation intensity, repetition, delay pressure, u
 
 Current local run in this repo:
 
-- alignment regression: `50/50`
-- curated ablation harness: `201/201`
-- static baseline in the same harness: `6/201`
+- alignment regression: `70/70`
+- curated ablation harness: `333/333`
+- static baseline in the same harness: `18/333`
 - scenario smoke test: `ok`
 - independent audit: `ok`
 - marketplace tag audit: `ok`
