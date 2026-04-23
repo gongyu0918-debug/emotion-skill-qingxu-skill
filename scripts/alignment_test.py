@@ -398,6 +398,15 @@ CASES = [
         },
     },
     {
+        "id": "reminder_reopen_breakage_en",
+        "expected": ["urgent", "frustrated"],
+        "payload": {
+            "message": "The reminder disappears again as soon as I reopen the app. This keeps breaking the one thing I need it for.",
+            "history": [{"role": "user", "text": "This already failed more than once and I need the real fix path."}],
+            "runtime": {"response_delay_seconds": 18, "unresolved_turns": 3, "same_issue_mentions": 1},
+        },
+    },
+    {
         "id": "silent_job_no_alert_en",
         "expected": ["frustrated", "skeptical"],
         "payload": {
@@ -406,11 +415,51 @@ CASES = [
         },
     },
     {
+        "id": "gateway_silent_monitor_en",
+        "expected": ["frustrated", "skeptical"],
+        "payload": {
+            "message": "The gateway goes quiet for minutes at a time, the health monitor gets stuck too, and you only notice when everything is silent.",
+            "history": [
+                {"role": "user", "text": "This already failed more than once and I need the real fix path."},
+                {"role": "assistant", "text": "The scheduler looked healthy in the last pass."},
+            ],
+            "runtime": {"response_delay_seconds": 27, "unresolved_turns": 2, "bug_retries": 1, "task_age_minutes": 120, "contradiction_signal": 0.28},
+        },
+    },
+    {
         "id": "gateway_running_but_dead_en",
         "expected": ["urgent", "frustrated"],
         "payload": {
             "message": "Status says running but nothing works. Cron jobs hang forever, messages do not deliver, no alert.",
             "runtime": {"response_delay_seconds": 18, "unresolved_turns": 3, "bug_retries": 2, "same_issue_mentions": 2, "contradiction_signal": 0.42},
+        },
+    },
+    {
+        "id": "shared_context_scoped_en",
+        "expected": ["skeptical", "cautious"],
+        "payload": {
+            "message": "You need shared context here. Pure prompt guessing will not cut it.",
+            "history": [
+                {"role": "user", "text": "Verify the shared context and keep the handoff path scoped."},
+                {"role": "assistant", "text": "I can infer the missing context from the latest prompt."},
+            ],
+            "runtime": {"response_delay_seconds": 12, "unresolved_turns": 2, "same_issue_mentions": 2, "contradiction_signal": 0.3},
+        },
+    },
+    {
+        "id": "diagnostic_dies_here_en",
+        "expected": ["urgent", "confused"],
+        "payload": {
+            "message": "Scan the file and tell me why it dies here.",
+            "runtime": {"response_delay_seconds": 14, "unresolved_turns": 2, "same_issue_mentions": 1},
+        },
+    },
+    {
+        "id": "architecture_guardrail_en",
+        "expected": ["frustrated", "cautious"],
+        "payload": {
+            "message": "I already spent hours on this. Keep the architecture modular and stop collapsing everything into one method.",
+            "runtime": {"response_delay_seconds": 30, "task_age_minutes": 90, "bug_retries": 3},
         },
     },
     {

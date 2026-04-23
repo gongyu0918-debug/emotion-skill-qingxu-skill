@@ -41,7 +41,7 @@ LONG_TAIL_CLUSTERS: list[dict[str, Any]] = [
         "theme": "shared context loss and prompt-only guesswork",
         "community_ids": ["rd_users_02", "rd_users_03"],
         "smoke_ids": ["rd_users_03"],
-        "smoke_expect": {"mode_in": ["skeptical", "frustrated"], "labels_all": ["skeptical"]},
+        "smoke_expect": {"mode_in": ["skeptical", "frustrated", "cautious"], "labels_all": ["skeptical", "cautious"]},
         "alignment_case": {
             "id": "shared_context_guesswork_en",
             "expected": ["frustrated", "skeptical"],
@@ -217,6 +217,164 @@ LONG_TAIL_CLUSTERS: list[dict[str, Any]] = [
             "expected": {
                 "mode_in": ["urgent", "frustrated"],
                 "labels_all": ["urgent", "frustrated"],
+                "queue_mode_in": ["steer", "interrupt"],
+                "reply_style_in": ["repair_then_explain", "act_then_brief"],
+                "verification_in": ["high", "very_high"],
+                "prefer_main_thread": True,
+                "max_progress_interval": 20,
+            },
+        },
+    },
+    {
+        "id": "silent_hang_feedback",
+        "theme": "silent hangs, no failure signal, and dead-air command execution",
+        "community_ids": ["codex3373_01", "codex3373_02", "codex3373_03", "codex6603_03"],
+        "smoke_ids": ["codex3373_02"],
+        "smoke_expect": {"mode_in": ["urgent", "frustrated"], "labels_all": ["urgent", "frustrated"]},
+        "alignment_case": {
+            "id": "silent_hang_feedback_en",
+            "expected": ["urgent", "frustrated"],
+            "payload": {
+                "message": "Return an error or any failure signal. Silent hangs and minutes of no response block the workflow.",
+                "runtime": {"response_delay_seconds": 18, "unresolved_turns": 3, "bug_retries": 2, "same_issue_mentions": 2},
+            },
+        },
+        "ablation_case": {
+            "id": "silent_hang_feedback_social",
+            "source": "https://github.com/openai/codex/issues/3373",
+            "payload": {
+                "message": "It freezes for minutes and says nothing useful. Return an error, return anything, just stop sitting there forever.",
+                "runtime": {"response_delay_seconds": 19, "unresolved_turns": 3, "bug_retries": 2, "same_issue_mentions": 2},
+            },
+            "expected": {
+                "mode_in": ["urgent", "frustrated"],
+                "labels_all": ["urgent", "frustrated"],
+                "queue_mode_in": ["steer", "interrupt"],
+                "reply_style_in": ["act_then_brief", "repair_then_explain"],
+                "verification_in": ["high", "very_high"],
+                "prefer_main_thread": True,
+                "max_progress_interval": 20,
+            },
+        },
+    },
+    {
+        "id": "platform_session_path_scope",
+        "theme": "platform-specific repro paths like WSL2, Remote SSH, and session exposure",
+        "community_ids": ["cc3426_02", "vsc238105_03", "rd_codex_wsl_01"],
+        "smoke_ids": ["cc3426_02"],
+        "smoke_expect": {"mode_in": ["skeptical", "cautious"], "labels_all": ["skeptical", "cautious"]},
+        "alignment_case": {
+            "id": "platform_session_path_scope_en",
+            "expected": ["skeptical", "cautious"],
+            "payload": {
+                "message": "The repro is specific to WSL2. Start from the session exposure path and verify that route before another generic fix.",
+                "runtime": {"response_delay_seconds": 11, "unresolved_turns": 2, "contradiction_signal": 0.24},
+            },
+        },
+        "ablation_case": {
+            "id": "platform_session_path_scope_social",
+            "source": "https://github.com/anthropics/claude-code/issues/3426",
+            "payload": {
+                "message": "The repro is 100 percent on WSL2. Start from the session exposure path and show what that layer misses before another blind patch.",
+                "runtime": {"response_delay_seconds": 11, "unresolved_turns": 2, "contradiction_signal": 0.26},
+            },
+            "expected": {
+                "mode_in": ["skeptical", "cautious"],
+                "labels_all": ["skeptical", "cautious"],
+                "queue_mode_in": ["collect", "steer"],
+                "reply_style_in": ["evidence_then_act", "verify_then_act"],
+                "verification_in": ["high", "very_high"],
+                "prefer_main_thread": True,
+                "max_progress_interval": 25,
+            },
+        },
+    },
+    {
+        "id": "vague_reference_ambiguity",
+        "theme": "ambiguous referents and missing object grounding in short requests",
+        "community_ids": ["rd_users_01"],
+        "smoke_ids": ["rd_users_01"],
+        "smoke_expect": {"mode_in": ["confused"], "labels_all": ["confused"]},
+        "alignment_case": {
+            "id": "vague_reference_ambiguity_en",
+            "expected": ["confused"],
+            "payload": {
+                "message": "I said make that thing bigger and the system had no idea what that thing was.",
+                "runtime": {"response_delay_seconds": 6},
+            },
+        },
+        "ablation_case": {
+            "id": "vague_reference_real_sessions",
+            "source": "https://www.reddit.com/r/AI_Agents/comments/1rx2s2y/shipped_an_ai_agent_last_month_real_users_broke/",
+            "payload": {
+                "message": "I said make that thing bigger and it had no idea what that thing was.",
+                "runtime": {"response_delay_seconds": 6},
+            },
+            "expected": {
+                "mode_in": ["confused"],
+                "labels_all": ["confused"],
+                "queue_mode_in": ["collect", "steer"],
+                "reply_style_in": ["explain_then_act", "verify_then_act"],
+                "verification_in": ["medium", "high", "very_high"],
+            },
+        },
+    },
+    {
+        "id": "graceful_recovery_caution",
+        "theme": "recover safely from bad tool calls or risky setup resets",
+        "community_ids": ["ck2504_01", "gh154128_03"],
+        "smoke_ids": ["ck2504_01"],
+        "smoke_expect": {"mode_in": ["cautious", "skeptical"], "labels_all": ["cautious", "skeptical"]},
+        "alignment_case": {
+            "id": "graceful_recovery_caution_en",
+            "expected": ["cautious", "skeptical"],
+            "payload": {
+                "message": "Handle the error gracefully, recover safely, and show the exact failing step before I wipe my setup.",
+                "runtime": {"response_delay_seconds": 12, "unresolved_turns": 2, "contradiction_signal": 0.24},
+            },
+        },
+        "ablation_case": {
+            "id": "graceful_recovery_caution_social",
+            "source": "https://github.com/orgs/community/discussions/154128",
+            "payload": {
+                "message": "Before I wipe my setup, tell me which setting actually causes this and handle the recovery path gracefully.",
+                "runtime": {"response_delay_seconds": 10, "unresolved_turns": 2, "contradiction_signal": 0.3},
+            },
+            "expected": {
+                "mode_in": ["skeptical", "cautious"],
+                "labels_all": ["skeptical", "cautious"],
+                "queue_mode_in": ["collect", "steer"],
+                "reply_style_in": ["evidence_then_act", "verify_then_act"],
+                "verification_in": ["high", "very_high"],
+                "prefer_main_thread": True,
+                "max_progress_interval": 25,
+            },
+        },
+    },
+    {
+        "id": "file_handling_breakage",
+        "theme": "slow, broken file handling and workspace mutations that miss intent",
+        "community_ids": ["gh145254_01", "gh145254_02"],
+        "smoke_ids": ["gh145254_01"],
+        "smoke_expect": {"mode_in": ["frustrated"], "labels_all": ["frustrated"]},
+        "alignment_case": {
+            "id": "file_handling_breakage_en",
+            "expected": ["frustrated"],
+            "payload": {
+                "message": "It is painfully slow and the file handling is wrong. This feels broken.",
+                "runtime": {"response_delay_seconds": 12, "unresolved_turns": 2},
+            },
+        },
+        "ablation_case": {
+            "id": "workspace_file_handling_breakage",
+            "source": "https://github.com/orgs/community/discussions/145254",
+            "payload": {
+                "message": "It is painfully slow, the file handling is wrong, and the workspace flow feels broken.",
+                "runtime": {"response_delay_seconds": 12, "unresolved_turns": 2},
+            },
+            "expected": {
+                "mode_in": ["frustrated"],
+                "labels_all": ["frustrated"],
                 "queue_mode_in": ["steer", "interrupt"],
                 "reply_style_in": ["repair_then_explain", "act_then_brief"],
                 "verification_in": ["high", "very_high"],

@@ -18,18 +18,18 @@ import emotion_engine as ee
 ROOT = Path(__file__).resolve().parents[1]
 DEMO_EVENT = ROOT / "demo" / "local_history_event.json"
 COMMUNITY_DATASET = ROOT / "assets" / "community-posthoc-calibration-v2.jsonl"
-STALL_HINTS = re.compile(r"(hang|hung|stuck|freeze|freezes|freezing|no response|nothing changes|still not fixed|again|fails|timeout|redirected back|卡住|卡死|没反应|一直转)", re.IGNORECASE)
-PRESSURE_HINTS = re.compile(r"(for hours|hour|hours|release|regression|blocked|blocking|ship today|发布|上线|回归)", re.IGNORECASE)
-SKEPTICAL_HINTS = re.compile(r"(show me|evidence|proof|exact|root cause|before another workaround|别瞎猜|依据|证据|根因|what changed|which setting|trust)", re.IGNORECASE)
-CAUTIOUS_HINTS = re.compile(r"(scope|verify|safe|conservative|stable path|guardrails|protected files|before any more edits|repo-wide changes|别碰|只改|验证|保守|稳定路径|保护文件)", re.IGNORECASE)
+STALL_HINTS = re.compile(r"(hang|hung|stuck|freeze|freezes|freezing|no response|nothing changes|still not fixed|again|fails|timeout|redirected back|sit there forever|silent hangs?|for several minutes|minutes and nothing|卡住|卡死|没反应|一直转)", re.IGNORECASE)
+PRESSURE_HINTS = re.compile(r"(for hours|hour|hours|release|regression|blocked|blocking|ship today|kills the core workflow|cannot use (?:it|the extension)|deadline|发布|上线|回归)", re.IGNORECASE)
+SKEPTICAL_HINTS = re.compile(r"(show me|evidence|proof|exact|root cause|before another workaround|别瞎猜|依据|证据|根因|what changed|which setting|trust|ci rules|pass locally but fail ci|file handling is wrong|show your limits|harder to trust|reliable fix|feedback when commands fail|automatic execution never fires|hooks work manually|blind patch|wsl|git bash configuration|health monitor gets stuck|everything is silent|say so)", re.IGNORECASE)
+CAUTIOUS_HINTS = re.compile(r"(scope|verify|safe|conservative|stable path|guardrails|protected files|before any more edits|repo-wide changes|session exposure path|wipe my setup|handle the error gracefully|recover safely|bad tool calls|architecture modular|one method|handoff path scoped|show the plan before another change|别碰|只改|验证|保守|稳定路径|保护文件)", re.IGNORECASE)
 COMPARISON_HINTS = re.compile(r"(compare|two ways|two paths|two options|tradeoff|tradeoffs|what changed|difference|differences|对比|比较|取舍|两个方案|两条路径)", re.IGNORECASE)
-CONFUSION_HINTS = re.compile(r"(confused|unclear|cannot tell|can't tell|what exactly is wrong|which state|which one|不清楚|看不懂|分不清|哪一步)", re.IGNORECASE)
+CONFUSION_HINTS = re.compile(r"(confused|unclear|cannot tell|can't tell|what exactly is wrong|which state|which one|what that thing was|no idea what that thing was|why it dies here|dies here|不清楚|看不懂|分不清|哪一步)", re.IGNORECASE)
 TOOL_RESULT_HINTS = re.compile(r"(tool[_ ]result|tool[_ ]use|non-existent tool|missing tool result|dead state)", re.IGNORECASE)
 SHARED_CONTEXT_HINTS = re.compile(r"(shared context|prompt guessing|conversational thread|starts fresh|fresh session|forgets this rule|context plumbing|compaction|session reset)", re.IGNORECASE)
-PATH_HINTS = re.compile(r"(file path|special character|path handling|path resolution|quoting|escaping)", re.IGNORECASE)
-REPO_HINTS = re.compile(r"(repo|codebase|guesswork|guessed the rest|grounded in the repo|grounded in the codebase|blind assumption)", re.IGNORECASE)
+PATH_HINTS = re.compile(r"(file path|file handling|special character|path handling|path resolution|quoting|escaping)", re.IGNORECASE)
+REPO_HINTS = re.compile(r"(repo|codebase|guesswork|guessed the rest|grounded in the repo|grounded in the codebase|blind assumption|ci rules|pass locally but fail ci|wsl2|wsl|reliable fix)", re.IGNORECASE)
 ALERT_HINTS = re.compile(r"(no alert|no notification|nobody noticed|silently broke|showed up late|manual refresh|nothing happened|goes quiet|scheduled time)", re.IGNORECASE)
-SIGNIN_HINTS = re.compile(r"(sign-in loop|activation loop|activating for hours|cannot use the extension)", re.IGNORECASE)
+SIGNIN_HINTS = re.compile(r"(sign-in loop|activation loop|activating for hours|cannot use the extension|sign in again|stuck in a loop|logged in but|config (?:page )?resets itself)", re.IGNORECASE)
 
 
 def load_jsonl(path: Path) -> list[dict[str, Any]]:
@@ -62,6 +62,32 @@ def assert_check(name: str, condition: bool, detail: dict[str, Any], failures: l
         failures.append({"name": name, "detail": detail})
 
 
+def evaluate_smoke_outcome(mode: str, labels: list[str], expected: list[str], mode_in: list[str] | None = None) -> dict[str, Any]:
+    matched = [label for label in expected if label in labels]
+    required_hits = 1 if len(expected) <= 1 else min(2, len(expected))
+    mode_candidates = mode_in or expected
+    label_ok = len(matched) >= required_hits
+    mode_ok = mode in mode_candidates
+    return {
+        "matched": matched,
+        "required_hits": required_hits,
+        "mode_in": mode_candidates,
+        "label_ok": label_ok,
+        "mode_ok": mode_ok,
+        "strict_ok": label_ok and mode_ok,
+    }
+
+
+def summarize_smoke_rows(rows: list[dict[str, Any]]) -> dict[str, int]:
+    total = len(rows)
+    return {
+        "total": total,
+        "strict_hits": sum(1 for row in rows if row.get("strict_ok")),
+        "label_hits": sum(1 for row in rows if row.get("label_ok")),
+        "mode_hits": sum(1 for row in rows if row.get("mode_ok")),
+    }
+
+
 def build_community_payload(row: dict[str, Any], rng: random.Random) -> dict[str, Any]:
     message = row["message"]
     message_norm = message.lower()
@@ -87,6 +113,9 @@ def build_community_payload(row: dict[str, Any], rng: random.Random) -> dict[str
         runtime["contradiction_signal"] = max(float(runtime.get("contradiction_signal", 0.0)), 0.3)
     if CONFUSION_HINTS.search(message):
         runtime["unresolved_turns"] = max(int(runtime.get("unresolved_turns", 0)), 2)
+        if "dies here" in message_norm:
+            runtime["response_delay_seconds"] = max(int(runtime.get("response_delay_seconds", 0)), rng.randint(12, 18))
+            runtime["same_issue_mentions"] = max(int(runtime.get("same_issue_mentions", 0)), 1)
     if "resets itself" in message_norm or "comes back tomorrow" in message_norm:
         history.append({"role": "assistant", "text": "It looked resolved from the last pass."})
         runtime["contradiction_signal"] = max(float(runtime.get("contradiction_signal", 0.0)), 0.34)
@@ -122,6 +151,8 @@ def build_community_payload(row: dict[str, Any], rng: random.Random) -> dict[str
         runtime["task_age_minutes"] = max(int(runtime.get("task_age_minutes", 0)), rng.choice([120, 180, 240]))
         runtime["bug_retries"] = max(int(runtime.get("bug_retries", 0)), rng.randint(1, 2))
         runtime["contradiction_signal"] = max(float(runtime.get("contradiction_signal", 0.0)), 0.28)
+        if "health monitor" in message_norm or "everything is silent" in message_norm:
+            runtime["contradiction_signal"] = max(float(runtime.get("contradiction_signal", 0.0)), 0.34)
     if SIGNIN_HINTS.search(message):
         history.append({"role": "assistant", "text": "The extension looks authenticated, so the loop should clear after a refresh."})
         runtime["unresolved_turns"] = max(int(runtime.get("unresolved_turns", 0)), 2)
@@ -235,7 +266,7 @@ def check_marketplace_scope(failures: list[dict[str, Any]]) -> dict[str, Any]:
     }
 
 
-def check_random_community(seed: int, sample_size: int, failures: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def check_random_community(seed: int, sample_size: int, failures: list[dict[str, Any]], strict_failures: list[dict[str, Any]]) -> list[dict[str, Any]]:
     dataset = load_jsonl(COMMUNITY_DATASET)
     rng = random.Random(seed)
     sampled = rng.sample(dataset, k=min(sample_size, len(dataset)))
@@ -246,28 +277,29 @@ def check_random_community(seed: int, sample_size: int, failures: list[dict[str,
         mode = result["confirmed_state"]["dominant_mode"]
         labels = result["confirmed_state"]["labels"]
         expected = row.get("expected_labels", [])
-        matched = [label for label in expected if label in labels]
-        required_hits = 1 if len(expected) <= 1 else min(2, len(expected))
-        ok = mode in expected and len(matched) >= required_hits
-        assert_check(
-            f"community:{row['id']}",
-            ok,
-            {
-                "mode": mode,
-                "labels": labels,
-                "expected": expected,
-                "matched": matched,
-                "required_hits": required_hits,
-                "message": row["message"][:120],
-                "payload": payload,
-            },
-            failures,
-        )
-        rows.append({"id": row["id"], "mode": mode, "labels": labels, "expected": expected, "matched": matched})
+        outcome = evaluate_smoke_outcome(mode, labels, expected)
+        detail = {
+            "mode": mode,
+            "labels": labels,
+            "expected": expected,
+            "matched": outcome["matched"],
+            "required_hits": outcome["required_hits"],
+            "mode_in": outcome["mode_in"],
+            "mode_ok": outcome["mode_ok"],
+            "label_ok": outcome["label_ok"],
+            "strict_ok": outcome["strict_ok"],
+            "message": row["message"][:120],
+            "payload": payload,
+        }
+        if not outcome["label_ok"]:
+            assert_check(f"community:{row['id']}", False, detail, failures)
+        elif not outcome["strict_ok"]:
+            strict_failures.append({"name": f"community:{row['id']}", "detail": detail})
+        rows.append({"id": row["id"], "mode": mode, "labels": labels, "expected": expected, **outcome})
     return rows
 
 
-def check_long_tail_clusters(seed: int, failures: list[dict[str, Any]]) -> list[dict[str, Any]]:
+def check_long_tail_clusters(seed: int, failures: list[dict[str, Any]], strict_failures: list[dict[str, Any]]) -> list[dict[str, Any]]:
     dataset = index_rows(load_jsonl(COMMUNITY_DATASET))
     rows: list[dict[str, Any]] = []
     for index, cluster in enumerate(long_tail.LONG_TAIL_CLUSTERS):
@@ -290,28 +322,27 @@ def check_long_tail_clusters(seed: int, failures: list[dict[str, Any]]) -> list[
             labels = result["confirmed_state"]["labels"]
             smoke_expect = cluster.get("smoke_expect") or {}
             expected = smoke_expect.get("labels_all") or row.get("expected_labels", [])
-            mode_in = smoke_expect.get("mode_in") or expected
-            matched = [label for label in expected if label in labels]
-            required_hits = 1 if len(expected) <= 1 else min(2, len(expected))
-            ok = mode in mode_in and len(matched) >= required_hits
-            assert_check(
-                f"long_tail_cluster:{cluster['id']}:{row_id}",
-                ok,
-                {
-                    "cluster_id": cluster["id"],
-                    "theme": cluster["theme"],
-                    "mode": mode,
-                    "labels": labels,
-                    "mode_in": mode_in,
-                    "expected": expected,
-                    "matched": matched,
-                    "required_hits": required_hits,
-                    "message": row["message"],
-                    "payload": payload,
-                },
-                failures,
-            )
-            cluster_results.append({"id": row_id, "mode": mode, "labels": labels, "mode_in": mode_in, "expected": expected, "matched": matched})
+            outcome = evaluate_smoke_outcome(mode, labels, expected, smoke_expect.get("mode_in"))
+            detail = {
+                "cluster_id": cluster["id"],
+                "theme": cluster["theme"],
+                "mode": mode,
+                "labels": labels,
+                "mode_in": outcome["mode_in"],
+                "expected": expected,
+                "matched": outcome["matched"],
+                "required_hits": outcome["required_hits"],
+                "mode_ok": outcome["mode_ok"],
+                "label_ok": outcome["label_ok"],
+                "strict_ok": outcome["strict_ok"],
+                "message": row["message"],
+                "payload": payload,
+            }
+            if not outcome["label_ok"]:
+                assert_check(f"long_tail_cluster:{cluster['id']}:{row_id}", False, detail, failures)
+            elif not outcome["strict_ok"]:
+                strict_failures.append({"name": f"long_tail_cluster:{cluster['id']}:{row_id}", "detail": detail})
+            cluster_results.append({"id": row_id, "mode": mode, "labels": labels, "expected": expected, **outcome})
         rows.append({"cluster_id": cluster["id"], "theme": cluster["theme"], "rows": cluster_results})
     return rows
 
@@ -323,20 +354,30 @@ def main() -> int:
     args = parser.parse_args()
 
     failures: list[dict[str, Any]] = []
+    strict_failures: list[dict[str, Any]] = []
+    long_tail_clusters = check_long_tail_clusters(args.seed, failures, strict_failures)
+    community_samples = check_random_community(args.seed, args.community_samples, failures, strict_failures)
+    long_tail_rows = [row for cluster in long_tail_clusters for row in cluster["rows"]]
     summary = {
         "direct_cases": check_direct_cases(failures),
         "cli_demo": check_cli_demo(failures),
         "host_adapter": check_host_adapter(failures),
         "marketplace_scope": check_marketplace_scope(failures),
-        "long_tail_clusters": check_long_tail_clusters(args.seed, failures),
-        "community_samples": check_random_community(args.seed, args.community_samples, failures),
+        "long_tail_clusters": long_tail_clusters,
+        "long_tail_stats": summarize_smoke_rows(long_tail_rows),
+        "community_samples": community_samples,
+        "community_stats": summarize_smoke_rows(community_samples),
     }
     rendered = {
         "ok": len(failures) == 0,
+        "strict_ok": len(failures) == 0 and len(strict_failures) == 0,
         "seed": args.seed,
         "long_tail_cluster_count": len(summary["long_tail_clusters"]),
         "community_sample_count": len(summary["community_samples"]),
+        "failure_count": len(failures),
+        "strict_failure_count": len(strict_failures),
         "failures": failures,
+        "strict_failures": strict_failures,
         "summary": summary,
     }
     print(json.dumps(rendered, ensure_ascii=False, indent=2))

@@ -110,6 +110,23 @@ REAL_WORLD_CASES = [
         },
     },
     {
+        "id": "shared_context_scoped_social",
+        "source": "https://www.reddit.com/r/AI_Agents/comments/1rx2s2y/shipped_an_ai_agent_last_month_real_users_broke/",
+        "payload": {
+            "message": "You need shared context here. Pure prompt guessing will not cut it. Verify the handoff path and keep the scope tight.",
+            "runtime": {"response_delay_seconds": 12, "unresolved_turns": 2, "same_issue_mentions": 2, "contradiction_signal": 0.3},
+        },
+        "expected": {
+            "mode_in": ["skeptical", "cautious"],
+            "labels_all": ["skeptical", "cautious"],
+            "queue_mode_in": ["collect", "steer"],
+            "reply_style_in": ["evidence_then_act", "verify_then_act"],
+            "verification_in": ["high", "very_high"],
+            "prefer_main_thread": True,
+            "max_progress_interval": 25,
+        },
+    },
+    {
         "id": "claude_posttooluse_never_executes",
         "source": "https://github.com/anthropics/claude-code/issues/6403",
         "payload": {
@@ -158,6 +175,22 @@ REAL_WORLD_CASES = [
         },
     },
     {
+        "id": "reminder_reopen_breakage_social",
+        "source": "https://www.reddit.com/r/GoogleKeep/comments/158jliu/reminders_not_working_anymore/",
+        "payload": {
+            "message": "The reminder disappears again as soon as I reopen the app. This keeps breaking the one thing I need it for.",
+            "runtime": {"response_delay_seconds": 18, "unresolved_turns": 3, "same_issue_mentions": 1},
+        },
+        "expected": {
+            "labels_all": ["urgent", "frustrated"],
+            "queue_mode_in": ["steer", "interrupt"],
+            "reply_style_in": ["act_then_brief", "repair_then_explain"],
+            "verification_in": ["high", "very_high"],
+            "prefer_main_thread": True,
+            "max_progress_interval": 20,
+        },
+    },
+    {
         "id": "silent_jobs_broke_for_days_social",
         "source": "https://www.reddit.com/r/SaaS/comments/1sb8esi/my_automated_background_jobs_silently_broke_for_3/",
         "payload": {
@@ -168,6 +201,56 @@ REAL_WORLD_CASES = [
             "labels_all": ["frustrated", "skeptical"],
             "queue_mode_in": ["steer", "collect"],
             "reply_style_in": ["repair_then_explain", "evidence_then_act"],
+            "verification_in": ["high", "very_high"],
+            "prefer_main_thread": True,
+            "max_progress_interval": 25,
+        },
+    },
+    {
+        "id": "gateway_silent_monitor_social",
+        "source": "https://www.reddit.com/r/openclaw/comments/1rfn0kz/gateway_silently_dies_pattern_report_after_25/",
+        "payload": {
+            "message": "The gateway goes quiet for minutes at a time, the health monitor gets stuck too, and you only notice when everything is silent.",
+            "runtime": {"response_delay_seconds": 27, "unresolved_turns": 2, "bug_retries": 1, "task_age_minutes": 120, "contradiction_signal": 0.28},
+        },
+        "expected": {
+            "labels_all": ["frustrated", "skeptical"],
+            "queue_mode_in": ["steer", "collect"],
+            "reply_style_in": ["repair_then_explain", "evidence_then_act"],
+            "verification_in": ["high", "very_high"],
+            "prefer_main_thread": True,
+            "max_progress_interval": 25,
+        },
+    },
+    {
+        "id": "architecture_guardrail_social",
+        "source": "https://github.com/anthropics/claude-code/issues/4520",
+        "payload": {
+            "message": "I already spent hours on this. Keep the architecture modular and stop collapsing everything into one method.",
+            "runtime": {"response_delay_seconds": 30, "task_age_minutes": 90, "bug_retries": 3},
+        },
+        "expected": {
+            "mode_in": ["frustrated", "cautious"],
+            "labels_all": ["frustrated", "cautious"],
+            "queue_mode_in": ["steer", "collect"],
+            "reply_style_in": ["repair_then_explain", "verify_then_act"],
+            "verification_in": ["high", "very_high"],
+            "prefer_main_thread": True,
+            "max_progress_interval": 25,
+        },
+    },
+    {
+        "id": "diagnostic_dies_here_social",
+        "source": "https://github.com/openai/codex/issues/6603",
+        "payload": {
+            "message": "Scan the file and tell me why it dies here.",
+            "runtime": {"response_delay_seconds": 14, "unresolved_turns": 2, "same_issue_mentions": 1},
+        },
+        "expected": {
+            "mode_in": ["urgent", "confused"],
+            "labels_all": ["urgent", "confused"],
+            "queue_mode_in": ["collect", "steer"],
+            "reply_style_in": ["explain_then_act", "evidence_then_act"],
             "verification_in": ["high", "very_high"],
             "prefer_main_thread": True,
             "max_progress_interval": 25,
