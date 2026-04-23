@@ -3,6 +3,8 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
+import tempfile
 from pathlib import Path
 from typing import Any
 
@@ -77,19 +79,32 @@ def build_persisted_state(result: dict[str, Any]) -> dict[str, Any]:
     }
 
 
+def atomic_write_text(path: Path, text: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp_path: Path | None = None
+    try:
+        with tempfile.NamedTemporaryFile("w", encoding="utf-8", dir=path.parent, delete=False) as handle:
+            handle.write(text)
+            tmp_path = Path(handle.name)
+        os.replace(tmp_path, path)
+    finally:
+        if tmp_path and tmp_path.exists():
+            tmp_path.unlink(missing_ok=True)
+
+
 def persist_store(store_dir: Path, payload: dict[str, Any], result: dict[str, Any]) -> None:
     store_dir.mkdir(parents=True, exist_ok=True)
-    (store_dir / STORE_FILES["user_profile"]).write_text(
+    atomic_write_text(
+        store_dir / STORE_FILES["user_profile"],
         dump_json(build_persisted_profile(payload, result), pretty=True),
-        encoding="utf-8",
     )
-    (store_dir / STORE_FILES["last_state"]).write_text(
+    atomic_write_text(
+        store_dir / STORE_FILES["last_state"],
         dump_json(build_persisted_state(result), pretty=True),
-        encoding="utf-8",
     )
-    (store_dir / STORE_FILES["calibration_state"]).write_text(
+    atomic_write_text(
+        store_dir / STORE_FILES["calibration_state"],
         dump_json(result["memory_update"]["proposed_calibration_state"], pretty=True),
-        encoding="utf-8",
     )
 
 

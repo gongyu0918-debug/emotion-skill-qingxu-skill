@@ -34,6 +34,9 @@ def main() -> int:
     demo_payload = json.loads(DEMO_EVENT.read_text(encoding="utf-8"))
     demo_result = ee.run_pipeline(demo_payload)
     required_top_level = {
+        "schema_version",
+        "degraded",
+        "degradation_reasons",
         "profile_state",
         "memory_update",
         "weight_schedule",
@@ -98,6 +101,47 @@ def main() -> int:
         "friendly_missing_file_error",
         missing_file_ok,
         {"exit_code": missing_code, "raw": missing_raw},
+        findings,
+    )
+
+    degraded = ee.run_pipeline(
+        {
+            "message": "Show me the exact failing step.",
+            "context": "bad",
+            "runtime": "bad",
+            "user_profile": {"baseline": "bad", "timezone": "Bad/Zone"},
+            "history": "bad",
+            "llm_semantic": "bad",
+        }
+    )
+    degraded_ok = (
+        isinstance(degraded, dict)
+        and degraded.get("degraded") is True
+        and isinstance(degraded.get("degradation_reasons"), list)
+        and isinstance(degraded.get("confirmed_state"), dict)
+        and isinstance(degraded["confirmed_state"].get("dominant_mode"), str)
+    )
+    record(
+        "malformed_payload_degrades_not_crash",
+        degraded_ok,
+        {
+            "degraded": degraded.get("degraded"),
+            "degradation_reasons": degraded.get("degradation_reasons"),
+            "mode": degraded.get("confirmed_state", {}).get("dominant_mode"),
+        },
+        findings,
+    )
+
+    deterministic_hour = ee.run_pipeline({"message": "ping", "user_profile": {"timezone": "Asia/Shanghai"}})
+    deterministic_hour_ok = deterministic_hour["profile_state"]["local_hour"] is None and deterministic_hour.get("degraded") is False
+    record(
+        "deterministic_local_hour_without_now_iso",
+        deterministic_hour_ok,
+        {
+            "local_hour": deterministic_hour["profile_state"]["local_hour"],
+            "degraded": deterministic_hour.get("degraded"),
+            "degradation_reasons": deterministic_hour.get("degradation_reasons"),
+        },
         findings,
     )
 

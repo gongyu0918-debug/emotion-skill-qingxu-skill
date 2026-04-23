@@ -29,6 +29,9 @@ DEFAULT_PERSONA_TRAITS = {
     "openness": 0.5,
     "assertiveness": 0.4,
 }
+SCHEMA_VERSION = "1.1.0"
+LABEL_ORDER = ("urgent", "frustrated", "confused", "skeptical", "cautious", "exploratory", "satisfied", "neutral")
+LABEL_ORDER_INDEX = {label: index for index, label in enumerate(LABEL_ORDER)}
 
 ANGER_TERMS = {
     "气死", "烦", "垃圾", "离谱", "扯", "蠢", "废物", "火大", "崩溃", "受不了", "妈的",
@@ -276,6 +279,7 @@ def count_token_terms(text: str, terms: set[str]) -> int:
 
 def count_hybrid_terms(text: str, terms: set[str]) -> int:
     norm = normalize_text(text)
+    compact_norm = norm.replace(" ", "")
     tokens = set(re.findall(r"[a-z']+|[\u4e00-\u9fff]+", norm))
     hits = 0
     for term in terms:
@@ -283,7 +287,8 @@ def count_hybrid_terms(text: str, terms: set[str]) -> int:
         if re.fullmatch(r"[a-z']+", term_norm):
             hits += 1 if term_norm in tokens else 0
         else:
-            hits += 1 if term_norm in norm else 0
+            compact_term = term_norm.replace(" ", "")
+            hits += 1 if term_norm in norm or compact_term in compact_norm else 0
     return hits
 
 
@@ -369,6 +374,104 @@ def clamp_dict(raw: Any, keys: tuple[str, ...], defaults: dict[str, float] | Non
     return base
 
 
+def mark_degraded(diagnostics: dict[str, Any], reason: str) -> None:
+    reasons = diagnostics.setdefault("degradation_reasons", [])
+    if reason not in reasons:
+        reasons.append(reason)
+    diagnostics["degraded"] = True
+
+
+def as_mapping(value: Any, diagnostics: dict[str, Any], reason: str) -> dict[str, Any]:
+    if value is None:
+        return {}
+    if isinstance(value, dict):
+        return value
+    mark_degraded(diagnostics, reason)
+    return {}
+
+
+def normalize_string_list(value: Any, diagnostics: dict[str, Any], reason: str) -> list[str]:
+    if value is None:
+        return []
+    if not isinstance(value, (list, tuple)):
+        mark_degraded(diagnostics, reason)
+        return []
+    result: list[str] = []
+    for item in value:
+        text = str(item).strip()
+        if text:
+            result.append(text)
+    return result
+
+
+def canonicalize_labels(labels: list[str]) -> list[str]:
+    ordered = unique_labels([str(label).strip() for label in labels if str(label).strip()])
+    return sorted(ordered, key=lambda label: (LABEL_ORDER_INDEX.get(label, len(LABEL_ORDER_INDEX)), label))
+
+
+def normalize_history(value: Any, diagnostics: dict[str, Any]) -> list[dict[str, str]]:
+    if value is None:
+        return []
+    if not isinstance(value, list):
+        mark_degraded(diagnostics, "history_not_list")
+        return []
+    normalized: list[dict[str, str]] = []
+    for index, item in enumerate(value):
+        if not isinstance(item, dict):
+            mark_degraded(diagnostics, f"history_item_{index}_not_mapping")
+            continue
+        text = item.get("text")
+        if text is None:
+            text = item.get("content")
+        normalized.append({
+            "role": str(item.get("role", "")).strip(),
+            "text": str(text or ""),
+        })
+    return normalized
+
+
+def normalize_payload(payload: Any) -> tuple[dict[str, Any], dict[str, Any]]:
+    diagnostics: dict[str, Any] = {"degraded": False, "degradation_reasons": []}
+    if not isinstance(payload, dict):
+        mark_degraded(diagnostics, "payload_not_mapping")
+        payload = {}
+    normalized = dict(payload)
+    message = normalized.get("message", "")
+    if message is None:
+        message = ""
+    elif not isinstance(message, str):
+        mark_degraded(diagnostics, "message_coerced_to_string")
+        message = str(message)
+    normalized["message"] = message
+    normalized["context"] = as_mapping(normalized.get("context"), diagnostics, "context_not_mapping")
+    normalized["runtime"] = as_mapping(normalized.get("runtime"), diagnostics, "runtime_not_mapping")
+    user_profile = as_mapping(normalized.get("user_profile"), diagnostics, "user_profile_not_mapping")
+    if user_profile:
+        user_profile = dict(user_profile)
+        user_profile["baseline"] = as_mapping(user_profile.get("baseline"), diagnostics, "user_profile.baseline_not_mapping")
+        user_profile["persona_traits"] = as_mapping(user_profile.get("persona_traits"), diagnostics, "user_profile.persona_traits_not_mapping")
+        user_profile["big5"] = as_mapping(user_profile.get("big5"), diagnostics, "user_profile.big5_not_mapping")
+        user_profile["affective_prior"] = as_mapping(user_profile.get("affective_prior"), diagnostics, "user_profile.affective_prior_not_mapping")
+    normalized["user_profile"] = user_profile
+    last_state = as_mapping(normalized.get("last_state"), diagnostics, "last_state_not_mapping")
+    if last_state:
+        last_state = dict(last_state)
+        last_state["vector"] = as_mapping(last_state.get("vector"), diagnostics, "last_state.vector_not_mapping")
+        last_state["emotion_vector"] = as_mapping(last_state.get("emotion_vector"), diagnostics, "last_state.emotion_vector_not_mapping")
+    normalized["last_state"] = last_state
+    for key in ("llm_semantic", "review_semantic", "posthoc_semantic"):
+        semantic = as_mapping(normalized.get(key), diagnostics, f"{key}_not_mapping")
+        if semantic:
+            semantic = dict(semantic)
+            semantic["vector"] = as_mapping(semantic.get("vector"), diagnostics, f"{key}.vector_not_mapping")
+            semantic["emotion_vector"] = as_mapping(semantic.get("emotion_vector"), diagnostics, f"{key}.emotion_vector_not_mapping")
+            semantic["labels"] = canonicalize_labels(normalize_string_list(semantic.get("labels"), diagnostics, f"{key}.labels_not_list"))
+        normalized[key] = semantic
+    normalized["calibration_state"] = as_mapping(normalized.get("calibration_state"), diagnostics, "calibration_state_not_mapping")
+    normalized["history"] = normalize_history(normalized.get("history"), diagnostics)
+    return normalized, diagnostics
+
+
 def combine_named_vectors(weighted_vectors: list[tuple[dict[str, Any], float]], dims: tuple[str, ...]) -> dict[str, float]:
     totals = {dim: 0.0 for dim in dims}
     weight_sum = {dim: 0.0 for dim in dims}
@@ -403,11 +506,13 @@ def derive_persona_traits(user_profile: dict[str, Any]) -> tuple[dict[str, float
             "openness": round(clamp(big5["openness"]), 4),
             "assertiveness": round(clamp(0.1 + 0.8 * big5["extraversion"]), 4),
         }
-    explicit = clamp_dict(user_profile.get("persona_traits"), tuple(DEFAULT_PERSONA_TRAITS.keys()))
+    explicit_raw = user_profile.get("persona_traits")
+    explicit = clamp_dict(explicit_raw, tuple(DEFAULT_PERSONA_TRAITS.keys()))
+    explicit_mapping = explicit_raw if isinstance(explicit_raw, dict) else {}
     if any(value > 0 for value in explicit.values()):
         source = "persona_traits"
         persona_traits = {
-            key: round(explicit[key] if key in user_profile.get("persona_traits", {}) else persona_traits[key], 4)
+            key: round(explicit[key] if key in explicit_mapping else persona_traits[key], 4)
             for key in DEFAULT_PERSONA_TRAITS
         }
     return persona_traits, source
@@ -471,10 +576,13 @@ def max_similarity(text: str, candidates: list[str]) -> float:
 
 
 def parse_hour_window(raw: Any) -> tuple[int, int]:
-    if isinstance(raw, (list, tuple)) and len(raw) >= 2:
-        start = int(raw[0])
-        end = int(raw[1])
-    else:
+    try:
+        if isinstance(raw, (list, tuple)) and len(raw) >= 2:
+            start = int(raw[0])
+            end = int(raw[1])
+        else:
+            start, end = 9, 22
+    except (TypeError, ValueError):
         start, end = 9, 22
     return max(0, min(23, start)), max(0, min(23, end))
 
@@ -489,7 +597,7 @@ def hour_in_window(hour: int | None, start: int, end: int) -> bool | None:
     return hour >= start or hour < end
 
 
-def infer_local_hour(payload: dict[str, Any], timezone_name: str | None) -> int | None:
+def infer_local_hour(payload: dict[str, Any], timezone_name: str | None, diagnostics: dict[str, Any]) -> int | None:
     context = payload.get("context") or {}
     runtime = payload.get("runtime") or {}
     explicit_hour = context.get("local_hour")
@@ -499,36 +607,38 @@ def infer_local_hour(payload: dict[str, Any], timezone_name: str | None) -> int 
         try:
             return max(0, min(23, int(explicit_hour)))
         except (TypeError, ValueError):
+            mark_degraded(diagnostics, "local_hour_invalid")
             return None
     if not timezone_name:
         return None
     try:
         tz = ZoneInfo(timezone_name)
     except Exception:
+        mark_degraded(diagnostics, "timezone_unavailable")
         return None
     now_iso = context.get("now_iso") or runtime.get("now_iso")
+    if not now_iso:
+        return None
     try:
-        if now_iso:
-            dt = datetime.fromisoformat(str(now_iso).replace("Z", "+00:00"))
-            if dt.tzinfo is None:
-                dt = dt.replace(tzinfo=tz)
-            else:
-                dt = dt.astimezone(tz)
+        dt = datetime.fromisoformat(str(now_iso).replace("Z", "+00:00"))
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=tz)
         else:
-            dt = datetime.now(tz)
+            dt = dt.astimezone(tz)
         return int(dt.hour)
     except Exception:
+        mark_degraded(diagnostics, "now_iso_invalid")
         return None
 
 
-def load_user_profile(payload: dict[str, Any]) -> dict[str, Any]:
+def load_user_profile(payload: dict[str, Any], diagnostics: dict[str, Any]) -> dict[str, Any]:
     user_profile = payload.get("user_profile") or {}
-    baseline = user_profile.get("baseline") or {}
+    baseline = as_mapping(user_profile.get("baseline"), diagnostics, "user_profile.baseline_not_mapping")
     persona_traits, persona_source = derive_persona_traits(user_profile)
     affective_prior, affective_prior_source, affective_prior_weight = derive_affective_prior(user_profile, persona_traits, persona_source)
     timezone_name = user_profile.get("timezone") or payload.get("context", {}).get("timezone")
     work_start, work_end = parse_hour_window(user_profile.get("work_hours_local") or user_profile.get("work_hours"))
-    local_hour = infer_local_hour(payload, timezone_name)
+    local_hour = infer_local_hour(payload, timezone_name, diagnostics)
     in_work_window = hour_in_window(local_hour, work_start, work_end)
     baseline_delay = max(12.0, float(baseline.get("response_delay_seconds", DEFAULT_BASELINE["response_delay_seconds"]) or DEFAULT_BASELINE["response_delay_seconds"]))
     baseline_politeness = clamp(float(baseline.get("politeness", DEFAULT_BASELINE["politeness"]) or DEFAULT_BASELINE["politeness"]))
@@ -558,11 +668,11 @@ def load_user_profile(payload: dict[str, Any]) -> dict[str, Any]:
     }
 
 
-def build_features(payload: dict[str, Any]) -> dict[str, Any]:
+def build_features(payload: dict[str, Any], diagnostics: dict[str, Any]) -> dict[str, Any]:
     message = str(payload.get("message") or "")
     history = payload.get("history") or []
     runtime = payload.get("runtime") or {}
-    user_profile = load_user_profile(payload)
+    user_profile = load_user_profile(payload, diagnostics)
     language = detect_language(message)
     norm_message = normalize_text(message)
     recent_users = recent_user_messages(history)
@@ -1047,7 +1157,7 @@ def build_emotionality_metrics(emotion_vector: dict[str, float], features: dict[
 def build_posthoc_shadow(payload: dict[str, Any], features: dict[str, Any], confirmed: dict[str, Any], analysis: dict[str, Any], posthoc_plan: dict[str, Any]) -> dict[str, Any]:
     review_semantic = load_review_semantic(payload)
     source_vector = clamp_dict(review_semantic.get("emotion_vector"), EMOTION_DIMS) if review_semantic.get("emotion_vector") else confirmed["emotion_vector"]
-    source_labels = unique_labels(list(review_semantic.get("labels") or [])) if review_semantic.get("labels") else confirmed["labels"]
+    source_labels = canonicalize_labels(list(review_semantic.get("labels") or [])) if review_semantic.get("labels") else canonicalize_labels(confirmed["labels"])
     metrics = build_emotionality_metrics(source_vector, features)
     dominant_axis = max(EMOTION_DIMS, key=lambda dim: float(source_vector.get(dim, 0.0)))
     available = bool(review_semantic.get("emotion_vector") or review_semantic.get("labels"))
@@ -1203,7 +1313,7 @@ def infer_labels(emotion_vector: dict[str, float], features: dict[str, Any]) -> 
         labels.append("exploratory")
     if not labels:
         labels.append("neutral")
-    return unique_labels(labels)
+    return canonicalize_labels(labels)
 
 
 def initial_screen(features: dict[str, Any]) -> dict[str, Any]:
@@ -1498,7 +1608,7 @@ def confirm_state(payload: dict[str, Any], features: dict[str, Any], screen: dic
     )
     return {
         "dominant_mode": mode,
-        "labels": unique_labels(labels),
+        "labels": canonicalize_labels(labels),
         "confidence": round(confidence, 4),
         "ttl_seconds": ttl,
         "vector": {dim: round(clamp(vector[dim]), 4) for dim in DIMS},
@@ -1522,13 +1632,13 @@ def build_consistency_snapshot(payload: dict[str, Any], screen: dict[str, Any]) 
             "label_overlap": 0.0,
             "vector_alignment": 0.0,
             "axis_overlap": 0.0,
-            "screen_labels": screen.get("labels", []),
+            "screen_labels": canonicalize_labels(screen.get("labels", [])),
             "posthoc_labels": [],
         }
     screen_vector = clamp_dict(screen.get("emotion_vector"), EMOTION_DIMS)
     posthoc_vector = clamp_dict(review_semantic.get("emotion_vector"), EMOTION_DIMS)
-    screen_labels = unique_labels(screen.get("labels", []))
-    posthoc_labels = unique_labels(list(review_semantic.get("labels") or []))
+    screen_labels = canonicalize_labels(screen.get("labels", []))
+    posthoc_labels = canonicalize_labels(list(review_semantic.get("labels") or []))
     label_overlap = label_overlap_score(screen_labels, posthoc_labels)
     vector_alignment = vector_alignment_score(screen_vector, posthoc_vector, EMOTION_DIMS)
     axis_overlap = axis_overlap_score(screen_vector, posthoc_vector, EMOTION_DIMS)
@@ -2023,7 +2133,7 @@ def build_model_prompts(payload: dict[str, Any], screen: dict[str, Any], confirm
     latest = str(payload.get("message") or "").strip()[:160]
     history = payload.get("history") or []
     runtime = payload.get("runtime") or {}
-    user_profile = load_user_profile(payload)
+    user_profile = load_user_profile(payload, {"degraded": False, "degradation_reasons": []})
     history_excerpt = [{"r": item.get("role", ""), "t": str(item.get("text") or item.get("content") or "")[:80]} for item in history[-3:]]
     profile_hint = {
         "tz": user_profile["timezone"],
@@ -2084,27 +2194,31 @@ def build_model_prompts(payload: dict[str, Any], screen: dict[str, Any], confirm
 
 
 def run_pipeline(payload: dict[str, Any]) -> dict[str, Any]:
-    features = build_features(payload)
+    normalized_payload, diagnostics = normalize_payload(payload)
+    features = build_features(normalized_payload, diagnostics)
     profile_state = build_profile_state(features)
     constraint_signals = build_constraint_signals(features)
-    weight_schedule = build_weight_schedule(payload, features)
+    weight_schedule = build_weight_schedule(normalized_payload, features)
     screen = initial_screen(features)
-    confirmed = confirm_state(payload, features, screen, weight_schedule)
-    consistency_snapshot = build_consistency_snapshot(payload, screen)
-    memory_update = build_memory_update(payload, features, confirmed, weight_schedule, consistency_snapshot)
+    confirmed = confirm_state(normalized_payload, features, screen, weight_schedule)
+    consistency_snapshot = build_consistency_snapshot(normalized_payload, screen)
+    memory_update = build_memory_update(normalized_payload, features, confirmed, weight_schedule, consistency_snapshot)
     prediction = predict_state(features, confirmed)
     analysis = build_analysis_plan(features, screen, confirmed, prediction)
     routing = build_routing(features, confirmed, prediction)
     guidance = build_guidance(features, confirmed, prediction)
     posthoc_plan = build_posthoc_plan(features, confirmed, analysis, weight_schedule)
-    posthoc_shadow = build_posthoc_shadow(payload, features, confirmed, analysis, posthoc_plan)
+    posthoc_shadow = build_posthoc_shadow(normalized_payload, features, confirmed, analysis, posthoc_plan)
     collection_stack = build_collection_stack(weight_schedule, features, posthoc_plan)
     overlay_prompt = render_overlay(features, confirmed, prediction, routing, analysis)
     debug_overlay_prompt = render_debug_overlay(features, confirmed, prediction, routing, analysis)
-    prompts = build_model_prompts(payload, screen, confirmed, routing, prediction, analysis, weight_schedule, posthoc_plan)
+    prompts = build_model_prompts(normalized_payload, screen, confirmed, routing, prediction, analysis, weight_schedule, posthoc_plan)
     prompts["overlay_prompt"] = overlay_prompt
     prompts["debug_overlay_prompt"] = debug_overlay_prompt
     return {
+        "schema_version": SCHEMA_VERSION,
+        "degraded": bool(diagnostics["degraded"]),
+        "degradation_reasons": list(diagnostics["degradation_reasons"]),
         "profile_state": profile_state,
         "memory_update": memory_update,
         "constraint_signals": constraint_signals,
@@ -2158,18 +2272,24 @@ def parse_payload(args: argparse.Namespace) -> dict[str, Any]:
 
 
 def select_output(command: str, full: dict[str, Any]) -> Any:
+    contract = {
+        "schema_version": full["schema_version"],
+        "degraded": full["degraded"],
+        "degradation_reasons": full["degradation_reasons"],
+    }
     if command == "screen":
-        return {"features": full["features"], "initial_screen": full["initial_screen"]}
+        return {**contract, "features": full["features"], "initial_screen": full["initial_screen"]}
     if command == "confirm":
-        return {"confirmed_state": full["confirmed_state"], "weight_schedule": full["weight_schedule"], "consistency_snapshot": full["consistency_snapshot"]}
+        return {**contract, "confirmed_state": full["confirmed_state"], "weight_schedule": full["weight_schedule"], "consistency_snapshot": full["consistency_snapshot"]}
     if command == "predict":
-        return {"prediction": full["prediction"], "analysis": full["analysis"]}
+        return {**contract, "prediction": full["prediction"], "analysis": full["analysis"]}
     if command == "route":
-        return {"routing": full["routing"]}
+        return {**contract, "routing": full["routing"]}
     if command == "guide":
-        return {"guidance": full["guidance"]}
+        return {**contract, "guidance": full["guidance"]}
     if command == "posthoc":
         return {
+            **contract,
             "collection_stack": full["collection_stack"],
             "review_plan": full["review_plan"],
             "posthoc_plan": full["posthoc_plan"],
@@ -2181,7 +2301,7 @@ def select_output(command: str, full: dict[str, Any]) -> Any:
             "posthoc_reflection_prompt": full["prompts"]["posthoc_reflection_prompt"],
         }
     if command == "overlay":
-        return {"overlay_prompt": full["overlay_prompt"], "debug_overlay_prompt": full["debug_overlay_prompt"]}
+        return {**contract, "overlay_prompt": full["overlay_prompt"], "debug_overlay_prompt": full["debug_overlay_prompt"]}
     return full
 
 
