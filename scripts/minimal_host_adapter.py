@@ -92,41 +92,31 @@ def atomic_write_text(path: Path, text: str) -> None:
             tmp_path.unlink(missing_ok=True)
 
 
-def persist_store(store_dir: Path, payload: dict[str, Any], result: dict[str, Any]) -> None:
+def persist_store(store_dir: Path, payload: dict[str, Any], result: dict[str, Any]) -> dict[str, str]:
     store_dir.mkdir(parents=True, exist_ok=True)
-    atomic_write_text(
-        store_dir / STORE_FILES["user_profile"],
-        dump_json(build_persisted_profile(payload, result), pretty=True),
-    )
-    atomic_write_text(
-        store_dir / STORE_FILES["last_state"],
-        dump_json(build_persisted_state(result), pretty=True),
-    )
-    atomic_write_text(
-        store_dir / STORE_FILES["calibration_state"],
-        dump_json(result["memory_update"]["proposed_calibration_state"], pretty=True),
-    )
+    paths = {key: store_dir / filename for key, filename in STORE_FILES.items()}
+    atomic_write_text(paths["user_profile"], dump_json(build_persisted_profile(payload, result), pretty=True))
+    atomic_write_text(paths["last_state"], dump_json(build_persisted_state(result), pretty=True))
+    atomic_write_text(paths["calibration_state"], dump_json(result["memory_update"]["proposed_calibration_state"], pretty=True))
+    return {key: str(path) for key, path in paths.items()}
 
 
-def run_event(event_path: Path, store_dir: Path, pretty: bool) -> dict[str, Any]:
+def run_event(event_path: Path, store_dir: Path, pretty: bool, persist: bool, view: str) -> dict[str, Any]:
     event = load_json(event_path, {})
     if not event:
         raise ValueError(f"Event payload is empty: {event_path}")
     store = load_store(store_dir)
     payload = build_payload(event, store)
     result = ee.run_pipeline(payload)
-    persist_store(store_dir, payload, result)
+    persisted = persist_store(store_dir, payload, result) if persist else {}
     return {
         "adapter": "minimal_host_adapter",
         "event_path": str(event_path),
         "store_dir": str(store_dir),
         "loaded_store": {key: bool(value) for key, value in store.items()},
-        "persisted": {
-            "user_profile": str(store_dir / STORE_FILES["user_profile"]),
-            "last_state": str(store_dir / STORE_FILES["last_state"]),
-            "calibration_state": str(store_dir / STORE_FILES["calibration_state"]),
-        },
-        "result": result,
+        "persist_enabled": persist,
+        "persisted": persisted,
+        "result": ee.build_host_output(result) if view == "host" else result,
     }
 
 
@@ -134,6 +124,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Minimal host adapter for the emotion skill.")
     parser.add_argument("--event", required=True, help="Path to a host event JSON payload.")
     parser.add_argument("--store-dir", required=True, help="Directory for persisted profile, state, and calibration files.")
+    parser.add_argument("--view", choices=("full", "host"), default="full", help="Output the full engine result or the compact host contract.")
+    parser.add_argument("--no-persist", action="store_true", help="Run without writing profile, state, or calibration files.")
     parser.add_argument("--output", help="Optional path for the rendered output JSON.")
     parser.add_argument("--pretty", action="store_true", help="Pretty-print JSON.")
     return parser
@@ -147,7 +139,7 @@ def main() -> int:
     if not event_path.exists():
         parser.exit(2, f"Host event file not found: {event_path}\n")
     try:
-        rendered_obj = run_event(event_path, store_dir, args.pretty)
+        rendered_obj = run_event(event_path, store_dir, args.pretty, persist=not args.no_persist, view=args.view)
     except json.JSONDecodeError as exc:
         parser.exit(2, f"Invalid JSON input: {exc}\n")
     except ValueError as exc:

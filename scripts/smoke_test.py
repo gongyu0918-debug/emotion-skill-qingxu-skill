@@ -191,23 +191,28 @@ def check_direct_cases(failures: list[dict[str, Any]]) -> list[dict[str, Any]]:
 
 def check_cli_demo(failures: list[dict[str, Any]]) -> dict[str, Any]:
     code, parsed, raw = run_json_command(
-        [sys.executable, "scripts/emotion_engine.py", "run", "--input", str(DEMO_EVENT), "--pretty"]
+        [sys.executable, "scripts/emotion_engine.py", "host", "--input", str(DEMO_EVENT), "--pretty"]
     )
     assert_check("cli_demo_exit", code == 0 and isinstance(parsed, dict), {"exit_code": code, "raw": raw[:400]}, failures)
     if not isinstance(parsed, dict):
         return {"exit_code": code, "raw": raw[:400]}
-    thread_interface = parsed["routing"]["thread_interface"]
     assert_check(
         "cli_demo_routing",
-        thread_interface["prefer_main_thread"] and thread_interface["queue_mode"] in {"steer", "interrupt"},
-        {"thread_interface": thread_interface},
+        parsed["routing"]["prefer_main_thread"] and parsed["routing"]["queue_mode"] in {"steer", "interrupt"},
+        {"routing": parsed["routing"]},
+        failures,
+    )
+    assert_check(
+        "cli_host_contract_compact",
+        "features" not in parsed and "prompts" not in parsed and bool(parsed.get("overlay_prompt")),
+        {"keys": sorted(parsed.keys())},
         failures,
     )
     return {
-        "mode": parsed["confirmed_state"]["dominant_mode"],
-        "labels": parsed["confirmed_state"]["labels"],
-        "queue_mode": thread_interface["queue_mode"],
-        "prefer_main_thread": thread_interface["prefer_main_thread"],
+        "mode": parsed["mode"],
+        "labels": parsed["labels"],
+        "queue_mode": parsed["routing"]["queue_mode"],
+        "prefer_main_thread": parsed["routing"]["prefer_main_thread"],
     }
 
 
@@ -231,11 +236,38 @@ def check_host_adapter(failures: list[dict[str, Any]]) -> dict[str, Any]:
             return {"exit_code": second_code, "raw": second_raw[:400]}
         loaded_store = second_parsed["loaded_store"]
         assert_check("host_adapter_persisted_store", all(loaded_store.values()), {"loaded_store": loaded_store}, failures)
+        preview_args = [
+            sys.executable,
+            "scripts/minimal_host_adapter.py",
+            "--event",
+            str(DEMO_EVENT),
+            "--store-dir",
+            str(store_dir / "preview"),
+            "--view",
+            "host",
+            "--no-persist",
+            "--pretty",
+        ]
+        preview_code, preview_parsed, preview_raw = run_json_command(preview_args)
+        preview_ok = (
+            preview_code == 0
+            and isinstance(preview_parsed, dict)
+            and preview_parsed.get("persist_enabled") is False
+            and preview_parsed.get("persisted") == {}
+            and "mode" in (preview_parsed.get("result") or {})
+        )
+        assert_check(
+            "host_adapter_preview_no_persist",
+            preview_ok,
+            {"exit_code": preview_code, "raw": preview_raw[:400], "parsed": preview_parsed if isinstance(preview_parsed, dict) else None},
+            failures,
+        )
         return {
             "first_loaded_store": first_parsed.get("loaded_store") if isinstance(first_parsed, dict) else {},
             "second_loaded_store": loaded_store,
             "persisted": second_parsed["persisted"],
             "mode": second_parsed["result"]["confirmed_state"]["dominant_mode"],
+            "preview_mode": preview_parsed["result"]["mode"] if isinstance(preview_parsed, dict) else None,
         }
 
 

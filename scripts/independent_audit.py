@@ -104,6 +104,29 @@ def main() -> int:
         findings,
     )
 
+    host_code, host_raw = run_command(
+        [sys.executable, "scripts/emotion_engine.py", "host", "--input", str(DEMO_EVENT), "--pretty"]
+    )
+    try:
+        host_parsed = json.loads(host_raw) if host_raw else {}
+    except json.JSONDecodeError:
+        host_parsed = {}
+    host_contract_ok = (
+        host_code == 0
+        and isinstance(host_parsed, dict)
+        and "overlay_prompt" in host_parsed
+        and "routing" in host_parsed
+        and "features" not in host_parsed
+        and "prompts" not in host_parsed
+        and isinstance(host_parsed.get("memory"), dict)
+    )
+    record(
+        "host_output_contract",
+        host_contract_ok,
+        {"exit_code": host_code, "keys": sorted(host_parsed.keys()) if isinstance(host_parsed, dict) else [], "raw": host_raw[:400]},
+        findings,
+    )
+
     degraded = ee.run_pipeline(
         {
             "message": "Show me the exact failing step.",
@@ -357,6 +380,41 @@ def main() -> int:
             {
                 "exit_code": second_code,
                 "loaded_store": second_parsed.get("loaded_store"),
+            },
+            findings,
+        )
+        preview_code, preview_raw = run_command(
+            [
+                sys.executable,
+                "scripts/minimal_host_adapter.py",
+                "--event",
+                str(DEMO_EVENT),
+                "--store-dir",
+                str(Path(tmp_dir) / "preview-store"),
+                "--view",
+                "host",
+                "--no-persist",
+                "--pretty",
+            ]
+        )
+        try:
+            preview_parsed = json.loads(preview_raw) if preview_raw else {}
+        except json.JSONDecodeError:
+            preview_parsed = {}
+        adapter_preview_ok = (
+            preview_code == 0
+            and isinstance(preview_parsed, dict)
+            and preview_parsed.get("persist_enabled") is False
+            and preview_parsed.get("persisted") == {}
+            and "overlay_prompt" in (preview_parsed.get("result") or {})
+        )
+        record(
+            "adapter_preview_no_persist",
+            adapter_preview_ok,
+            {
+                "exit_code": preview_code,
+                "persist_enabled": preview_parsed.get("persist_enabled") if isinstance(preview_parsed, dict) else None,
+                "result_keys": sorted((preview_parsed.get("result") or {}).keys()) if isinstance(preview_parsed, dict) else [],
             },
             findings,
         )

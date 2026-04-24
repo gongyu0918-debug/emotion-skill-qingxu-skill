@@ -29,7 +29,7 @@ DEFAULT_PERSONA_TRAITS = {
     "openness": 0.5,
     "assertiveness": 0.4,
 }
-SCHEMA_VERSION = "1.1.1"
+SCHEMA_VERSION = "1.1.2"
 MAX_DEGRADATION_REASONS = 32
 LABEL_ORDER = ("urgent", "frustrated", "confused", "skeptical", "cautious", "exploratory", "satisfied", "neutral")
 LABEL_ORDER_INDEX = {label: index for index, label in enumerate(LABEL_ORDER)}
@@ -2353,6 +2353,8 @@ def select_output(command: str, full: dict[str, Any]) -> Any:
         "degraded": full["degraded"],
         "degradation_reasons": full["degradation_reasons"],
     }
+    if command == "host":
+        return build_host_output(full)
     if command == "screen":
         return {**contract, "features": full["features"], "initial_screen": full["initial_screen"]}
     if command == "confirm":
@@ -2381,10 +2383,52 @@ def select_output(command: str, full: dict[str, Any]) -> Any:
     return full
 
 
+def build_host_output(full: dict[str, Any]) -> dict[str, Any]:
+    confirmed = full["confirmed_state"]
+    routing = full["routing"]
+    thread_interface = routing["thread_interface"]
+    memory_update = full["memory_update"]
+    return {
+        "schema_version": full["schema_version"],
+        "degraded": full["degraded"],
+        "degradation_reasons": full["degradation_reasons"],
+        "mode": confirmed["dominant_mode"],
+        "labels": confirmed["labels"],
+        "confidence": confirmed["confidence"],
+        "overlay_prompt": full["overlay_prompt"],
+        "routing": {
+            "reply_style": routing["reply_style"],
+            "verification_level": routing["verification_level"],
+            "queue_mode": thread_interface["queue_mode"],
+            "prefer_main_thread": thread_interface["prefer_main_thread"],
+            "defer_heartbeat": thread_interface["defer_heartbeat"],
+            "allow_parallel_subagents": thread_interface["allow_parallel_subagents"],
+            "max_parallel_subagents": thread_interface["max_parallel_subagents"],
+            "progress_update_interval_sec": thread_interface["progress_update_interval_sec"],
+        },
+        "guidance": {
+            "should_probe": full["guidance"]["should_probe"],
+            "hook_mode": full["guidance"]["hook_mode"],
+            "probe_style": full["guidance"]["probe_style"],
+            "question": full["guidance"]["question"],
+            "soft_probe_seed": full["guidance"]["soft_probe_seed"],
+        },
+        "state": {
+            "emotion_vector": confirmed["emotion_vector"],
+            "interaction_state": confirmed["interaction_state"],
+        },
+        "memory": {
+            "should_persist": memory_update["should_persist"],
+            "host_profile_update_recommended": memory_update["host_profile_update_recommended"],
+            "proposed_calibration_state": memory_update["proposed_calibration_state"],
+        },
+    }
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description="Emotion-aware routing and prompt overlay engine.")
     subparsers = parser.add_subparsers(dest="command", required=True)
-    for name in ("screen", "confirm", "predict", "route", "guide", "posthoc", "overlay", "run"):
+    for name in ("host", "screen", "confirm", "predict", "route", "guide", "posthoc", "overlay", "run"):
         sub = subparsers.add_parser(name)
         sub.add_argument("--input", help="Path to a JSON payload.")
         sub.add_argument("--message", help="Latest user message.")

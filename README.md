@@ -2,75 +2,109 @@
 
 [简体中文 README](./README.zh-CN.md)
 
-Emotion-aware routing for coding agents.
+Emotion Skill is a small routing layer for coding agents. It reads the latest user turn, optional history, runtime pressure, and a local profile, then returns concrete instructions for how the agent should work this turn.
 
-This repo reads the latest user turn plus optional history, runtime signals, and user profile, then returns work-mode signals such as priority, verification depth, reply style, guard mode, and review-pass hints.
+It helps an agent notice signals like "this is still broken", "show me the basis", "keep the scope tight", or "this works now, finish cleanly" and convert them into queue priority, verification depth, reply style, progress cadence, and guard behavior.
 
-## Included In This Repo
+## What Changes
 
-- `SKILL.md`: skill definition and full input contract
-- `scripts/emotion_engine.py`: rule engine and CLI
-- `scripts/alignment_test.py`: curated regression cases
-- `scripts/ablation_test.py`: curated skill-vs-baseline harness
-- `scripts/smoke_test.py`: scenario smoke tests with local history and randomized community workflows
-- `scripts/independent_audit.py`: independent contract and host-profile checks
-- `scripts/marketplace_tag_audit.py`: marketplace-tag regression, evaluation, and smoke checks
-- `scripts/minimal_host_adapter.py`: minimal host adapter with a host-owned local profile
-- `demo/local_history_event.json`: realistic demo payload
-- `references/`: design notes, examples, prompt references
+| User state | Agent behavior |
+|---|---|
+| Urgent or blocked | stay on the main thread, shorten progress updates, act first |
+| Frustrated after repeated failures | repair first, explain after, raise verification |
+| Skeptical or asking for evidence | show basis, exact checks, and failure path before edits |
+| Cautious about scope | verify first, keep changes narrow, protect files and config |
+| Confused by the path | explain the next step, use one clarifier at most |
+| Satisfied after success | switch into guard mode and prevent drift |
 
-## Best Fit
+## 30-Second Demo
 
-- coding-agent turns with delivery pressure, repeated failures, skepticism, boundary protection, or post-success stabilization
-- hosts that can call a local Python script and consume JSON
+Run the compact host contract:
 
-## Marketplace Scope
+```bash
+python scripts/emotion_engine.py host --message "This is still not fixed. Show me the basis before changing more files." --pretty
+```
 
-- repository debugging
-- coding-agent orchestration
-- verification depth control
-- queue, thread, and heartbeat coordination
-- stabilization after success
+Example shape:
 
-## Core Inputs
+```json
+{
+  "mode": "skeptical",
+  "labels": ["frustrated", "skeptical"],
+  "overlay_prompt": "<state mode=skeptical ...>",
+  "routing": {
+    "reply_style": "evidence_then_act",
+    "verification_level": "high",
+    "queue_mode": "collect",
+    "prefer_main_thread": true,
+    "progress_update_interval_sec": 20
+  },
+  "memory": {
+    "should_persist": false
+  }
+}
+```
 
-The engine accepts a JSON payload. The fields you will use most often are:
+Use the bundled local-history event:
 
-- `message`
-- `history`
-- `runtime`
-- `user_profile`
-- `last_state`
-- `llm_semantic`
-- `posthoc_semantic`
-- `calibration_state`
+```bash
+python scripts/emotion_engine.py host --input demo/local_history_event.json --pretty
+```
 
-Full contract and field examples live in [SKILL.md](./SKILL.md).
+Preview the host adapter without writing profile state:
 
-## Core Outputs
+```bash
+python scripts/minimal_host_adapter.py --event demo/local_history_event.json --store-dir .demo-store --view host --no-persist --pretty
+```
 
-Start with these:
+## Integration
 
-- `overlay_prompt`: compact runtime hint for the current turn
-- `routing.thread_interface`: queue mode, main-thread preference, heartbeat behavior, parallelism, progress interval
+Use these fields first:
 
-Useful secondary outputs:
+- `overlay_prompt`: add this compact state hint to the current agent turn.
+- `routing.reply_style`: choose the response posture, such as `repair_then_explain`, `evidence_then_act`, or `verify_then_act`.
+- `routing.verification_level`: choose how much checking to do before acting.
+- `routing.queue_mode`: choose whether to collect, steer, or interrupt work.
+- `routing.progress_update_interval_sec`: set the progress update cadence.
+- `memory.should_persist`: decide whether the host should merge the proposed profile update.
 
-- `guidance`
-- `memory_update`
-- `posthoc_plan`
-- `prompts`
+Minimal event:
 
-State reading rule:
+```json
+{
+  "message": "This is still not fixed. Show me the basis before changing more files.",
+  "history": [
+    {"role": "assistant", "text": "I think I found the root cause."}
+  ],
+  "runtime": {
+    "response_delay_seconds": 20,
+    "unresolved_turns": 3,
+    "bug_retries": 2,
+    "same_issue_mentions": 2
+  }
+}
+```
 
-- `confirmed_state.emotion_vector.confusion` is the affect axis for user uncertainty, while `confirmed_state.vector.clarity` is the task-reading axis for how clear the request is. Read them together.
+The full contract and advanced fields live in [SKILL.md](./SKILL.md).
+
+## User Experience Boundary
+
+The core engine is stateless. It returns JSON and writes nothing by itself.
+
+The minimal host adapter can persist three host-owned JSON files when you want cross-turn adaptation:
+
+- `user_profile.json`
+- `last_state.json`
+- `calibration_state.json`
+
+Use `--no-persist` for read-only previews. Use `--view host` for the compact output a real runtime usually needs.
 
 ## Install
 
 Requirements:
 
 - Python `3.9+`
-- no external dependencies
+- standard library only
 
 Clone the repo:
 
@@ -84,134 +118,60 @@ Optional local skill install for Codex-style skill loading.
 macOS / Linux:
 
 ```bash
-cp -r emotion-skill-qingxu-skill ~/.codex/skills/emotion-skill
+cp -r . ~/.codex/skills/emotion-skill
 ```
 
 PowerShell:
 
 ```powershell
-Copy-Item -LiteralPath .\emotion-skill-qingxu-skill -Destination $HOME\.codex\skills\emotion-skill -Recurse -Force
+Copy-Item -LiteralPath . -Destination $HOME\.codex\skills\emotion-skill -Recurse -Force
 ```
 
-## Quick Start
+## Output Model
 
-Smoke test with a single message:
+The compact `host` output uses these fields:
 
-```bash
-python scripts/emotion_engine.py run --message "先给我依据，别瞎猜" --pretty
-```
+- `state.emotion_vector.confusion`: user uncertainty or disorientation.
+- `state.interaction_state.clarity`: task clarity inferred from wording and context.
+- `labels`: concurrent states that matter this turn.
+- `mode`: the state that drives routing for this turn.
 
-Run the bundled local-history demo:
+The full `run` output keeps the same values under `confirmed_state.*` and adds diagnostics, prompts, feature signals, and review plans.
 
-```bash
-python scripts/emotion_engine.py run --input demo/local_history_event.json --pretty
-```
-
-Run with a full payload:
-
-```bash
-python scripts/emotion_engine.py run --input path/to/turn.json --pretty
-```
-
-Minimal host adapter with a host-owned local profile:
-
-```bash
-python scripts/minimal_host_adapter.py --event demo/local_history_event.json --store-dir .demo-store --pretty
-```
-
-Minimal payload example:
-
-```json
-{
-  "message": "This is still not fixed. Show me the basis before changing more files.",
-  "history": [
-    {"role": "assistant", "text": "I think I found the root cause"}
-  ],
-  "runtime": {
-    "response_delay_seconds": 20,
-    "unresolved_turns": 3,
-    "bug_retries": 2,
-    "same_issue_mentions": 2
-  }
-}
-```
-
-## Integration Path
-
-1. Call `emotion_engine.py` on every user turn.
-2. Insert `overlay_prompt` into the current turn as a compact runtime pre-prompt.
-3. Apply `routing.thread_interface` to queueing, main-thread choice, heartbeat behavior, and progress cadence.
-4. When `analysis.semantic_pass` is `fast`, run the model-side semantic pass and feed the result back as `llm_semantic`.
-5. Reuse the bounded fields from `memory_update` inside a host-owned local profile if you want cross-turn adaptation.
-
-## States It Optimizes For
-
-| State | Main behavior change | Expected value |
-|---|---|---|
-| `urgent` | prioritize the main thread, shorten progress interval | faster first useful action |
-| `frustrated` | repair first, explain after | lower drift and less wasted dialogue |
-| `skeptical` | show basis and verification points first | fewer blind patches |
-| `cautious` | tighten scope and prefer safer paths | fewer scope violations |
-| `satisfied` | switch into guard mode | fewer regressions after success |
-
-## Language Coverage
-
-Specialized calibration currently focuses on:
-
-- Chinese
-- English
-
-The generic path still uses punctuation intensity, repetition, delay pressure, unresolved-turn pressure, and imperative structure for other languages.
-
-## Product Boundaries
-
-- runtime adapters stay in the host layer
-- cross-turn adaptation reuses bounded fields from `memory_update` inside a host-owned local profile
-- benchmark numbers below come from curated internal cases
-- first-turn judgments are strongest when `runtime` and `history` are present
-- marketplace scope is coding-agent orchestration only
-
-## Current Status
+## Current Checks
 
 Current local run in this repo:
 
 - alignment regression: `70/70`
 - curated ablation harness: `333/333`
 - static baseline in the same harness: `18/333`
-- scenario smoke test: `ok`
+- randomized community smoke: `24/24 strict` plus five `12/12 strict` seed runs
 - independent audit: `ok`
 - marketplace tag audit: `ok`
 - feature gate audit: `ok`
 
-These numbers come from repository-owned curated cases and are best read as regression coverage, not production A/B evidence.
-
-ClawHub publishes the runtime-facing subset only. The heavier regression, audit, and calibration assets stay in the GitHub repository.
+These numbers are regression coverage from repository-owned cases. They are useful for catching behavior drift during development.
 
 ## Repo Layout
 
-Published on ClawHub:
+Runtime-facing files:
 
 - [SKILL.md](./SKILL.md): skill definition and full contract
-- [scripts/emotion_engine.py](./scripts/emotion_engine.py): runtime engine
-- [scripts/minimal_host_adapter.py](./scripts/minimal_host_adapter.py): minimal host adapter with a host-owned local profile
-- [demo/local_history_event.json](./demo/local_history_event.json): realistic local-history demo payload
+- [scripts/emotion_engine.py](./scripts/emotion_engine.py): runtime engine and CLI
+- [scripts/minimal_host_adapter.py](./scripts/minimal_host_adapter.py): host adapter with optional local profile persistence
+- [demo/local_history_event.json](./demo/local_history_event.json): realistic local-history demo event
 - [references/examples.md](./references/examples.md): example turns and outcomes
 
-Kept in the GitHub repository:
+Evaluation and audit files:
 
 - [scripts/alignment_test.py](./scripts/alignment_test.py): curated regression suite
-- [scripts/ablation_test.py](./scripts/ablation_test.py): curated evaluation harness
-- [scripts/smoke_test.py](./scripts/smoke_test.py): scenario smoke coverage
-- [scripts/independent_audit.py](./scripts/independent_audit.py): independent verification
+- [scripts/ablation_test.py](./scripts/ablation_test.py): skill-vs-baseline harness
+- [scripts/smoke_test.py](./scripts/smoke_test.py): scenario and community smoke coverage
+- [scripts/independent_audit.py](./scripts/independent_audit.py): contract and host-boundary audit
 - [scripts/marketplace_tag_audit.py](./scripts/marketplace_tag_audit.py): marketplace-scope audit
-- [scripts/posthoc_calibration_pack.py](./scripts/posthoc_calibration_pack.py): pack builder for cold-start posthoc cases
+- [scripts/posthoc_calibration_pack.py](./scripts/posthoc_calibration_pack.py): posthoc pack builder
 
-## Next
-
-- stricter false-positive tests for short imperative turns
-- host adapters for common agent runtimes
-- richer demo payloads and installation walkthroughs
-- broader calibration beyond Chinese and English
+ClawHub publishes the runtime-facing subset. GitHub keeps the full evaluation surface.
 
 ## License
 

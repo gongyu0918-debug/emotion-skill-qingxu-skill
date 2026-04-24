@@ -1,6 +1,6 @@
 ---
 name: emotion-skill
-description: Emotion-aware orchestration for coding agents. Detect urgency, frustration, skepticism, confusion, caution, satisfaction, and openness from coding-task wording, retries, delay pressure, and dialogue history, then route verification depth, queue priority, reply style, and stabilization strategy. Use when: coding agent orchestration, repo debugging, scope protection, verification depth control, and post-success stabilization.
+description: Emotion-aware orchestration for coding agents. Use when a coding agent needs to adapt behavior during repo debugging, scoped implementation, repeated-failure recovery, evidence-demanding review, cautious changes, or post-success stabilization. Detect urgency, frustration, skepticism, confusion, caution, satisfaction, and openness from the latest turn, dialogue history, retries, and delay pressure, then return overlay_prompt, reply style, verification depth, queue mode, progress cadence, and guard behavior.
 metadata:
   openclaw:
     emoji: "🎛️"
@@ -9,27 +9,27 @@ metadata:
 
 # 情绪.skill / Emotion Skill
 
-让 Agent 听懂空气，不只是听懂任务。
+给 Coding Agent 加一层读空气路由。
 
-Teach an agent to read the room, not just the task.
+Add a read-the-room routing layer to coding agents.
 
-这个 skill 做的事情很简单：
+同一条任务，用户状态变了，Agent 的工作方式也要变：
 
 - 用户开始急了，它少铺垫，先动手
 - 用户开始怀疑，它先拿依据再开工
 - 用户很谨慎，它把 scope 收紧
 - 用户已经满意，它别继续乱改，直接收口
 
-What this skill does:
+The same coding task should route differently when the user state changes:
 
 - when the user turns urgent, it cuts the padding and acts first
 - when the user turns skeptical, it shows the basis before making moves
 - when the user turns cautious, it tightens scope
 - when the user is already satisfied, it stops pushing and switches to closing mode
 
-它是一个编排层，负责把用户状态翻译成执行策略。
+它把这些信号翻译成 `overlay_prompt`、回复风格、验证强度、队列模式、进度节奏和成功后守护策略。
 
-It is an orchestration layer that turns user state into execution policy.
+It converts those signals into `overlay_prompt`, reply style, verification depth, queue mode, progress cadence, and post-success guard behavior.
 
 它盯着一轮对话里那些细小但真实的东西：
 
@@ -162,58 +162,58 @@ The collection layer always runs four signals in parallel:
 先跑一轮，把当前用户消息丢进引擎里看看它怎么读空气：
 
 ```bash
-python scripts/emotion_engine.py run --message "先给我依据，别瞎猜" --pretty
+python scripts/emotion_engine.py host --message "先给我依据，别瞎猜" --pretty
 ```
 
 Start with one run. Feed the latest turn in and see how the engine reads the room:
 
 ```bash
-python scripts/emotion_engine.py run --message "Show me the basis before changing more files." --pretty
+python scripts/emotion_engine.py host --message "Show me the basis before changing more files." --pretty
 ```
 
 再跑一个更真实的 demo payload：
 
 ```bash
-python scripts/emotion_engine.py run --input demo/local_history_event.json --pretty
+python scripts/emotion_engine.py host --input demo/local_history_event.json --pretty
 ```
 
 Run the bundled local-history demo payload:
 
 ```bash
-python scripts/emotion_engine.py run --input demo/local_history_event.json --pretty
+python scripts/emotion_engine.py host --input demo/local_history_event.json --pretty
 ```
 
 如果你要补一个最小宿主适配层，直接跑：
 
 ```bash
-python scripts/minimal_host_adapter.py --event demo/local_history_event.json --store-dir .demo-store --pretty
+python scripts/minimal_host_adapter.py --event demo/local_history_event.json --store-dir .demo-store --view host --no-persist --pretty
 ```
 
 For a minimal host-side profile adapter, run:
 
 ```bash
-python scripts/minimal_host_adapter.py --event demo/local_history_event.json --store-dir .demo-store --pretty
+python scripts/minimal_host_adapter.py --event demo/local_history_event.json --store-dir .demo-store --view host --no-persist --pretty
 ```
 
 然后按这个顺序接进去：
 
 1. 把 `overlay_prompt` 塞进当前这一轮，当成一个很小的动态前置提示。
-2. 把 `routing.thread_interface` 接到队列、线程、heartbeat 和子任务路由。
+2. 用 `routing` 接队列、线程、heartbeat 和子任务路由；完整 `run` 输出里还有 `routing.thread_interface` 的细分字段。
 3. 如果 `guidance.hook_mode` 是 `latent`，先用 `guidance.soft_probe_seed`。只有真的值得打断用户时，再用 `guidance.question`。
 4. 先看 `analysis.semantic_pass`。它是 `fast` 的时候，再去跑模型语义复核。
 5. 如果你想让模型也参与判断，去看 `references/model-prompts.md`，把结果按 `llm_semantic` 回填。
-6. 看状态时别只盯一个标签，要一起看 `confirmed_state.emotion_vector` 和 `mode_scores`。情绪可以并存，`dominant_mode` 只负责决定这轮谁来主导编排。
+6. 看状态时先看 `state.emotion_vector`、`labels` 和 `mode`；调权或排查时再切到完整 `run` 输出看 `mode_scores`。
 7. 冷启动阶段建议让 review pass 跟随每轮一起运行；一致性升高后，把它压缩成一个很短的 shadow review。
 8. 等 `calibration_state.consistency_rate` 和 `consistency_samples` 长起来，再慢慢抬高前置权重。
 
 Then wire it in like this:
 
 1. Drop `overlay_prompt` into the current turn as a small dynamic pre-prompt.
-2. Feed `routing.thread_interface` into queueing, thread priority, heartbeat, and subagent routing.
+2. Feed `routing` into queueing, thread priority, heartbeat, and subagent routing; the full `run` output keeps the deeper `routing.thread_interface` fields.
 3. If `guidance.hook_mode` is `latent`, start with `guidance.soft_probe_seed`. Reach for `guidance.question` only when the interruption is worth it.
 4. Check `analysis.semantic_pass` first. Only run the semantic model pass when it says `fast`.
 5. If you want model-side judgment, read `references/model-prompts.md` and feed the result back as `llm_semantic`.
-6. Do not stare at one label in isolation. Read `confirmed_state.emotion_vector` and `mode_scores` together. Emotions can coexist. `dominant_mode` only decides who drives the turn.
+6. Read `state.emotion_vector`, `labels`, and `mode` first. Use the full `run` output for `mode_scores` when tuning or debugging.
 7. During cold start, keep the review pass available on each turn. As consistency rises, compress it into a short shadow review.
 8. Raise front weight only after `calibration_state.consistency_rate` and `consistency_samples` become believable.
 
@@ -403,7 +403,7 @@ Keep the question short. Ask for one dimension at a time:
 
 ### 5. Route
 
-Use `routing.thread_interface` to drive orchestration.
+Use `routing` from the compact `host` output to drive orchestration. In full `run` output, the same details live under `routing.thread_interface`.
 
 Key fields:
 

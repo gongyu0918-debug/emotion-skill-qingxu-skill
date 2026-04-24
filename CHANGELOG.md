@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.2 - 2026-04-24
+
+- added a compact `host` CLI output for integration previews and runtime adapters
+- added `--view host` and `--no-persist` to the minimal host adapter
+- added audits for compact host output and read-only adapter preview mode
+
 ## 1.1.1 - 2026-04-23
 
 - tightened payload normalization for mapping, label-list, and history fields
