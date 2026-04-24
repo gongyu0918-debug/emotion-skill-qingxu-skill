@@ -13,6 +13,7 @@ from zoneinfo import ZoneInfo
 
 
 STATE_DIMS = ("urgency", "frustration", "clarity", "satisfaction", "trust", "engagement")
+INTERACTION_DIMS = ("clarity", "trust", "engagement")
 EMOTION_DIMS = ("urgency", "frustration", "confusion", "skepticism", "satisfaction", "cautiousness", "openness")
 DIMS = STATE_DIMS
 DEFAULT_BASELINE = {
@@ -29,7 +30,7 @@ DEFAULT_PERSONA_TRAITS = {
     "openness": 0.5,
     "assertiveness": 0.4,
 }
-SCHEMA_VERSION = "1.1.2"
+SCHEMA_VERSION = "1.1.3"
 MAX_DEGRADATION_REASONS = 32
 LABEL_ORDER = ("urgent", "frustrated", "confused", "skeptical", "cautious", "exploratory", "satisfied", "neutral")
 LABEL_ORDER_INDEX = {label: index for index, label in enumerate(LABEL_ORDER)}
@@ -40,7 +41,8 @@ ANGER_TERMS = {
 }
 URGENCY_TERMS = {
     "快", "赶紧", "立刻", "马上", "现在", "别停", "直接", "先处理",
-    "asap", "urgent", "immediately", "right now", "hurry",
+    "asap", "urgent", "immediately", "right now", "hurry", "prioritize this", "high urgency",
+    "pick up where you left off", "progress feedback", "blocks my workflow",
 }
 SOFT_URGENCY_TERMS = {"for several minutes", "forty minutes"}
 RUSH_TYPO_TERMS = {
@@ -71,6 +73,12 @@ FRUSTRATION_TERMS = {
     "pass locally but fail ci", "freezes when i ask", "forty minutes and nothing", "stuck in a loop",
     "feels worse", "damaged project files", "harder to trust", "brick a working install",
     "say so", "one thing i need it for", "health monitor gets stuck", "everything is silent",
+    "defeats the whole point", "defeats the whole point of automated workflows", "trigger path stays silent",
+    "same failure", "already tried", "same error again", "still will not activate", "already paid",
+    "does not execute", "heartbeat simply does not execute", "blocks my workflow", "cannot see them",
+    "progress feedback", "hanging on the same step", "silent failure on every hook", "generic reinstall",
+    "not another generic reinstall", "created a new file from scratch", "instead of modifying the existing one",
+    "what exactly is blocking",
 }
 STALL_TERMS = {
     "卡住", "卡死", "没反应", "一直转", "卡这", "hang", "hung", "stuck", "stall",
@@ -83,6 +91,8 @@ CONFUSION_TERMS = {
     "confused", "unclear", "cannot tell", "can't tell", "not sure which", "which one", "what exactly is wrong",
     "logged in but", "resets itself", "drops the earlier context", "interrupt mid-response", "path resolution", "quoting", "escaping",
     "what that thing was", "no idea what that thing was", "special character handling", "dies here",
+    "nothing changes", "get redirected back", "what exactly is blocking", "exact failing step",
+    "token fetch fails after login",
 }
 SATISFACTION_TERMS = {
     "好了", "可以", "不错", "满意", "谢谢", "太好了", "解决了",
@@ -96,6 +106,7 @@ BLOCKING_TERMS = {
     "阻塞", "卡住发布", "卡住我今天的发布", "发布", "上线", "卡住进度",
     "blocking", "blocked", "blocks productive use", "severely impacts", "regression", "ship today", "release",
     "core workflow break", "workflow break", "cannot use the extension", "stuck in a loop", "kills the core workflow",
+    "blocks my workflow", "blocks workflow", "cannot see them",
 }
 CAUTION_TERMS = {
     "小心", "稳一点", "谨慎", "别搞砸", "不要搞砸", "千万别", "别出事", "别弄坏", "注意边界",
@@ -103,6 +114,7 @@ CAUTION_TERMS = {
     "careful", "be careful", "don't break", "do not break", "safely", "stable path", "protected files", "downgrade path", "migration note", "rollback",
     "handle the error gracefully", "recover safely", "wipe my setup", "session exposure path", "recover from bad tool calls", "bad tool calls",
     "keep the architecture modular", "architecture modular", "one method", "keep the handoff path scoped", "handoff path scoped",
+    "missing tool result", "silently ending the turn",
 }
 BOUNDARY_TERMS = {
     "只改", "只动", "只碰", "别碰", "不要动", "不能动", "不可改", "先别动", "不要删", "别删",
@@ -116,6 +128,7 @@ ASSURANCE_TERMS = {
     "check that path", "before another workaround", "before telling me to", "精确定位", "失败路径", "show the plan", "exact failing step", "exact failing point", "failure path",
     "handle the error gracefully", "recover safely", "before i wipe my setup", "session exposure path", "recover from bad tool calls", "bad tool calls", "scan the file",
     "show the plan before another change", "keep the handoff path scoped", "exact detection path",
+    "missing tool result", "silently ending the turn",
 }
 SKEPTICISM_TERMS = {
     "你确定", "确定吗", "真的吗", "靠谱吗", "有把握吗", "凭什么", "依据", "证据", "给我证据",
@@ -136,6 +149,10 @@ SKEPTICISM_TERMS = {
     "ci rules", "pass locally but fail ci", "wasting time", "session exposure path", "what the session layer misses", "file handling is wrong",
     "harder to trust", "reliable fix", "feedback when commands fail", "automatic execution never fires", "hooks work manually", "wsl", "silent hangs are useless", "blind patch",
     "correct git bash configuration", "git bash configuration", "health monitor gets stuck", "everything is silent", "say so",
+    "current settings", "fixed it for some people", "compare that path with",
+    "same failure", "regression still open", "why is the regression still open", "logs and configs ready",
+    "generic reinstall", "not another generic reinstall", "concrete root cause",
+    "created a new file from scratch", "instead of modifying the existing one",
 }
 SPECULATION_TERMS = {
     "猜的", "瞎猜", "脑补", "臆测", "别猜", "别编", "编的", "猜出来", "靠猜", "乱猜",
@@ -152,7 +169,7 @@ CONTEXT_LOSS_TERMS = {
     "fresh session", "forgets this rule", "forgets my rules", "forgets everything", "no memory of the previous session",
     "fallback workspace", "agent_home", "no prior session workspace", "context plumbing", "projectid = null",
     "workspaceid = null", "actual dialogue just vanishes", "dialogue just vanishes",
-    "previous session", "previous sessions", "stayed idle", "held off", "nothing changed in this session",
+    "previous session", "previous sessions", "stayed idle", "held off", "nothing changed in this session", "nothing changes", "get redirected back",
     "forgot the edits", "forgot edits", "survived compaction",
     "drops the earlier context", "interrupt mid-response", "shared context",
 }
@@ -165,7 +182,9 @@ EXECUTION_PLUMBING_TERMS = {
     "cron list --json", "health monitor restarts", "socket connected", "still no events", "tool_result", "tool result",
     "tool_use", "missing tool result", "non-existent tool", "dead state", "ci rules", "pass locally but fail ci",
     "wsl2", "wsl", "session exposure path", "sign in again", "config page resets", "logged in but",
-    "automatic execution never fires", "hooks work manually",
+    "automatic execution never fires", "hooks work manually", "trigger path", "automated workflows",
+    "does not execute", "heartbeat simply does not execute", "isolatedsession", "lightcontext",
+    "ai session cannot see", "cannot see them",
 }
 HEDGE_TERMS = {
     "不一定", "未必", "可能", "也许", "大概", "应该", "恐怕", "我怀疑", "我觉得未必", "我不太认同",
@@ -182,6 +201,7 @@ EXPLORATION_TERMS = {
     "两个方案", "两种方案", "两条路径", "两种方式", "两个方向", "对比", "差异", "最短修复路径",
     "brainstorm", "options", "tradeoff", "tradeoffs", "design", "architecture", "compare", "compare against", "compare both", "compare the two paths",
     "feasibility", "suggest", "direction", "directions", "ideas", "two ways", "two paths", "two options", "differences", "what changed", "shortest fix path", "which path",
+    "pick one stable path", "logs and configs ready",
 }
 COMMAND_TERMS = {"修", "改", "做", "上", "给我", "继续", "直接", "fix", "ship", "do it", "change", "implement", "patch"}
 VAGUE_TERMS = {"随便", "差不多", "大概", "something", "whatever", "somehow"}
@@ -204,7 +224,7 @@ MISSED_EXPECTATION_TERMS = {
     "goes quiet", "too quiet", "no alert at all", "manual refresh", "suddenly appears", "running but nothing works", "overdue",
     "reminder disappears", "disappears right after the notification", "resets itself", "core workflow break", "failed renames",
     "silently broke for days", "nobody noticed", "return an error", "return anything", "feedback when commands fail",
-    "say so", "everything is silent", "health monitor gets stuck", "reopen the app",
+    "say so", "everything is silent", "health monitor gets stuck", "reopen the app", "defeats the whole point", "trigger path stays silent",
 }
 TECHNICAL_TERMS = {
     "bug", "traceback", "stack", "stacktrace", "api", "hook", "plugin", "queue", "thread", "prompt",
@@ -235,7 +255,7 @@ EVIDENCE_REQUEST_PATTERN = re.compile(
 )
 COMPARISON_REQUEST_PATTERN = re.compile(
     r"(two ways|two paths|two options|compare (?:the )?(?:two )?(?:paths|options|versions|approaches)|compare .* against|"
-    r"difference|differences|tradeoffs?|what changed|downgrade path|migration note|shortest fix path|which path|"
+    r"compare .* with|compare (?:that|this|the )?path with|pick one stable path|difference|differences|tradeoffs?|what changed|downgrade path|migration note|shortest fix path|which path|"
     r"两个方案|两种方案|两条路径|两种方式|最短修复路径|"
     r"两个方向|对比|比较一下|取舍|差异)",
     re.IGNORECASE,
@@ -248,7 +268,7 @@ GUARDRAIL_REQUEST_PATTERN = re.compile(
     re.IGNORECASE,
 )
 EXPLICIT_CONFUSION_PATTERN = re.compile(
-    r"(confused|unclear|cannot tell|can't tell|not sure which|what exactly is wrong|which state|which one|what that thing was|no idea what that thing was|why it dies here|dies here|迷糊|为什么会这样|不清楚|不知道|看不懂|分不清|到底哪里|哪一步)",
+    r"(confused|unclear|cannot tell|can't tell|not sure which|what exactly is wrong|what exactly is blocking|exact failing step|which state|which one|what that thing was|no idea what that thing was|why it dies here|dies here|迷糊|为什么会这样|不清楚|不知道|看不懂|分不清|到底哪里|哪一步)",
     re.IGNORECASE,
 )
 CLAIMED_RESOLUTION_PATTERN = re.compile(r"(fixed|resolved|done|solved|passed|green|works now|好了|解决了|完成了|跑通了|通过|通过了)")
@@ -1338,6 +1358,21 @@ def infer_labels(emotion_vector: dict[str, float], features: dict[str, Any]) -> 
         labels.append("urgent")
     if emotion_vector["frustration"] >= 0.6 or features["frustration_ratio"] >= 0.32 or features["missed_expectation_ratio"] >= 0.34 or features["context_loss_ratio"] >= 0.34 or features["execution_plumbing_ratio"] >= 0.34 or features["resolution_mismatch"] >= 0.5 or features["stall_ratio"] >= 0.5 or (features["stall_ratio"] >= 0.25 and features["delay_pressure"] >= 0.42 and (features["urgency_hits"] >= 1 or features["missed_expectation_ratio"] >= 0.25 or features["same_issue_mentions"] >= 1)) or (features["abrupt_delta"] >= 0.35 and features["delay_pressure"] >= 0.45) or (features["dismissive_pressure"] >= 0.38 and (features["delay_pressure"] >= 0.28 or features["stuck_pressure"] >= 0.42 or features["resolution_mismatch"] >= 0.5)) or (features["stuck_pressure"] >= 0.8 and (features["frustration_ratio"] >= 0.25 or features["stall_ratio"] >= 0.25 or features["delay_pressure"] >= 0.35)) or ((features["contradiction_signal"] >= 0.4 or features["soft_correction"] >= 0.8) and features["same_issue_mentions"] >= 1 and (features["skepticism_ratio"] >= 0.25 or features["speculation_ratio"] >= 0.25 or features["context_loss_ratio"] >= 0.25)) or (features["speculation_ratio"] >= 0.75 and (features["delay_pressure"] >= 0.28 or features["contradiction_signal"] >= 0.28 or features["stuck_pressure"] >= 0.28)) or (features["skepticism_ratio"] >= 0.3 and features["stuck_pressure"] >= 0.52 and features["contradiction_signal"] >= 0.28):
         labels.append("frustrated")
+    if "urgent" not in labels and (
+        (features["urgency_hits"] >= 1 and (features["goal_specificity"] >= 0.25 or features["guardrail_request"] >= 1.0 or features["command_ratio"] >= 0.25))
+        or (features["delay_pressure"] >= 0.6 and (features["frustration_ratio"] >= 0.25 or features["stuck_pressure"] >= 0.55 or features["same_issue_mentions"] >= 1))
+        or (features["frustration_ratio"] >= 0.75 and features["same_issue_mentions"] >= 1 and features["delay_pressure"] >= 0.4)
+        or (features["frustration_ratio"] >= 0.5 and features["same_issue_mentions"] >= 1 and features["delay_pressure"] >= 0.35 and features["stuck_pressure"] >= 0.7)
+        or features["blocking_ratio"] >= 0.25
+    ):
+        labels.append("urgent")
+    if "frustrated" not in labels and (
+        features["blocking_ratio"] >= 0.25
+        or (features["execution_plumbing_ratio"] >= 0.25 and (features["task_object_ratio"] >= 0.25 or features["same_issue_mentions"] >= 1))
+        or (features["frustration_ratio"] >= 0.25 and (features["stuck_pressure"] >= 0.45 or features["delay_pressure"] >= 0.42))
+        or (features["missed_expectation_ratio"] >= 0.25 and (features["evidence_request"] >= 1.0 or features["technical_ratio"] >= 0.15))
+    ):
+        labels.append("frustrated")
     confused_signal = (
         emotion_vector["confusion"] >= 0.58
         and (
@@ -1374,11 +1409,19 @@ def infer_labels(emotion_vector: dict[str, float], features: dict[str, Any]) -> 
         labels.append("confused")
     if emotion_vector["skepticism"] >= 0.42 or features["skepticism_ratio"] >= 0.32 or features["speculation_ratio"] >= 0.25 or features["context_loss_ratio"] >= 0.25 or features["execution_plumbing_ratio"] >= 0.25 or (features["hedge_ratio"] >= 0.34 and (features["contradiction_signal"] >= 0.25 or features["speculation_ratio"] >= 0.25 or features["evidence_request"] >= 1.0)) or features["resolution_mismatch"] >= 0.5 or features["contradiction_signal"] >= 0.45 or features["evidence_request"] >= 1.0 or (features["dismissive_pressure"] >= 0.42 and (features["hedge_ratio"] >= 0.2 or features["contradiction_signal"] >= 0.25 or features["goal_specificity"] >= 0.28)) or (features["missed_expectation_ratio"] >= 0.25 and features["contradiction_signal"] >= 0.24 and features["delay_pressure"] >= 0.5):
         labels.append("skeptical")
+    if "skeptical" not in labels and (
+        features["skepticism_ratio"] >= 0.25
+        or (features["questions"] >= 1 and features["stuck_pressure"] >= 0.5)
+        or (features["evidence_request"] >= 1.0 and features["task_object_ratio"] >= 0.3)
+    ):
+        labels.append("skeptical")
     if emotion_vector["satisfaction"] >= 0.6 or (features["guard_ratio"] >= 0.3 and (features["success_ratio"] >= 0.3 or features["satisfaction_hits"] >= 1 or features["resolution_claimed"] >= 0.5)) or ((features["satisfaction_hits"] >= 1 or features["resolution_claimed"] >= 0.5 or features["success_hits"] >= 1) and features["continue_ratio"] >= 0.25):
         labels.append("satisfied")
     if emotion_vector["cautiousness"] >= 0.42 or features["caution_ratio"] >= 0.3 or features["boundary_ratio"] >= 0.3 or features["assurance_ratio"] >= 0.3 or features["guardrail_request"] >= 1.0 or (features["context_loss_ratio"] >= 0.25 and features["speculation_ratio"] >= 0.25) or (features["context_loss_ratio"] >= 0.25 and features["evidence_request"] >= 1.0 and features["contradiction_signal"] >= 0.25):
         labels.append("cautious")
     if (emotion_vector["openness"] >= 0.4 or features["comparison_request"] >= 1.0) and emotion_vector["urgency"] <= 0.72 and emotion_vector["frustration"] <= 0.72:
+        labels.append("exploratory")
+    if "exploratory" not in labels and features["explore_ratio"] >= 0.3 and (features["comparison_request"] >= 1.0 or features["evidence_request"] >= 1.0 or features["guardrail_request"] >= 1.0) and emotion_vector["frustration"] <= 0.72:
         labels.append("exploratory")
     if not labels:
         labels.append("neutral")
@@ -1552,6 +1595,10 @@ def dominant_mode(emotion_vector: dict[str, float], features: dict[str, Any], sc
         return "cautious"
     if scores["confused"] >= 0.18 and features["explicit_confusion_request"] >= 1.0 and features["evidence_request"] >= 1.0 and features["goal_specificity"] <= 0.18 and features["unresolved_turns"] >= 2 and scores["urgent"] <= 0.32:
         return "confused"
+    if features["comparison_request"] >= 1.0 and scores["exploratory"] >= 0.3 and features["frustration_ratio"] == 0.0 and scores["exploratory"] >= scores["skeptical"] - 0.14:
+        return "exploratory"
+    if scores["frustrated"] >= 0.42 and features["stuck_pressure"] >= 0.8 and features["delay_pressure"] >= 0.5 and features["frustration_ratio"] >= 0.25 and features["urgency_hits"] == 0 and features["blocking_ratio"] < 0.25 and features["comparison_request"] == 0.0:
+        return "frustrated"
     if scores["skeptical"] >= 0.34 and features["evidence_request"] >= 1.0 and scores["urgent"] - scores["skeptical"] <= 0.14:
         return "skeptical"
     if scores["skeptical"] >= 0.34 and features["skepticism_ratio"] >= 0.25 and (features["evidence_request"] >= 1.0 or features["contradiction_signal"] >= 0.3 or features["stuck_pressure"] >= 0.6) and scores["frustrated"] - scores["skeptical"] <= 0.1:
@@ -1561,6 +1608,8 @@ def dominant_mode(emotion_vector: dict[str, float], features: dict[str, Any], sc
     if scores["cautious"] >= 0.28 and features["guardrail_request"] >= 1.0 and scores["urgent"] - scores["cautious"] <= 0.14:
         return "cautious"
     if scores["urgent"] >= 0.5 and (features["urgency_hits"] >= 1 or features["rush_typo_hits"] >= 1 or features["textism_hits"] >= 1):
+        return "urgent"
+    if features["urgency_hits"] >= 1 and features["blocking_ratio"] >= 0.25 and scores["urgent"] >= scores["frustrated"] - 0.12:
         return "urgent"
     if scores["confused"] >= 0.24 and features["explicit_confusion_request"] >= 1.0 and features["goal_specificity"] <= 0.18 and features["evidence_request"] == 0.0 and features["comparison_request"] == 0.0 and features["guardrail_request"] == 0.0 and scores["confused"] >= scores["skeptical"] - 0.04:
         return "confused"
@@ -2009,6 +2058,155 @@ def build_routing(features: dict[str, Any], confirmed: dict[str, Any], predictio
     }
 
 
+def has_vector_signal(raw: Any, dims: tuple[str, ...]) -> bool:
+    return isinstance(raw, dict) and any(dim in raw and raw.get(dim) is not None for dim in dims)
+
+
+def significant_vector_delta(current: dict[str, Any], previous: dict[str, Any], dims: tuple[str, ...], floor: float = 0.05) -> dict[str, float]:
+    deltas: dict[str, float] = {}
+    for dim in dims:
+        try:
+            delta = float(current.get(dim, 0.0)) - float(previous.get(dim, 0.0))
+        except (TypeError, ValueError):
+            continue
+        rounded = round(delta, 4)
+        if abs(rounded) >= floor:
+            deltas[dim] = rounded
+    return deltas
+
+
+def build_state_delta(payload: dict[str, Any], confirmed: dict[str, Any]) -> dict[str, Any]:
+    last_state = payload.get("last_state") or {}
+    previous_vector_raw = last_state.get("vector") if isinstance(last_state, dict) else {}
+    previous_emotion_raw = last_state.get("emotion_vector") if isinstance(last_state, dict) else {}
+    has_interaction = has_vector_signal(previous_vector_raw, STATE_DIMS)
+    has_emotion = has_vector_signal(previous_emotion_raw, EMOTION_DIMS)
+    if not has_interaction and not has_emotion:
+        return {
+            "available": False,
+            "dominant_shift": "new_turn",
+            "emotion": {},
+            "interaction": {},
+        }
+
+    previous_vector = clamp_dict(previous_vector_raw, STATE_DIMS)
+    previous_emotion = clamp_dict(previous_emotion_raw, EMOTION_DIMS)
+    interaction_delta = significant_vector_delta(confirmed["vector"], previous_vector, INTERACTION_DIMS)
+    emotion_delta = significant_vector_delta(confirmed["emotion_vector"], previous_emotion, EMOTION_DIMS)
+    if emotion_delta.get("frustration", 0.0) >= 0.12:
+        dominant_shift = "rising_frustration"
+    elif emotion_delta.get("urgency", 0.0) >= 0.12:
+        dominant_shift = "rising_urgency"
+    elif emotion_delta.get("skepticism", 0.0) >= 0.12 or interaction_delta.get("trust", 0.0) <= -0.12:
+        dominant_shift = "falling_trust"
+    elif emotion_delta.get("confusion", 0.0) >= 0.12 or interaction_delta.get("clarity", 0.0) <= -0.12:
+        dominant_shift = "falling_clarity"
+    elif emotion_delta.get("satisfaction", 0.0) >= 0.12:
+        dominant_shift = "rising_satisfaction"
+    elif not interaction_delta and not emotion_delta:
+        dominant_shift = "stable"
+    else:
+        dominant_shift = "changed"
+    return {
+        "available": True,
+        "dominant_shift": dominant_shift,
+        "emotion": emotion_delta,
+        "interaction": interaction_delta,
+    }
+
+
+def build_route_reasons(
+    features: dict[str, Any],
+    confirmed: dict[str, Any],
+    prediction: dict[str, Any],
+    routing: dict[str, Any],
+    state_delta: dict[str, Any],
+) -> list[str]:
+    mode = confirmed["dominant_mode"]
+    labels = set(confirmed.get("labels") or [])
+    emotion_vector = confirmed["emotion_vector"]
+    reasons: list[str] = []
+    if routing["thread_interface"]["queue_mode"] in {"steer", "interrupt"}:
+        reasons.append("runtime_priority")
+    if mode == "urgent" or emotion_vector["urgency"] >= 0.64 or features.get("delay_pressure", 0.0) >= 0.42:
+        reasons.append("urgent_pressure")
+    if mode == "frustrated" or prediction["frustration_risk"] >= 0.62 or features.get("bug_retries", 0.0) >= 1:
+        reasons.append("repeat_failure_pressure")
+    if mode == "skeptical" or "skeptical" in labels or features.get("evidence_request", 0.0) >= 1.0:
+        reasons.append("evidence_requested")
+    if mode == "cautious" or "cautious" in labels or features.get("guardrail_request", 0.0) >= 1.0:
+        reasons.append("scope_guard_requested")
+    if mode == "confused" or emotion_vector["confusion"] >= 0.58:
+        reasons.append("low_clarity")
+    if mode == "satisfied" or prediction["guard_needed"]:
+        reasons.append("post_success_guard")
+    if prediction["stall_risk"] >= 0.62 or features.get("stall_ratio", 0.0) >= 0.25:
+        reasons.append("stall_risk")
+    if state_delta.get("dominant_shift") in {"rising_frustration", "falling_trust", "falling_clarity"}:
+        reasons.append(str(state_delta["dominant_shift"]))
+    if features.get("goal_specificity", 0.0) >= 0.48:
+        reasons.append("task_specific")
+    return unique_labels(reasons)[:6]
+
+
+def build_satisfaction_lock(features: dict[str, Any], confirmed: dict[str, Any], prediction: dict[str, Any]) -> dict[str, Any]:
+    mode = confirmed["dominant_mode"]
+    emotion_vector = confirmed["emotion_vector"]
+    active = bool(mode == "satisfied" or prediction["guard_needed"] or features.get("success_ratio", 0.0) >= 0.34)
+    if not active:
+        return {
+            "active": False,
+            "reason": "inactive",
+            "allowed_actions": [],
+            "blocked_actions": [],
+        }
+    if features.get("guard_ratio", 0.0) >= 0.34:
+        reason = "post_success_guard"
+    elif emotion_vector["satisfaction"] >= 0.5:
+        reason = "user_satisfied"
+    elif features.get("resolution_claimed", 0.0) >= 1.0:
+        reason = "resolution_claimed"
+    else:
+        reason = "guard_needed"
+    return {
+        "active": True,
+        "reason": reason,
+        "allowed_actions": ["summarize_result", "run_regression_check", "prepare_handoff"],
+        "blocked_actions": ["expand_scope", "start_new_refactor", "change_config_without_request"],
+    }
+
+
+def build_response_constraints(
+    confirmed: dict[str, Any],
+    routing: dict[str, Any],
+    prediction: dict[str, Any],
+    satisfaction_lock: dict[str, Any],
+) -> list[str]:
+    mode = confirmed["dominant_mode"]
+    constraints: list[str] = []
+    if mode == "urgent":
+        constraints.extend(["lead_with_action", "keep_first_reply_short", "progress_update_required"])
+    elif mode == "frustrated":
+        constraints.extend(["repair_before_explain", "avoid_repeating_failed_path", "progress_update_required"])
+    elif mode == "skeptical":
+        constraints.extend(["show_basis_first", "name_verification_steps", "avoid_guessing"])
+    elif mode == "cautious":
+        constraints.extend(["verify_before_editing", "keep_scope_tight", "protect_user_boundaries"])
+    elif mode == "confused":
+        constraints.extend(["explain_next_step", "ask_at_most_one_question"])
+    elif mode == "satisfied":
+        constraints.extend(["guard_mode", "avoid_scope_expansion", "close_with_regression_check"])
+    else:
+        constraints.extend(["state_recommendation_first", "expand_only_when_useful"])
+    if routing["verification_level"] in {"high", "very_high"}:
+        constraints.append("include_check_result")
+    if prediction["next_update_deadline_sec"] <= 20:
+        constraints.append("progress_update_required")
+    if satisfaction_lock["active"]:
+        constraints.extend(["avoid_scope_expansion", "close_with_regression_check"])
+    return unique_labels(constraints)[:8]
+
+
 def build_guidance(features: dict[str, Any], confirmed: dict[str, Any], prediction: dict[str, Any]) -> dict[str, Any]:
     mode = confirmed["dominant_mode"]
     language = features["language"]
@@ -2281,6 +2479,10 @@ def run_pipeline(payload: dict[str, Any]) -> dict[str, Any]:
     prediction = predict_state(features, confirmed)
     analysis = build_analysis_plan(features, screen, confirmed, prediction)
     routing = build_routing(features, confirmed, prediction)
+    state_delta = build_state_delta(normalized_payload, confirmed)
+    route_reasons = build_route_reasons(features, confirmed, prediction, routing, state_delta)
+    satisfaction_lock = build_satisfaction_lock(features, confirmed, prediction)
+    response_constraints = build_response_constraints(confirmed, routing, prediction, satisfaction_lock)
     guidance = build_guidance(features, confirmed, prediction)
     posthoc_plan = build_posthoc_plan(features, confirmed, analysis, weight_schedule)
     posthoc_shadow = build_posthoc_shadow(normalized_payload, features, confirmed, analysis, posthoc_plan)
@@ -2311,6 +2513,10 @@ def run_pipeline(payload: dict[str, Any]) -> dict[str, Any]:
         "prediction": prediction,
         "analysis": analysis,
         "routing": routing,
+        "route_reasons": route_reasons,
+        "response_constraints": response_constraints,
+        "state_delta": state_delta,
+        "satisfaction_lock": satisfaction_lock,
         "guidance": guidance,
         "overlay_prompt": overlay_prompt,
         "debug_overlay_prompt": debug_overlay_prompt,
@@ -2396,6 +2602,9 @@ def build_host_output(full: dict[str, Any]) -> dict[str, Any]:
         "labels": confirmed["labels"],
         "confidence": confirmed["confidence"],
         "overlay_prompt": full["overlay_prompt"],
+        "route_reasons": full["route_reasons"],
+        "response_constraints": full["response_constraints"],
+        "satisfaction_lock": full["satisfaction_lock"],
         "routing": {
             "reply_style": routing["reply_style"],
             "verification_level": routing["verification_level"],
@@ -2416,6 +2625,7 @@ def build_host_output(full: dict[str, Any]) -> dict[str, Any]:
         "state": {
             "emotion_vector": confirmed["emotion_vector"],
             "interaction_state": confirmed["interaction_state"],
+            "state_delta": full["state_delta"],
         },
         "memory": {
             "should_persist": memory_update["should_persist"],

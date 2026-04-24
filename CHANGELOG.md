@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.1.3 - 2026-04-24
+
+- added compact `route_reasons` and `response_constraints` for host-side orchestration
+- added `state.state_delta` to expose significant cross-turn shifts from `last_state`
+- added `satisfaction_lock` for post-success closeout and regression-guard behavior
+- expanded smoke and independent audits for the new host control fields
+
 ## 1.1.2 - 2026-04-24
 
 - added a compact `host` CLI output for integration previews and runtime adapters

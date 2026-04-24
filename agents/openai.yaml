@@ -1,7 +1,7 @@
 interface:
   display_name: "情绪.skill / Emotion Skill"
   short_description: "让 Coding Agent 读懂用户状态：急了先动手，怀疑先给依据，担心越界就收紧 scope，成功后自动收口。"
-  default_prompt: "Use $emotion-skill on coding-agent turns to read user state from the latest message, history, retries, and delay pressure. Apply the compact host output to set overlay_prompt, reply style, verification depth, queue mode, progress cadence, and post-success guard behavior for repo debugging and scoped coding work."
+  default_prompt: "Use $emotion-skill on coding-agent turns to read user state from the latest message, history, retries, and delay pressure. Apply the compact host output to set overlay_prompt, route reasons, response constraints, reply style, verification depth, queue mode, progress cadence, state deltas, and post-success guard behavior for repo debugging and scoped coding work."
 
 policy:
   allow_implicit_invocation: true

@@ -1,6 +1,6 @@
 ---
 name: emotion-skill
-description: Emotion-aware orchestration for coding agents. Use when a coding agent needs to adapt behavior during repo debugging, scoped implementation, repeated-failure recovery, evidence-demanding review, cautious changes, or post-success stabilization. Detect urgency, frustration, skepticism, confusion, caution, satisfaction, and openness from the latest turn, dialogue history, retries, and delay pressure, then return overlay_prompt, reply style, verification depth, queue mode, progress cadence, and guard behavior.
+description: Emotion-aware orchestration for coding agents. Use when a coding agent needs to adapt behavior during repo debugging, scoped implementation, repeated-failure recovery, evidence-demanding review, cautious changes, or post-success stabilization. Detect urgency, frustration, skepticism, confusion, caution, satisfaction, and openness from the latest turn, dialogue history, retries, and delay pressure, then return overlay_prompt, route reasons, response constraints, reply style, verification depth, queue mode, progress cadence, and guard behavior.
 metadata:
   openclaw:
     emoji: "🎛️"
@@ -27,9 +27,9 @@ The same coding task should route differently when the user state changes:
 - when the user turns cautious, it tightens scope
 - when the user is already satisfied, it stops pushing and switches to closing mode
 
-它把这些信号翻译成 `overlay_prompt`、回复风格、验证强度、队列模式、进度节奏和成功后守护策略。
+它把这些信号翻译成 `overlay_prompt`、路由原因、回复约束、验证强度、队列模式、进度节奏和成功后守护策略。
 
-It converts those signals into `overlay_prompt`, reply style, verification depth, queue mode, progress cadence, and post-success guard behavior.
+It converts those signals into `overlay_prompt`, route reasons, response constraints, verification depth, queue mode, progress cadence, and post-success guard behavior.
 
 它盯着一轮对话里那些细小但真实的东西：
 
@@ -199,23 +199,27 @@ python scripts/minimal_host_adapter.py --event demo/local_history_event.json --s
 
 1. 把 `overlay_prompt` 塞进当前这一轮，当成一个很小的动态前置提示。
 2. 用 `routing` 接队列、线程、heartbeat 和子任务路由；完整 `run` 输出里还有 `routing.thread_interface` 的细分字段。
-3. 如果 `guidance.hook_mode` 是 `latent`，先用 `guidance.soft_probe_seed`。只有真的值得打断用户时，再用 `guidance.question`。
-4. 先看 `analysis.semantic_pass`。它是 `fast` 的时候，再去跑模型语义复核。
-5. 如果你想让模型也参与判断，去看 `references/model-prompts.md`，把结果按 `llm_semantic` 回填。
-6. 看状态时先看 `state.emotion_vector`、`labels` 和 `mode`；调权或排查时再切到完整 `run` 输出看 `mode_scores`。
-7. 冷启动阶段建议让 review pass 跟随每轮一起运行；一致性升高后，把它压缩成一个很短的 shadow review。
-8. 等 `calibration_state.consistency_rate` 和 `consistency_samples` 长起来，再慢慢抬高前置权重。
+3. 用 `route_reasons` 做路由日志，用 `response_constraints` 约束下一轮输出。
+4. 如果 `satisfaction_lock.active` 为 true，把 Agent 锁到收口、回归和交付说明。
+5. 如果 `guidance.hook_mode` 是 `latent`，先用 `guidance.soft_probe_seed`。只有真的值得打断用户时，再用 `guidance.question`。
+6. 先看 `analysis.semantic_pass`。它是 `fast` 的时候，再去跑模型语义复核。
+7. 如果你想让模型也参与判断，去看 `references/model-prompts.md`，把结果按 `llm_semantic` 回填。
+8. 看状态时先看 `state.emotion_vector`、`state.state_delta`、`labels` 和 `mode`；调权或排查时再切到完整 `run` 输出看 `mode_scores`。
+9. 冷启动阶段建议让 review pass 跟随每轮一起运行；一致性升高后，把它压缩成一个很短的 shadow review。
+10. 等 `calibration_state.consistency_rate` 和 `consistency_samples` 长起来，再慢慢抬高前置权重。
 
 Then wire it in like this:
 
 1. Drop `overlay_prompt` into the current turn as a small dynamic pre-prompt.
 2. Feed `routing` into queueing, thread priority, heartbeat, and subagent routing; the full `run` output keeps the deeper `routing.thread_interface` fields.
-3. If `guidance.hook_mode` is `latent`, start with `guidance.soft_probe_seed`. Reach for `guidance.question` only when the interruption is worth it.
-4. Check `analysis.semantic_pass` first. Only run the semantic model pass when it says `fast`.
-5. If you want model-side judgment, read `references/model-prompts.md` and feed the result back as `llm_semantic`.
-6. Read `state.emotion_vector`, `labels`, and `mode` first. Use the full `run` output for `mode_scores` when tuning or debugging.
-7. During cold start, keep the review pass available on each turn. As consistency rises, compress it into a short shadow review.
-8. Raise front weight only after `calibration_state.consistency_rate` and `consistency_samples` become believable.
+3. Use `route_reasons` for route logging and `response_constraints` to shape the next reply.
+4. If `satisfaction_lock.active` is true, keep the agent in closeout, regression, and handoff mode.
+5. If `guidance.hook_mode` is `latent`, start with `guidance.soft_probe_seed`. Reach for `guidance.question` only when the interruption is worth it.
+6. Check `analysis.semantic_pass` first. Only run the semantic model pass when it says `fast`.
+7. If you want model-side judgment, read `references/model-prompts.md` and feed the result back as `llm_semantic`.
+8. Read `state.emotion_vector`, `state.state_delta`, `labels`, and `mode` first. Use the full `run` output for `mode_scores` when tuning or debugging.
+9. During cold start, keep the review pass available on each turn. As consistency rises, compress it into a short shadow review.
+10. Raise front weight only after `calibration_state.consistency_rate` and `consistency_samples` become believable.
 
 ## Input Contract
 
@@ -412,6 +416,10 @@ Key fields:
 - `defer_heartbeat`
 - `allow_parallel_subagents`
 - `progress_update_interval_sec`
+- `route_reasons`
+- `response_constraints`
+- `satisfaction_lock`
+- `state.state_delta`
 - `openclaw`
 - `hermes`
 

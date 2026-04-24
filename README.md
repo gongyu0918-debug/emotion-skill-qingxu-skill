@@ -4,7 +4,7 @@
 
 Emotion Skill is a small routing layer for coding agents. It reads the latest user turn, optional history, runtime pressure, and a local profile, then returns concrete instructions for how the agent should work this turn.
 
-It helps an agent notice signals like "this is still broken", "show me the basis", "keep the scope tight", or "this works now, finish cleanly" and convert them into queue priority, verification depth, reply style, progress cadence, and guard behavior.
+It helps an agent notice signals like "this is still broken", "show me the basis", "keep the scope tight", or "this works now, finish cleanly" and convert them into queue priority, verification depth, reply style, progress cadence, guard behavior, and compact route reasons.
 
 ## What Changes
 
@@ -31,6 +31,8 @@ Example shape:
 {
   "mode": "skeptical",
   "labels": ["frustrated", "skeptical"],
+  "route_reasons": ["runtime_priority", "repeat_failure_pressure", "evidence_requested"],
+  "response_constraints": ["show_basis_first", "name_verification_steps", "avoid_guessing"],
   "overlay_prompt": "<state mode=skeptical ...>",
   "routing": {
     "reply_style": "evidence_then_act",
@@ -41,6 +43,12 @@ Example shape:
   },
   "memory": {
     "should_persist": false
+  },
+  "state": {
+    "state_delta": {
+      "available": false,
+      "dominant_shift": "new_turn"
+    }
   }
 }
 ```
@@ -66,6 +74,10 @@ Use these fields first:
 - `routing.verification_level`: choose how much checking to do before acting.
 - `routing.queue_mode`: choose whether to collect, steer, or interrupt work.
 - `routing.progress_update_interval_sec`: set the progress update cadence.
+- `route_reasons`: log why the route changed without exposing raw user text.
+- `response_constraints`: feed direct guardrails into the next agent response.
+- `satisfaction_lock`: keep successful work in closeout/regression mode.
+- `state.state_delta`: compare this turn with the previous host-owned state.
 - `memory.should_persist`: decide whether the host should merge the proposed profile update.
 
 Minimal event:
@@ -90,6 +102,13 @@ The full contract and advanced fields live in [SKILL.md](./SKILL.md).
 ## User Experience Boundary
 
 The core engine is stateless. It returns JSON and writes nothing by itself.
+
+The new host control fields are derived codes and small numeric deltas. They are safe to ignore in older hosts and useful for silent improvements in newer hosts:
+
+- route logging: `route_reasons`
+- reply shaping: `response_constraints`
+- post-success drift control: `satisfaction_lock`
+- cross-turn trend detection: `state.state_delta`
 
 The minimal host adapter can persist three host-owned JSON files when you want cross-turn adaptation:
 
@@ -133,6 +152,7 @@ The compact `host` output uses these fields:
 
 - `state.emotion_vector.confusion`: user uncertainty or disorientation.
 - `state.interaction_state.clarity`: task clarity inferred from wording and context.
+- `state.state_delta`: significant cross-turn changes compared with `last_state`.
 - `labels`: concurrent states that matter this turn.
 - `mode`: the state that drives routing for this turn.
 

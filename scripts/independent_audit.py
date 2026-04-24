@@ -50,6 +50,10 @@ def main() -> int:
         "prediction",
         "analysis",
         "routing",
+        "route_reasons",
+        "response_constraints",
+        "state_delta",
+        "satisfaction_lock",
         "guidance",
         "overlay_prompt",
         "prompts",
@@ -116,6 +120,10 @@ def main() -> int:
         and isinstance(host_parsed, dict)
         and "overlay_prompt" in host_parsed
         and "routing" in host_parsed
+        and isinstance(host_parsed.get("route_reasons"), list)
+        and isinstance(host_parsed.get("response_constraints"), list)
+        and isinstance(host_parsed.get("satisfaction_lock"), dict)
+        and isinstance((host_parsed.get("state") or {}).get("state_delta"), dict)
         and "features" not in host_parsed
         and "prompts" not in host_parsed
         and isinstance(host_parsed.get("memory"), dict)
@@ -124,6 +132,33 @@ def main() -> int:
         "host_output_contract",
         host_contract_ok,
         {"exit_code": host_code, "keys": sorted(host_parsed.keys()) if isinstance(host_parsed, dict) else [], "raw": host_raw[:400]},
+        findings,
+    )
+
+    delta_result = ee.run_pipeline(
+        {
+            "message": "这个又坏了，先给我失败路径。",
+            "last_state": {
+                "vector": {"urgency": 0.15, "frustration": 0.12, "clarity": 0.82, "satisfaction": 0.52, "trust": 0.76, "engagement": 0.42},
+                "emotion_vector": {"urgency": 0.1, "frustration": 0.12, "confusion": 0.08, "skepticism": 0.12, "satisfaction": 0.52, "cautiousness": 0.18, "openness": 0.18},
+            },
+            "runtime": {"bug_retries": 2, "same_issue_mentions": 2, "unresolved_turns": 2},
+        }
+    )
+    delta_ok = (
+        delta_result["state_delta"]["available"] is True
+        and delta_result["state_delta"]["dominant_shift"] in {"rising_frustration", "falling_trust", "changed"}
+        and "repeat_failure_pressure" in delta_result["route_reasons"]
+        and isinstance(delta_result["response_constraints"], list)
+    )
+    record(
+        "host_state_delta_and_route_reasons",
+        delta_ok,
+        {
+            "state_delta": delta_result["state_delta"],
+            "route_reasons": delta_result["route_reasons"],
+            "response_constraints": delta_result["response_constraints"],
+        },
         findings,
     )
 
@@ -353,7 +388,12 @@ def main() -> int:
     )
 
     satisfied = ee.run_pipeline({"message": "好了，主流程通了，开始收口"})
-    release_guard_ok = satisfied["confirmed_state"]["dominant_mode"] == "satisfied" and satisfied["routing"]["reply_style"] == "guard_then_close"
+    release_guard_ok = (
+        satisfied["confirmed_state"]["dominant_mode"] == "satisfied"
+        and satisfied["routing"]["reply_style"] == "guard_then_close"
+        and satisfied["satisfaction_lock"]["active"] is True
+        and "avoid_scope_expansion" in satisfied["response_constraints"]
+    )
     record(
         "post_success_guard",
         release_guard_ok,
@@ -361,6 +401,8 @@ def main() -> int:
             "mode": satisfied["confirmed_state"]["dominant_mode"],
             "reply_style": satisfied["routing"]["reply_style"],
             "labels": satisfied["confirmed_state"]["labels"],
+            "satisfaction_lock": satisfied["satisfaction_lock"],
+            "response_constraints": satisfied["response_constraints"],
         },
         findings,
     )

@@ -165,7 +165,14 @@ def check_direct_cases(failures: list[dict[str, Any]]) -> list[dict[str, Any]]:
     cases = [
         {"id": "urgent_short_cn_no_runtime", "payload": {"message": "快一点，这个问题还没修好"}, "mode_in": ["urgent"], "labels_all": ["urgent"]},
         {"id": "cautious_boundary_cn_no_runtime", "payload": {"message": "只改这个文件，别碰配置"}, "mode_in": ["cautious"], "labels_all": ["cautious"]},
-        {"id": "satisfied_guard_cn_no_runtime", "payload": {"message": "好了，主流程通了，开始收口"}, "mode_in": ["satisfied"], "labels_all": ["satisfied"]},
+        {
+            "id": "satisfied_guard_cn_no_runtime",
+            "payload": {"message": "好了，主流程通了，开始收口"},
+            "mode_in": ["satisfied"],
+            "labels_all": ["satisfied"],
+            "satisfaction_lock_active": True,
+            "constraints_all": ["avoid_scope_expansion"],
+        },
         {
             "id": "local_history_thread_cn",
             "payload": json.loads(DEMO_EVENT.read_text(encoding="utf-8")),
@@ -178,14 +185,27 @@ def check_direct_cases(failures: list[dict[str, Any]]) -> list[dict[str, Any]]:
         result = ee.run_pipeline(case["payload"])
         mode = result["confirmed_state"]["dominant_mode"]
         labels = result["confirmed_state"]["labels"]
+        constraints = result.get("response_constraints", [])
         ok = mode in case["mode_in"] and all(label in labels for label in case["labels_all"])
+        if "satisfaction_lock_active" in case:
+            ok = ok and result.get("satisfaction_lock", {}).get("active") is case["satisfaction_lock_active"]
+        if case.get("constraints_all"):
+            ok = ok and all(item in constraints for item in case["constraints_all"])
         assert_check(
             case["id"],
             ok,
-            {"mode": mode, "labels": labels, "expected_mode_in": case["mode_in"], "expected_labels": case["labels_all"]},
+            {
+                "mode": mode,
+                "labels": labels,
+                "expected_mode_in": case["mode_in"],
+                "expected_labels": case["labels_all"],
+                "route_reasons": result.get("route_reasons"),
+                "response_constraints": constraints,
+                "satisfaction_lock": result.get("satisfaction_lock"),
+            },
             failures,
         )
-        rows.append({"id": case["id"], "mode": mode, "labels": labels})
+        rows.append({"id": case["id"], "mode": mode, "labels": labels, "route_reasons": result.get("route_reasons")})
     return rows
 
 
@@ -204,7 +224,13 @@ def check_cli_demo(failures: list[dict[str, Any]]) -> dict[str, Any]:
     )
     assert_check(
         "cli_host_contract_compact",
-        "features" not in parsed and "prompts" not in parsed and bool(parsed.get("overlay_prompt")),
+        "features" not in parsed
+        and "prompts" not in parsed
+        and bool(parsed.get("overlay_prompt"))
+        and isinstance(parsed.get("route_reasons"), list)
+        and isinstance(parsed.get("response_constraints"), list)
+        and isinstance(parsed.get("satisfaction_lock"), dict)
+        and isinstance((parsed.get("state") or {}).get("state_delta"), dict),
         {"keys": sorted(parsed.keys())},
         failures,
     )
