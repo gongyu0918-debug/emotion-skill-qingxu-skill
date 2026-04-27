@@ -1,7 +1,7 @@
 interface:
   display_name: "情绪.skill / Emotion Skill"
-  short_description: "把用户状态转成正向执行提示：先依据、先验证、先收口，避免 raw 情绪向量污染模型回复。"
-  default_prompt: "Use $emotion-skill on coding-agent turns to read user state from the latest message, history, retries, delay pressure, and optional last_routing_outcome. Apply guidance.system_prompt_addendum, overlay_prompt, route reasons, response constraints, reply style, verification depth, queue mode, progress cadence, action-named state deltas, and post-success guard behavior. Keep raw labels and emotion_vector internal unless host_capabilities.include_raw_emotion is explicitly enabled for audit."
+  short_description: "Positive routing for coding agents under pressure: evidence first, scope protected, progress visible, closeout guarded."
+  default_prompt: "Use $emotion-skill on coding-agent turns when the user asks for evidence, repeats a failed bug, protects scope, waits through a delay, or wants closeout. Apply guidance.system_prompt_addendum first, then response_constraints, routing, progress cadence, action-named state deltas, and satisfaction_lock. Keep raw labels and emotion_vector out of the model prompt unless host_capabilities.include_raw_emotion is explicitly enabled for audit."
 
 policy:
   allow_implicit_invocation: true

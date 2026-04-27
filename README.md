@@ -1,30 +1,49 @@
 # Emotion Skill
 
-[简体中文 README](./README.zh-CN.md)
+[简体中文](./README.zh-CN.md) · [GitHub](https://github.com/gongyu0918-debug/emotion-skill-qingxu-skill) · `clawhub install emotion-skill`
 
-Emotion Skill is a small orchestration layer for coding agents. It reads the latest user turn, recent history, runtime pressure, and optional local profile state, then returns a compact JSON contract that tells the agent how to work this turn.
+Positive routing for coding agents when the conversation gets tense, vague, blocked, or ready to close.
 
-It is built for the moments where a coding agent usually loses trust: repeated failures, vague stuck states, evidence requests, scope anxiety, and the handoff after success.
+Emotion Skill reads user-state signals internally, then gives the host LLM a positive execution policy: what to verify first, how much scope to protect, when to stay on the main thread, and when to stop expanding work after success.
 
 ![Python](https://img.shields.io/badge/python-3.9%2B-3776AB)
 ![Dependencies](https://img.shields.io/badge/dependencies-standard%20library-2E7D32)
+![Runtime](https://img.shields.io/badge/runtime-no%20network-455A64)
 ![License](https://img.shields.io/badge/license-MIT-blue)
 
-## Why It Exists
+## Why People Install It
 
-The same coding request should route differently when the user state changes.
+Coding agents often fail in the same human moments:
 
-| User signal | Runtime behavior |
+- The user says the same bug still happens, and the agent keeps explaining.
+- The user asks for evidence, and the agent keeps guessing.
+- The user protects scope, and the agent touches nearby files.
+- The user says it works, and the agent starts a new refactor.
+- The user gets vague after a long delay, and the agent misses the pressure.
+
+This skill turns those moments into host-readable routing fields and a positive `system_prompt_addendum`. Raw affect signals stay internal unless you explicitly opt in for audit.
+
+## What It Changes
+
+| User signal | Host behavior |
 |---|---|
-| "This is still broken" | keep the main thread focused, raise verification, shorten updates |
-| "Show me the basis" | show evidence, exact checks, and failure path before edits |
-| "Only touch this file" | tighten scope, avoid config drift, verify first |
-| "I am lost on the path" | align the goal, explain the next step, ask at most one clarifier |
+| "This is still broken" | raise verification, keep work on the main thread, shorten progress updates |
+| "Show me the basis" | start with a command, log, test, or exact check before the conclusion |
+| "Only touch this file" | tighten scope, protect config, name rollback path |
+| "I am lost on the path" | restate the target, give one correctable default path |
 | "Works now, wrap it up" | enter guard mode, run regression checks, stop scope drift |
 
-The default host output is intentionally bounded: it turns internal state into positive action prompts and avoids exposing raw affect vectors to the model.
-
 ## Install
+
+From ClawHub:
+
+```bash
+clawhub install emotion-skill
+cd skills/emotion-skill
+python scripts/download_smoke.py
+```
+
+From GitHub:
 
 ```bash
 git clone https://github.com/gongyu0918-debug/emotion-skill-qingxu-skill.git
@@ -36,33 +55,23 @@ Requirements:
 
 - Python `3.9+`
 - standard library only
+- no network calls from the runtime engine
 
-Optional local Codex-style skill install:
-
-```bash
-cp -r . ~/.codex/skills/emotion-skill
-```
-
-PowerShell:
-
-```powershell
-Copy-Item -LiteralPath . -Destination $HOME\.codex\skills\emotion-skill -Recurse -Force
-```
-
-## 30-Second Demo
+## Try It
 
 ```bash
-python scripts/emotion_engine.py host --message "This is still not fixed. Show me the basis before changing more files." --pretty
+python scripts/emotion_engine.py host \
+  --message "This is still not fixed. Show me the basis before changing more files." \
+  --pretty
 ```
 
-Expected shape:
+Default host output is designed for production prompts:
 
 ```json
 {
   "mode": "skeptical",
   "route_reasons": ["repeat_failure_pressure", "evidence_requested"],
   "response_constraints": ["show_basis_first", "name_verification_steps"],
-  "overlay_prompt": "<state mode=skeptical ...>",
   "guidance": {
     "system_prompt_addendum": "The user wants evidence before more changes. Start with a verification point, command, or log excerpt, then give the conclusion and next step.",
     "tone": "evidence_first"
@@ -72,103 +81,67 @@ Expected shape:
     "verification_level": "high",
     "queue_mode": "collect",
     "prefer_main_thread": true
-  },
-  "satisfaction_lock": {
-    "active": false
   }
 }
 ```
 
-Run the bundled local-history event:
-
-```bash
-python scripts/emotion_engine.py host --input demo/local_history_event.json --pretty
-```
-
-Preview host-side persistence without writing state:
-
-```bash
-python scripts/minimal_host_adapter.py --event demo/local_history_event.json --store-dir .demo-store --view host --no-persist --pretty
-```
+Notice what is absent by default: no raw `labels`, no raw `emotion_vector`, no negative state phrase such as `falling_trust`.
 
 ## Host Contract
 
-Use `host` for runtime integration. It returns the compact fields most hosts need:
+Use `host` for runtime integration. The most important fields are:
 
-- `overlay_prompt`: small per-turn state hint for the agent.
-- `mode`: primary orchestration mode for this turn.
-- `route_reasons`: compact route log safe for telemetry.
-- `response_constraints`: direct guardrails for the next response.
-- `guidance.system_prompt_addendum`: positive action prompt for the host LLM.
-- `guidance.tone`: compact tone target such as `evidence_first` or `careful_and_bounded`.
-- `routing.reply_style`: response posture such as `repair_then_explain`, `evidence_then_act`, or `verify_then_act`.
-- `routing.verification_level`: checking depth before edits.
-- `routing.queue_mode`: collect, steer, or interrupt work.
-- `routing.progress_update_interval_sec`: progress cadence.
-- `satisfaction_lock`: post-success guard and closeout behavior.
-- `interaction_state`: positive host-facing axes: clarity, trust, and engagement.
-- `state.state_delta`: action-named cross-turn shifts such as `needs_evidence_first`.
-- `memory.should_persist`: recommendation for merging profile updates.
+- `guidance.system_prompt_addendum`: positive instruction text for the host LLM.
+- `response_constraints`: compact guardrails for the next reply.
+- `routing.reply_style`: posture such as `evidence_then_act`, `repair_then_explain`, or `verify_then_act`.
+- `routing.verification_level`: how much checking to do before editing.
+- `routing.queue_mode`: collect, steer, or interrupt current work.
+- `routing.progress_update_interval_sec`: progress cadence for long turns.
+- `satisfaction_lock`: closeout guard after success.
+- `interaction_state`: positive host-facing axes: clarity, trust, engagement.
+- `state.state_delta`: action-named shifts such as `needs_evidence_first`.
+- `memory.should_persist`: recommendation for host-owned profile storage.
 
-Raw affect fields are internal by default. For audit and calibration, pass:
+The full `run` command keeps diagnostics, features, prompts, and calibration fields for research and regression work.
+
+## Raw Affect Is Opt-In
+
+Production hosts should feed the model `guidance.system_prompt_addendum`, `response_constraints`, and `routing`.
+
+Audit tools can request raw internal state:
 
 ```json
 {
-  "message": "Show me the basis first.",
+  "message": "Show me the exact failing path first.",
   "host_capabilities": {
     "include_raw_emotion": true
   }
 }
 ```
 
-That adds `diagnostics.internal.labels` and `diagnostics.internal.emotion_vector` while keeping the default host state clean.
+That adds:
 
-Minimal input:
+- `diagnostics.internal.labels`
+- `diagnostics.internal.emotion_vector`
+- `diagnostics.internal.state_delta`
+- `diagnostics.internal.mode_scores`
+
+## Feedback Loop
+
+Hosts can pass the previous route outcome into the next turn:
 
 ```json
 {
-  "message": "This is still not fixed. Show me the basis before changing more files."
-}
-```
-
-Useful optional fields:
-
-```json
-{
-  "message": "Only touch the parser file and show the failing path first.",
-  "history": [
-    {"role": "assistant", "text": "I think the last patch fixed it."}
-  ],
   "runtime": {
-    "response_delay_seconds": 20,
-    "unresolved_turns": 3,
-    "bug_retries": 2,
-    "same_issue_mentions": 2,
     "last_routing_outcome": {
       "mode_was": "skeptical",
       "user_followed_up_with": "still broken"
     }
-  },
-  "last_state": {},
-  "calibration_state": {},
-  "user_profile": {}
+  }
 }
 ```
 
-Top-level payloads must be JSON objects. Malformed JSON, missing files, and top-level arrays return exit code `2` with a single-line error.
-
-## Output Modes
-
-| Command | Use it for |
-|---|---|
-| `host` | runtime integration and compact host output |
-| `run` | full diagnostics, prompts, features, prediction, and review plans |
-| `screen` | deterministic first pass over text, history, and runtime hints |
-| `confirm` | final state after rule screen and optional semantic input |
-| `route` | routing-only inspection |
-| `guide` | short-probe guidance |
-| `overlay` | prompt overlay inspection |
-| `posthoc` | review-pass and calibration debugging |
+This gives the router a lightweight effect signal without adding a model-training pipeline.
 
 ## Persistence Boundary
 
@@ -180,13 +153,7 @@ The minimal host adapter can persist three host-owned files under `--store-dir`:
 - `last_state.json`
 - `calibration_state.json`
 
-Use `--no-persist` for read-only previews. Reset local adaptation by deleting those three files. Corrupt store files report the exact path; `--ignore-bad-store` skips corrupt store values and continues from empty state.
-
-## Language Coverage
-
-Chinese and English have explicit calibration for shared emotion cues, community phrasing, punctuation habits, pauses, rushed typos, and coding-agent failure reports.
-
-Other languages use generic punctuation, repetition, delay, and structure signals. Treat those outputs as weaker routing hints.
+Use `--no-persist` for read-only previews. Use `--ignore-bad-store` to skip corrupt local store files and continue from empty values.
 
 ## Validation
 
@@ -196,7 +163,7 @@ Published-bundle smoke:
 python scripts/download_smoke.py
 ```
 
-Full GitHub validation:
+Full repository validation:
 
 ```bash
 python scripts/alignment_test.py
@@ -208,14 +175,13 @@ python scripts/feature_gate_audit.py
 python scripts/bundle_manifest_check.py
 ```
 
-Verified locally on 2026-04-27 with Python 3.11.9:
+Current local results:
 
 - alignment regression: `70/70`
-- curated ablation harness: `333/333`
-- static baseline in the same harness: `18/333`
-- smoke strict: `ok`
+- ablation harness: `333/333`
+- strict smoke: `ok`
 - independent audit: `ok`
-- marketplace tag audit: `ok`
+- marketplace scope audit: `ok`
 - feature gate audit: `ok`
 - download smoke: `ok`
 - bundle manifest check: `ok`
@@ -240,15 +206,13 @@ ClawHub ships the runtime-facing subset:
 - `references/emotion-policy-matrix.md`
 - `references/integration-openclaw-hermes.md`
 
-The GitHub repository keeps the regression, audit, and calibration surface.
+The GitHub repository keeps the heavier regression, audit, and calibration files.
 
-## Integration Notes
+## Good Fit
 
-- OpenClaw and Hermes wiring: [references/integration-openclaw-hermes.md](./references/integration-openclaw-hermes.md)
-- Behavior examples: [references/examples.md](./references/examples.md)
-- Policy matrix: [references/emotion-policy-matrix.md](./references/emotion-policy-matrix.md)
-- Value model: [references/emotion-value-model.md](./references/emotion-value-model.md)
-- Model prompts: [references/model-prompts.md](./references/model-prompts.md)
+- Coding agents that need better turn-by-turn behavior under pressure.
+- Hosts that want routing fields, progress cadence, and verification depth.
+- Teams that want emotion-aware behavior without exposing raw emotion text to the model.
 
 ## License
 

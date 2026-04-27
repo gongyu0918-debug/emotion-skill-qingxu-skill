@@ -1,6 +1,6 @@
 ---
 name: emotion-skill
-description: Emotion-aware orchestration for coding agents. Use when a coding agent needs to adapt behavior during repo debugging, scoped implementation, repeated-failure recovery, evidence-demanding review, cautious changes, or post-success stabilization. Detect user-state signals internally, then return positive system prompt addenda, route reasons, response constraints, reply style, verification depth, queue mode, progress cadence, and guard behavior.
+description: Positive routing for coding agents under pressure. Use when repo debugging, scoped implementation, repeated-failure recovery, evidence-demanding review, cautious file changes, or post-success closeout need better runtime behavior. Detect user-state signals internally, then return positive system prompt addenda, route reasons, response constraints, reply style, verification depth, queue mode, progress cadence, and guard behavior.
 metadata:
   openclaw:
     emoji: "🎛️"
@@ -9,75 +9,36 @@ metadata:
 
 # Emotion Skill
 
-Emotion Skill gives coding agents a small read-the-room router.
+Emotion Skill is a small runtime router for coding agents.
 
-It turns user-state signals into execution policy:
+It reads the latest user turn, recent dialogue, retries, delay pressure, optional host state, and optional feedback from the last routing decision. It then returns a compact host contract that tells the agent how to work this turn.
 
-- urgency -> stay on the main thread, shorten updates, act first
-- frustration -> repair first, raise verification, keep progress visible
-- skepticism -> show basis, exact checks, and failure path before edits
-- caution -> tighten scope, protect config, verify before changing files
-- confusion -> explain one next step and ask at most one clarifier
-- satisfaction -> switch to closeout, regression checks, and guard mode
+The core rule: internal user-state signals must become positive execution instructions. Production hosts should pass `guidance.system_prompt_addendum`, `response_constraints`, and `routing` into the model. Raw affect fields stay internal unless audit mode is explicitly enabled.
 
-The runtime output is JSON. Hosts can consume it for positive prompt addenda, prompt overlays, queue routing, verification depth, heartbeat cadence, response constraints, and post-success behavior.
+## Use It When
 
-## Quick Start
+- A bug fix has failed more than once.
+- The user asks for evidence, exact checks, logs, or root cause.
+- The user says to touch only specific files or avoid config drift.
+- A tool call, session, queue, or heartbeat path has gone silent.
+- The user says the work is good and the agent should close out.
+- The agent needs to choose between collect, steer, and interrupt modes.
 
-Run the compact host contract:
+## What It Returns
+
+Use the `host` command for real integration:
 
 ```bash
 python scripts/emotion_engine.py host --message "Show me the basis before changing more files." --pretty
 ```
 
-Run the bundled local-history demo:
-
-```bash
-python scripts/emotion_engine.py host --input demo/local_history_event.json --pretty
-```
-
-Run the install and published-bundle smoke:
-
-```bash
-python scripts/download_smoke.py
-```
-
-Preview host-side persistence without writes:
-
-```bash
-python scripts/minimal_host_adapter.py --event demo/local_history_event.json --store-dir .demo-store --view host --no-persist --pretty
-```
-
-## Host Output
-
-Use `host` for real runtime wiring. It returns:
-
-- `mode`: the primary orchestration mode for this turn.
-- `overlay_prompt`: compact per-turn state hint.
-- `route_reasons`: compact log codes for why routing changed.
-- `response_constraints`: direct guardrails for the next reply.
-- `guidance.system_prompt_addendum`: positive action prompt for the host LLM.
-- `guidance.tone`: compact tone target such as `evidence_first`.
-- `routing.reply_style`: response posture.
-- `routing.verification_level`: checking depth.
-- `routing.queue_mode`: collect, steer, or interrupt.
-- `routing.prefer_main_thread`: whether to keep work on the main thread.
-- `routing.progress_update_interval_sec`: progress cadence.
-- `satisfaction_lock`: post-success closeout guard.
-- `interaction_state`: clarity, trust, and engagement axes.
-- `state.state_delta`: action-named cross-turn changes from `last_state`.
-- `memory.should_persist`: host-side persistence recommendation.
-
-Raw affect data is internal by default. For audit or calibration, set `host_capabilities.include_raw_emotion=true`; the host output will add `diagnostics.internal.labels`, `diagnostics.internal.emotion_vector`, raw `state_delta`, and `mode_scores`.
-
-Minimal host result shape:
+Default host shape:
 
 ```json
 {
   "mode": "skeptical",
   "route_reasons": ["repeat_failure_pressure", "evidence_requested"],
   "response_constraints": ["show_basis_first", "name_verification_steps"],
-  "overlay_prompt": "<state mode=skeptical ...>",
   "guidance": {
     "system_prompt_addendum": "The user wants evidence before more changes. Start with a verification point, command, or log excerpt, then give the conclusion and next step.",
     "tone": "evidence_first"
@@ -92,9 +53,27 @@ Minimal host result shape:
 }
 ```
 
+Default output deliberately keeps raw `labels` and raw `emotion_vector` out of the host prompt path. This keeps the skill from amplifying negative state words inside the model context.
+
+## Host Fields
+
+- `guidance.system_prompt_addendum`: positive instruction text for the host LLM.
+- `guidance.tone`: compact tone target such as `evidence_first`, `careful_and_bounded`, or `guarded_closeout`.
+- `response_constraints`: compact reply guardrails.
+- `route_reasons`: enum-like routing codes for logs and telemetry.
+- `routing.reply_style`: response posture.
+- `routing.verification_level`: checking depth.
+- `routing.queue_mode`: collect, steer, or interrupt.
+- `routing.prefer_main_thread`: keep the work on the main turn when user trust or clarity needs it.
+- `routing.progress_update_interval_sec`: progress cadence for long-running work.
+- `satisfaction_lock`: closeout guard after success.
+- `interaction_state`: positive host-facing axes: clarity, trust, engagement.
+- `state.state_delta`: action-named shifts such as `needs_concrete_unblock`, `needs_evidence_first`, or `needs_alignment_check`.
+- `memory.should_persist`: host-side persistence recommendation.
+
 ## Input Contract
 
-The top-level payload must be a JSON object. The smallest valid payload is:
+Smallest valid payload:
 
 ```json
 {
@@ -102,15 +81,11 @@ The top-level payload must be a JSON object. The smallest valid payload is:
 }
 ```
 
-Common production payload:
+Production payload:
 
 ```json
 {
   "message": "Only touch the parser file and show the failing path first.",
-  "context": {
-    "timezone": "Asia/Shanghai",
-    "now_iso": "2026-04-27T10:00:00+08:00"
-  },
   "history": [
     {"role": "user", "text": "earlier user turn"},
     {"role": "assistant", "text": "earlier assistant turn"}
@@ -127,63 +102,37 @@ Common production payload:
       "user_followed_up_with": "still broken"
     }
   },
-  "host_capabilities": {
-    "include_raw_emotion": false
-  },
   "last_state": {
     "vector": {},
     "emotion_vector": {},
     "ttl_seconds": 1200
   },
-  "calibration_state": {
-    "observed_turns": 18,
-    "posthoc_samples": 11,
-    "consistency_samples": 9,
-    "stable_prediction_hits": 6,
-    "prediction_agreement": 0.58,
-    "consistency_rate": 0.63
-  },
-  "user_profile": {
-    "timezone": "Asia/Shanghai",
-    "work_hours_local": [9, 22],
-    "baseline": {
-      "response_delay_seconds": 35,
-      "politeness": 0.2,
-      "terseness": 0.35,
-      "punctuation": 0.15,
-      "directness": 0.3
-    },
-    "persona_traits": {
-      "patience": 0.55,
-      "skepticism": 0.48,
-      "caution": 0.52,
-      "openness": 0.44,
-      "assertiveness": 0.38
-    }
-  },
-  "llm_semantic": {
-    "labels": ["skeptical"],
-    "confidence": 0.78,
-    "emotion_vector": {
-      "urgency": 0.18,
-      "frustration": 0.12,
-      "confusion": 0.08,
-      "skepticism": 0.92,
-      "satisfaction": 0.04,
-      "cautiousness": 0.18,
-      "openness": 0.12
-    }
-  }
+  "calibration_state": {},
+  "user_profile": {}
 }
 ```
 
 Malformed JSON, missing files, and top-level arrays return exit code `2` with a single-line error.
 
-## Output Modes
+## Raw Affect Audit Mode
+
+For audit and calibration only:
+
+```json
+{
+  "host_capabilities": {
+    "include_raw_emotion": true
+  }
+}
+```
+
+This adds `diagnostics.internal.labels`, `diagnostics.internal.emotion_vector`, raw `state_delta`, and `mode_scores`. Keep these fields out of normal LLM prompts.
+
+## Runtime Commands
 
 | Command | Purpose |
 |---|---|
-| `host` | compact runtime contract |
+| `host` | compact production contract |
 | `run` | full diagnostics |
 | `screen` | deterministic first pass |
 | `confirm` | final state and weight schedule |
@@ -193,77 +142,27 @@ Malformed JSON, missing files, and top-level arrays return exit code `2` with a 
 | `overlay` | overlay prompt inspection |
 | `posthoc` | review-pass and calibration inspection |
 
-## Internal Model
-
-The engine keeps three concurrent internal layers:
-
-- `emotion_vector`: `urgency`, `frustration`, `confusion`, `skepticism`, `satisfaction`, `cautiousness`, `openness`
-- `interaction_state`: `clarity`, `trust`, `engagement`
-- `constraint_signals`: `boundary_strength`, `verification_preference`, `scope_tightness`, `evidence_requirement`
-
-Intensity bands:
-
-- `0.00-0.29`: background
-- `0.30-0.54`: present
-- `0.55-0.74`: strong
-- `0.75-1.00`: dominant
-
-Use `mode_scores` in the full `run` output or `diagnostics.internal` when tuning arbitration between concurrent states. Production hosts should feed the model `guidance.system_prompt_addendum`, `response_constraints`, and `routing` rather than raw affect axes.
-
-## Integration Pattern
-
-1. Run `host` when a user turn arrives.
-2. Insert `guidance.system_prompt_addendum` and `overlay_prompt` into the current agent turn.
-3. Feed `routing` into queue priority, thread choice, heartbeat deferral, progress cadence, and subtask policy.
-4. Feed `response_constraints` into the next reply.
-5. Apply `satisfaction_lock` after success to keep the agent in closeout and regression mode.
-6. Persist `memory.proposed_calibration_state` only in a host-owned profile store.
-
-Use [references/integration-openclaw-hermes.md](./references/integration-openclaw-hermes.md) for OpenClaw and Hermes wiring.
-
 ## Persistence Boundary
 
 The core engine is stateless. It returns JSON, makes no network calls, and writes only when `--output` is provided.
 
-The minimal host adapter writes these files under `--store-dir` when persistence is enabled:
+The minimal host adapter writes three host-owned JSON files under `--store-dir` when persistence is enabled:
 
 - `user_profile.json`
 - `last_state.json`
 - `calibration_state.json`
 
-Use `--no-persist` for read-only previews. Use `--ignore-bad-store` to skip corrupt store files and continue from empty store values.
+Use `--no-persist` for read-only previews. Use `--ignore-bad-store` to skip corrupt store files and continue from empty values.
 
-## Language Coverage
+## Integration Pattern
 
-Chinese and English have explicit calibration for:
-
-- shared emotion cues
-- community phrasing
-- punctuation habits
-- rhythmic pauses
-- rushed typos
-- coding-agent failure reports
-
-Other languages use generic punctuation, repetition, delay, and structure signals.
-
-## Scope
-
-Use this skill for coding-agent orchestration during:
-
-- repo debugging
-- scoped implementation
-- repeated-failure recovery
-- evidence-demanding review
-- cautious file or config changes
-- post-success stabilization
-
-The marketplace copy should stay anchored to developer workflows:
-
-- repository debugging
-- agent runtime routing
-- verification depth control
-- thread and heartbeat coordination
-- stabilization after success
+1. Run `host` when a user turn arrives.
+2. Put `guidance.system_prompt_addendum` before the model's task instructions.
+3. Put `overlay_prompt` near the runtime metadata.
+4. Feed `response_constraints` into reply planning.
+5. Feed `routing` into queue, heartbeat, progress cadence, and subtask policy.
+6. Apply `satisfaction_lock` after success.
+7. Persist `memory.proposed_calibration_state` only in host-owned storage.
 
 ## Published Bundle
 
@@ -307,29 +206,17 @@ python scripts/feature_gate_audit.py
 python scripts/bundle_manifest_check.py
 ```
 
-## Resources
+Current local regression results:
 
-Bundled with the published skill:
+- alignment: `70/70`
+- ablation: `333/333`
+- strict smoke: `ok`
+- independent audit: `ok`
+- download smoke: `ok`
+- bundle manifest: `ok`
 
-- `scripts/emotion_engine.py`: runtime engine and CLI.
-- `scripts/minimal_host_adapter.py`: host-owned local profile adapter.
-- `scripts/download_smoke.py`: install and published-bundle smoke check.
-- `demo/local_history_event.json`: realistic local-history payload.
-- `references/examples.md`: side-by-side examples.
-- `references/model-prompts.md`: prompt blocks for semantic passes.
-- `references/emotion-value-model.md`: routing and quality impact.
-- `references/emotion-policy-matrix.md`: state-to-behavior mapping.
-- `references/integration-openclaw-hermes.md`: runtime wiring notes.
+## Good Fit
 
-Kept in the GitHub repo for deeper review and local validation:
+Use it for coding-agent orchestration, repository debugging, scoped edits, verification-first replies, and closeout behavior after success.
 
-- `scripts/smoke_test.py`: scenario and community smoke coverage.
-- `scripts/independent_audit.py`: contract and host-boundary audit.
-- `scripts/marketplace_tag_audit.py`: marketplace-scope regression.
-- `scripts/bundle_manifest_check.py`: published-bundle manifest audit.
-- `scripts/ablation_test.py`: skill-vs-baseline harness.
-- `scripts/posthoc_calibration_pack.py`: calibration pack builder.
-- `assets/community-posthoc-calibration-v2.jsonl`: expanded community calibration set.
-- `assets/community-posthoc-calibration-56.jsonl`: frozen first-pass snapshot.
-- `references/prompt-chain-audit.md`: design audit notes.
-- `references/research-cues-v2.md`: source-backed cue notes.
+Use a different skill for general emotional memory, roleplay, personal journaling, or long-term personality simulation.

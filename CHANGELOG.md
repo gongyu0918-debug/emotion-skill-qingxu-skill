@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.1 - 2026-04-27
+
+- rewrote README and README.zh-CN as GitHub-facing landing pages with install, 30-second demo, host contract, raw affect opt-in, feedback loop, validation, and fit guidance
+- rewrote SKILL.md as a ClawHub-facing runtime card with trigger scenarios, production host fields, input contract, audit mode, persistence boundary, integration pattern, and published-bundle manifest
+- refreshed `agents/openai.yaml` listing copy to emphasize positive routing, evidence-first behavior, scope protection, progress visibility, and guarded closeout
+
 ## 1.2.0 - 2026-04-27
 
 - changed default `host` output to keep raw `labels` and `state.emotion_vector` out of the production payload
