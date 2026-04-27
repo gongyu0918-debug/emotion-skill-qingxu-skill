@@ -3,8 +3,10 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import re
 import sys
+import tempfile
 from datetime import datetime
 from difflib import SequenceMatcher
 from pathlib import Path
@@ -30,7 +32,7 @@ DEFAULT_PERSONA_TRAITS = {
     "openness": 0.5,
     "assertiveness": 0.4,
 }
-SCHEMA_VERSION = "1.1.3"
+SCHEMA_VERSION = "1.1.4"
 MAX_DEGRADATION_REASONS = 32
 LABEL_ORDER = ("urgent", "frustrated", "confused", "skeptical", "cautious", "exploratory", "satisfied", "neutral")
 LABEL_ORDER_INDEX = {label: index for index, label in enumerate(LABEL_ORDER)}
@@ -291,10 +293,30 @@ def load_json_file(path: str | None) -> Any:
     return json.loads(file_path.read_text(encoding="utf-8"))
 
 
+def require_json_object(value: Any, source: str) -> dict[str, Any]:
+    if isinstance(value, dict):
+        return value
+    value_type = type(value).__name__
+    raise ValueError(f"Top-level JSON object required: {source} got {value_type}")
+
+
 def dump_json(data: Any, pretty: bool) -> str:
     if pretty:
         return json.dumps(data, ensure_ascii=False, indent=2, sort_keys=True)
     return json.dumps(data, ensure_ascii=False, separators=(",", ":"), sort_keys=True)
+
+
+def atomic_write_text(path: Path, text: str) -> None:
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp_path: Path | None = None
+    try:
+        with tempfile.NamedTemporaryFile("w", encoding="utf-8", dir=path.parent, delete=False) as handle:
+            handle.write(text)
+            tmp_path = Path(handle.name)
+        os.replace(tmp_path, path)
+    finally:
+        if tmp_path and tmp_path.exists():
+            tmp_path.unlink(missing_ok=True)
 
 
 def normalize_text(text: str) -> str:
@@ -2527,11 +2549,11 @@ def run_pipeline(payload: dict[str, Any]) -> dict[str, Any]:
 def parse_payload(args: argparse.Namespace) -> dict[str, Any]:
     payload: dict[str, Any] = {}
     if args.input:
-        payload.update(load_json_file(args.input) or {})
+        payload.update(require_json_object(load_json_file(args.input) or {}, f"--input {args.input}"))
     elif not sys.stdin.isatty():
         stdin_text = sys.stdin.read().strip()
         if stdin_text:
-            payload.update(json.loads(stdin_text))
+            payload.update(require_json_object(json.loads(stdin_text), "stdin"))
     if args.message:
         payload["message"] = args.message
     if args.history_file:
@@ -2663,13 +2685,18 @@ def main() -> int:
         parser.exit(2, f"{exc}\n")
     except json.JSONDecodeError as exc:
         parser.exit(2, f"Invalid JSON input: {exc}\n")
+    except ValueError as exc:
+        parser.exit(2, f"{exc}\n")
     if not payload.get("message"):
         parser.error("A message is required via --message, --input, or stdin JSON.")
     full = run_pipeline(payload)
     selected = select_output(args.command, full)
     rendered = dump_json(selected, args.pretty)
     if args.output:
-        Path(args.output).write_text(rendered, encoding="utf-8")
+        try:
+            atomic_write_text(Path(args.output), rendered)
+        except OSError as exc:
+            parser.exit(2, f"Could not write output {args.output}: {exc}\n")
     else:
         print(rendered)
     return 0

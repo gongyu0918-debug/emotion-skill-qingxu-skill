@@ -1,6 +1,7 @@
 assets/**
 scripts/ablation_test.py
 scripts/alignment_test.py
+scripts/bundle_manifest_check.py
 scripts/community_long_tail_cases.py
 scripts/feature_gate_audit.py
 scripts/independent_audit.py

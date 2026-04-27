@@ -9,6 +9,7 @@ import tempfile
 from pathlib import Path
 from typing import Any
 
+import bundle_manifest_check
 import community_long_tail_cases as long_tail
 import emotion_engine as ee
 import smoke_test as smoke
@@ -22,8 +23,8 @@ def record(name: str, ok: bool, detail: dict[str, Any], findings: list[dict[str,
     findings.append({"name": name, "ok": ok, "detail": detail})
 
 
-def run_command(args: list[str]) -> tuple[int, str]:
-    proc = subprocess.run(args, capture_output=True, text=True, cwd=ROOT)
+def run_command(args: list[str], stdin: str | None = None) -> tuple[int, str]:
+    proc = subprocess.run(args, input=stdin, capture_output=True, text=True, cwd=ROOT)
     raw = proc.stdout.strip() or proc.stderr.strip()
     return proc.returncode, raw
 
@@ -107,6 +108,45 @@ def main() -> int:
         {"exit_code": missing_code, "raw": missing_raw},
         findings,
     )
+
+    stdin_list_code, stdin_list_raw = run_command(
+        [sys.executable, "scripts/emotion_engine.py", "host", "--pretty"],
+        stdin="[1,2]",
+    )
+    record(
+        "friendly_stdin_top_level_type_error",
+        stdin_list_code == 2 and "Top-level JSON object required" in stdin_list_raw and "Traceback" not in stdin_list_raw,
+        {"exit_code": stdin_list_code, "raw": stdin_list_raw},
+        findings,
+    )
+
+    with tempfile.TemporaryDirectory(prefix="emotion-skill-input-") as tmp_dir:
+        bad_input = Path(tmp_dir) / "bad-input.json"
+        bad_input.write_text("[1,2]", encoding="utf-8")
+        input_list_code, input_list_raw = run_command(
+            [sys.executable, "scripts/emotion_engine.py", "host", "--input", str(bad_input), "--pretty"]
+        )
+        record(
+            "friendly_input_top_level_type_error",
+            input_list_code == 2 and "Top-level JSON object required" in input_list_raw and "Traceback" not in input_list_raw,
+            {"exit_code": input_list_code, "raw": input_list_raw},
+            findings,
+        )
+
+        nested_output = Path(tmp_dir) / "nested" / "engine" / "emotion.json"
+        nested_code, nested_raw = run_command(
+            [sys.executable, "scripts/emotion_engine.py", "host", "--message", "test", "--output", str(nested_output)]
+        )
+        try:
+            nested_parsed = json.loads(nested_output.read_text(encoding="utf-8")) if nested_output.exists() else {}
+        except json.JSONDecodeError:
+            nested_parsed = {}
+        record(
+            "engine_nested_output_write",
+            nested_code == 0 and isinstance(nested_parsed, dict) and "mode" in nested_parsed,
+            {"exit_code": nested_code, "raw": nested_raw, "exists": nested_output.exists()},
+            findings,
+        )
 
     host_code, host_raw = run_command(
         [sys.executable, "scripts/emotion_engine.py", "host", "--input", str(DEMO_EVENT), "--pretty"]
@@ -461,6 +501,145 @@ def main() -> int:
             findings,
         )
 
+        bad_event = Path(tmp_dir) / "bad-event.json"
+        bad_event.write_text("[1,2]", encoding="utf-8")
+        bad_event_code, bad_event_raw = run_command(
+            [
+                sys.executable,
+                "scripts/minimal_host_adapter.py",
+                "--event",
+                str(bad_event),
+                "--store-dir",
+                str(Path(tmp_dir) / "bad-event-store"),
+                "--view",
+                "host",
+                "--no-persist",
+                "--pretty",
+            ]
+        )
+        record(
+            "adapter_top_level_type_error",
+            bad_event_code == 2 and "Top-level JSON object required" in bad_event_raw and "Traceback" not in bad_event_raw,
+            {"exit_code": bad_event_code, "raw": bad_event_raw},
+            findings,
+        )
+
+        non_mapping_event = Path(tmp_dir) / "non-mapping-profile-event.json"
+        non_mapping_event.write_text(json.dumps({"message": "先给我依据", "user_profile": "bad"}, ensure_ascii=False), encoding="utf-8")
+        non_mapping_code, non_mapping_raw = run_command(
+            [
+                sys.executable,
+                "scripts/minimal_host_adapter.py",
+                "--event",
+                str(non_mapping_event),
+                "--store-dir",
+                str(Path(tmp_dir) / "profile-store"),
+                "--view",
+                "host",
+                "--no-persist",
+                "--pretty",
+            ]
+        )
+        try:
+            non_mapping_parsed = json.loads(non_mapping_raw) if non_mapping_raw else {}
+        except json.JSONDecodeError:
+            non_mapping_parsed = {}
+        record(
+            "adapter_non_mapping_user_profile_forwarded",
+            non_mapping_code == 0
+            and isinstance(non_mapping_parsed, dict)
+            and "user_profile_not_mapping.forwarded_to_engine" in non_mapping_parsed.get("adapter_warnings", [])
+            and (non_mapping_parsed.get("result") or {}).get("degraded") is True,
+            {
+                "exit_code": non_mapping_code,
+                "adapter_warnings": non_mapping_parsed.get("adapter_warnings") if isinstance(non_mapping_parsed, dict) else None,
+                "degradation_reasons": (non_mapping_parsed.get("result") or {}).get("degradation_reasons") if isinstance(non_mapping_parsed, dict) else None,
+                "raw": non_mapping_raw[:400],
+            },
+            findings,
+        )
+
+        corrupt_store = Path(tmp_dir) / "corrupt-store"
+        corrupt_store.mkdir(parents=True, exist_ok=True)
+        (corrupt_store / "user_profile.json").write_text("{bad json", encoding="utf-8")
+        corrupt_code, corrupt_raw = run_command(
+            [
+                sys.executable,
+                "scripts/minimal_host_adapter.py",
+                "--event",
+                str(DEMO_EVENT),
+                "--store-dir",
+                str(corrupt_store),
+                "--view",
+                "host",
+                "--no-persist",
+                "--pretty",
+            ]
+        )
+        record(
+            "adapter_corrupt_store_names_file",
+            corrupt_code == 2 and "Invalid JSON in" in corrupt_raw and "user_profile.json" in corrupt_raw,
+            {"exit_code": corrupt_code, "raw": corrupt_raw},
+            findings,
+        )
+
+        ignore_code, ignore_raw = run_command(
+            [
+                sys.executable,
+                "scripts/minimal_host_adapter.py",
+                "--event",
+                str(DEMO_EVENT),
+                "--store-dir",
+                str(corrupt_store),
+                "--view",
+                "host",
+                "--no-persist",
+                "--ignore-bad-store",
+                "--pretty",
+            ]
+        )
+        try:
+            ignore_parsed = json.loads(ignore_raw) if ignore_raw else {}
+        except json.JSONDecodeError:
+            ignore_parsed = {}
+        record(
+            "adapter_ignore_bad_store",
+            ignore_code == 0 and isinstance(ignore_parsed, dict) and "user_profile" in ignore_parsed.get("store_errors", {}),
+            {
+                "exit_code": ignore_code,
+                "store_errors": ignore_parsed.get("store_errors") if isinstance(ignore_parsed, dict) else None,
+                "raw": ignore_raw[:400],
+            },
+            findings,
+        )
+
+        adapter_output = Path(tmp_dir) / "nested" / "adapter" / "out.json"
+        adapter_output_code, adapter_output_raw = run_command(
+            [
+                sys.executable,
+                "scripts/minimal_host_adapter.py",
+                "--event",
+                str(DEMO_EVENT),
+                "--store-dir",
+                str(Path(tmp_dir) / "adapter-output-store"),
+                "--view",
+                "host",
+                "--no-persist",
+                "--output",
+                str(adapter_output),
+            ]
+        )
+        try:
+            adapter_output_parsed = json.loads(adapter_output.read_text(encoding="utf-8")) if adapter_output.exists() else {}
+        except json.JSONDecodeError:
+            adapter_output_parsed = {}
+        record(
+            "adapter_nested_output_write",
+            adapter_output_code == 0 and isinstance(adapter_output_parsed, dict) and "result" in adapter_output_parsed,
+            {"exit_code": adapter_output_code, "raw": adapter_output_raw, "exists": adapter_output.exists()},
+            findings,
+        )
+
     market_code, market_raw = run_command([sys.executable, "scripts/marketplace_tag_audit.py"])
     try:
         market_parsed = json.loads(market_raw) if market_raw else {}
@@ -476,6 +655,19 @@ def main() -> int:
             "exit_code": market_code,
             "listing_copy": listing,
             "full_surface": full_surface,
+        },
+        findings,
+    )
+
+    manifest_result = bundle_manifest_check.check_manifest()
+    record(
+        "bundle_manifest_matches_skill_docs",
+        bool(manifest_result.get("ok")),
+        {
+            "missing_from_docs": manifest_result.get("missing_from_docs"),
+            "missing_from_bundle": manifest_result.get("missing_from_bundle"),
+            "actual_count": manifest_result.get("actual_count"),
+            "documented_count": manifest_result.get("documented_count"),
         },
         findings,
     )

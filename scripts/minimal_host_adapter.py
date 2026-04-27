@@ -18,10 +18,23 @@ STORE_FILES = {
 }
 
 
-def load_json(path: Path, default: Any) -> Any:
+def load_json(path: Path, default: Any, *, ignore_errors: bool = False) -> tuple[Any, str]:
     if not path.exists():
-        return default
-    return json.loads(path.read_text(encoding="utf-8"))
+        return default, ""
+    try:
+        return json.loads(path.read_text(encoding="utf-8")), ""
+    except json.JSONDecodeError as exc:
+        message = f"Invalid JSON in {path}: {exc}"
+        if ignore_errors:
+            return default, message
+        raise ValueError(message) from exc
+
+
+def require_json_object(value: Any, source: str) -> dict[str, Any]:
+    if isinstance(value, dict):
+        return value
+    value_type = type(value).__name__
+    raise ValueError(f"Top-level JSON object required: {source} got {value_type}")
 
 
 def dump_json(data: Any, pretty: bool) -> str:
@@ -40,16 +53,27 @@ def merge_dict(base: dict[str, Any], override: dict[str, Any]) -> dict[str, Any]
     return merged
 
 
-def load_store(store_dir: Path) -> dict[str, Any]:
-    return {
-        key: load_json(store_dir / filename, {})
-        for key, filename in STORE_FILES.items()
-    }
+def load_store(store_dir: Path, ignore_bad_store: bool) -> tuple[dict[str, Any], dict[str, str]]:
+    store: dict[str, Any] = {}
+    errors: dict[str, str] = {}
+    for key, filename in STORE_FILES.items():
+        value, error = load_json(store_dir / filename, {}, ignore_errors=ignore_bad_store)
+        if error:
+            errors[key] = error
+        store[key] = value if isinstance(value, dict) else {}
+    return store, errors
 
 
-def build_payload(event: dict[str, Any], store: dict[str, Any]) -> dict[str, Any]:
+def build_payload(event: dict[str, Any], store: dict[str, Any], adapter_warnings: list[str]) -> dict[str, Any]:
     payload = dict(event)
-    payload["user_profile"] = merge_dict(store.get("user_profile", {}), payload.get("user_profile", {}))
+    event_profile = payload.get("user_profile")
+    store_profile = store.get("user_profile", {})
+    if isinstance(event_profile, dict):
+        payload["user_profile"] = merge_dict(store_profile, event_profile)
+    elif "user_profile" in payload:
+        adapter_warnings.append("user_profile_not_mapping.forwarded_to_engine")
+    else:
+        payload["user_profile"] = store_profile
     if store.get("last_state") and "last_state" not in payload:
         payload["last_state"] = store["last_state"]
     if store.get("calibration_state") and "calibration_state" not in payload:
@@ -58,7 +82,8 @@ def build_payload(event: dict[str, Any], store: dict[str, Any]) -> dict[str, Any
 
 
 def build_persisted_profile(payload: dict[str, Any], result: dict[str, Any]) -> dict[str, Any]:
-    base_profile = dict(payload.get("user_profile") or {})
+    payload_profile = payload.get("user_profile") or {}
+    base_profile = dict(payload_profile) if isinstance(payload_profile, dict) else {}
     memory_update = result["memory_update"]
     base_profile["baseline"] = memory_update["proposed_baseline"]
     base_profile["persona_traits"] = memory_update["proposed_persona_traits"]
@@ -101,18 +126,22 @@ def persist_store(store_dir: Path, payload: dict[str, Any], result: dict[str, An
     return {key: str(path) for key, path in paths.items()}
 
 
-def run_event(event_path: Path, store_dir: Path, pretty: bool, persist: bool, view: str) -> dict[str, Any]:
-    event = load_json(event_path, {})
+def run_event(event_path: Path, store_dir: Path, pretty: bool, persist: bool, view: str, ignore_bad_store: bool) -> dict[str, Any]:
+    event_raw, _ = load_json(event_path, {})
+    event = require_json_object(event_raw, f"host event {event_path}")
     if not event:
         raise ValueError(f"Event payload is empty: {event_path}")
-    store = load_store(store_dir)
-    payload = build_payload(event, store)
+    store, store_errors = load_store(store_dir, ignore_bad_store)
+    adapter_warnings: list[str] = []
+    payload = build_payload(event, store, adapter_warnings)
     result = ee.run_pipeline(payload)
     persisted = persist_store(store_dir, payload, result) if persist else {}
     return {
         "adapter": "minimal_host_adapter",
+        "adapter_warnings": adapter_warnings,
         "event_path": str(event_path),
         "store_dir": str(store_dir),
+        "store_errors": store_errors,
         "loaded_store": {key: bool(value) for key, value in store.items()},
         "persist_enabled": persist,
         "persisted": persisted,
@@ -126,6 +155,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--store-dir", required=True, help="Directory for persisted profile, state, and calibration files.")
     parser.add_argument("--view", choices=("full", "host"), default="full", help="Output the full engine result or the compact host contract.")
     parser.add_argument("--no-persist", action="store_true", help="Run without writing profile, state, or calibration files.")
+    parser.add_argument("--ignore-bad-store", action="store_true", help="Skip corrupt store files and continue with empty store values.")
     parser.add_argument("--output", help="Optional path for the rendered output JSON.")
     parser.add_argument("--pretty", action="store_true", help="Pretty-print JSON.")
     return parser
@@ -139,14 +169,17 @@ def main() -> int:
     if not event_path.exists():
         parser.exit(2, f"Host event file not found: {event_path}\n")
     try:
-        rendered_obj = run_event(event_path, store_dir, args.pretty, persist=not args.no_persist, view=args.view)
+        rendered_obj = run_event(event_path, store_dir, args.pretty, persist=not args.no_persist, view=args.view, ignore_bad_store=args.ignore_bad_store)
     except json.JSONDecodeError as exc:
         parser.exit(2, f"Invalid JSON input: {exc}\n")
     except ValueError as exc:
         parser.exit(2, f"{exc}\n")
     rendered = dump_json(rendered_obj, args.pretty)
     if args.output:
-        Path(args.output).write_text(rendered, encoding="utf-8")
+        try:
+            atomic_write_text(Path(args.output), rendered)
+        except OSError as exc:
+            parser.exit(2, f"Could not write output {args.output}: {exc}\n")
     else:
         print(rendered)
     return 0

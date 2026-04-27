@@ -409,6 +409,7 @@ def main() -> int:
     parser = argparse.ArgumentParser(description="Run smoke tests for the emotion skill.")
     parser.add_argument("--seed", type=int, default=20260421)
     parser.add_argument("--community-samples", type=int, default=6)
+    parser.add_argument("--strict", action="store_true", help="Fail when strict smoke checks report any strict failures.")
     args = parser.parse_args()
 
     failures: list[dict[str, Any]] = []
@@ -439,7 +440,11 @@ def main() -> int:
         "summary": summary,
     }
     print(json.dumps(rendered, ensure_ascii=False, indent=2))
-    return 0 if not failures else 1
+    if failures:
+        return 1
+    if args.strict and strict_failures:
+        return 1
+    return 0
 
 
 if __name__ == "__main__":

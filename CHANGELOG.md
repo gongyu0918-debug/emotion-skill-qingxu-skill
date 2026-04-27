@@ -1,5 +1,16 @@
 # Changelog
 
+## 1.1.4 - 2026-04-27
+
+- added friendly top-level JSON object errors for CLI and host adapter inputs
+- added nested-directory atomic output writes for `emotion_engine.py` and `minimal_host_adapter.py`
+- added `--ignore-bad-store` and path-specific corrupt store diagnostics to the minimal host adapter
+- added `scripts/download_smoke.py` for install and published-bundle verification
+- added `--strict` to `scripts/smoke_test.py`
+- added published-bundle manifest auditing and refreshed integration paths for `emotion-skill`
+- rewrote README and SKILL documentation around install speed, host contracts, trust recovery, and published-bundle validation
+- clarified language coverage, persistence reset, validation commands, and MIT licensing
+
 ## 1.1.3 - 2026-04-24
 
 - added compact `route_reasons` and `response_constraints` for host-side orchestration
