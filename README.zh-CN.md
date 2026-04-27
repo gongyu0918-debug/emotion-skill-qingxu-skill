@@ -194,7 +194,6 @@ ClawHub 发布包只带运行时需要的文件：
 - `README.md`
 - `README.zh-CN.md`
 - `CHANGELOG.md`
-- `LICENSE`
 - `agents/openai.yaml`
 - `scripts/emotion_engine.py`
 - `scripts/minimal_host_adapter.py`
@@ -212,8 +211,8 @@ ClawHub 发布包只带运行时需要的文件：
 
 - 需要在高压对话里稳定输出的 Coding Agent。
 - 需要路由字段、进度节奏和验证强度控制的宿主。
-- 想做 emotion-aware 行为，又不想把 raw 情绪词塞进模型提示词的团队。
+- 想做 emotion-aware 行为，并把 raw 情绪信号保留在 audit 模式的团队。
 
 ## License
 
-MIT. See [LICENSE](./LICENSE).
+MIT. See the [GitHub repository license](https://github.com/gongyu0918-debug/emotion-skill-qingxu-skill/blob/main/LICENSE).

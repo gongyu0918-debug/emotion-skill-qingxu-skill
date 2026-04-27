@@ -172,7 +172,6 @@ ClawHub publish now ships the runtime-facing subset only:
 - `README.md`
 - `README.zh-CN.md`
 - `CHANGELOG.md`
-- `LICENSE`
 - `agents/openai.yaml`
 - `scripts/emotion_engine.py`
 - `scripts/minimal_host_adapter.py`

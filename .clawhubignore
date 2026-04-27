@@ -1,4 +1,5 @@
 assets/**
+LICENSE
 scripts/ablation_test.py
 scripts/alignment_test.py
 scripts/bundle_manifest_check.py

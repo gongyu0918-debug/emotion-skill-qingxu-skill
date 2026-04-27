@@ -194,7 +194,6 @@ ClawHub ships the runtime-facing subset:
 - `README.md`
 - `README.zh-CN.md`
 - `CHANGELOG.md`
-- `LICENSE`
 - `agents/openai.yaml`
 - `scripts/emotion_engine.py`
 - `scripts/minimal_host_adapter.py`
@@ -212,8 +211,8 @@ The GitHub repository keeps the heavier regression, audit, and calibration files
 
 - Coding agents that need better turn-by-turn behavior under pressure.
 - Hosts that want routing fields, progress cadence, and verification depth.
-- Teams that want emotion-aware behavior without exposing raw emotion text to the model.
+- Teams that want emotion-aware behavior with raw affect kept in audit mode.
 
 ## License
 
-MIT. See [LICENSE](./LICENSE).
+MIT. See the [GitHub repository license](https://github.com/gongyu0918-debug/emotion-skill-qingxu-skill/blob/main/LICENSE).

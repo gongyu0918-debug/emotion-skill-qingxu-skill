@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.2 - 2026-04-27
+
+- aligned the ClawHub published-bundle manifest with the real install surface by excluding the repository license file from the runtime package
+- updated README and README.zh-CN license links to point at the GitHub repository license
+- kept the ClawHub package focused on the 14 runtime-facing files plus ClawHub-generated install metadata
+
 ## 1.2.1 - 2026-04-27
 
 - rewrote README and README.zh-CN as GitHub-facing landing pages with install, 30-second demo, host contract, raw affect opt-in, feedback loop, validation, and fit guidance
