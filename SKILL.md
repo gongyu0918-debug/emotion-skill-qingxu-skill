@@ -1,6 +1,6 @@
 ---
 name: emotion-skill
-description: Emotion-aware orchestration for coding agents. Use when a coding agent needs to adapt behavior during repo debugging, scoped implementation, repeated-failure recovery, evidence-demanding review, cautious changes, or post-success stabilization. Detect urgency, frustration, skepticism, confusion, caution, satisfaction, and openness from the latest turn, dialogue history, retries, and delay pressure, then return overlay_prompt, route reasons, response constraints, reply style, verification depth, queue mode, progress cadence, and guard behavior.
+description: Emotion-aware orchestration for coding agents. Use when a coding agent needs to adapt behavior during repo debugging, scoped implementation, repeated-failure recovery, evidence-demanding review, cautious changes, or post-success stabilization. Detect user-state signals internally, then return positive system prompt addenda, route reasons, response constraints, reply style, verification depth, queue mode, progress cadence, and guard behavior.
 metadata:
   openclaw:
     emoji: "🎛️"
@@ -20,7 +20,7 @@ It turns user-state signals into execution policy:
 - confusion -> explain one next step and ask at most one clarifier
 - satisfaction -> switch to closeout, regression checks, and guard mode
 
-The runtime output is JSON. Hosts can consume it for prompt overlays, queue routing, verification depth, heartbeat cadence, response constraints, and post-success behavior.
+The runtime output is JSON. Hosts can consume it for positive prompt addenda, prompt overlays, queue routing, verification depth, heartbeat cadence, response constraints, and post-success behavior.
 
 ## Quick Start
 
@@ -53,30 +53,35 @@ python scripts/minimal_host_adapter.py --event demo/local_history_event.json --s
 Use `host` for real runtime wiring. It returns:
 
 - `mode`: the primary orchestration mode for this turn.
-- `labels`: concurrent user states.
 - `overlay_prompt`: compact per-turn state hint.
 - `route_reasons`: compact log codes for why routing changed.
 - `response_constraints`: direct guardrails for the next reply.
+- `guidance.system_prompt_addendum`: positive action prompt for the host LLM.
+- `guidance.tone`: compact tone target such as `evidence_first`.
 - `routing.reply_style`: response posture.
 - `routing.verification_level`: checking depth.
 - `routing.queue_mode`: collect, steer, or interrupt.
 - `routing.prefer_main_thread`: whether to keep work on the main thread.
 - `routing.progress_update_interval_sec`: progress cadence.
 - `satisfaction_lock`: post-success closeout guard.
-- `state.emotion_vector`: current affect axes.
-- `state.interaction_state`: clarity, trust, and engagement axes.
-- `state.state_delta`: cross-turn changes from `last_state`.
+- `interaction_state`: clarity, trust, and engagement axes.
+- `state.state_delta`: action-named cross-turn changes from `last_state`.
 - `memory.should_persist`: host-side persistence recommendation.
+
+Raw affect data is internal by default. For audit or calibration, set `host_capabilities.include_raw_emotion=true`; the host output will add `diagnostics.internal.labels`, `diagnostics.internal.emotion_vector`, raw `state_delta`, and `mode_scores`.
 
 Minimal host result shape:
 
 ```json
 {
   "mode": "skeptical",
-  "labels": ["frustrated", "skeptical"],
   "route_reasons": ["repeat_failure_pressure", "evidence_requested"],
   "response_constraints": ["show_basis_first", "name_verification_steps"],
   "overlay_prompt": "<state mode=skeptical ...>",
+  "guidance": {
+    "system_prompt_addendum": "The user wants evidence before more changes. Start with a verification point, command, or log excerpt, then give the conclusion and next step.",
+    "tone": "evidence_first"
+  },
   "routing": {
     "reply_style": "evidence_then_act",
     "verification_level": "high",
@@ -116,7 +121,14 @@ Common production payload:
     "bug_retries": 2,
     "same_issue_mentions": 2,
     "queue_depth": 1,
-    "background_tasks_running": 1
+    "background_tasks_running": 1,
+    "last_routing_outcome": {
+      "mode_was": "skeptical",
+      "user_followed_up_with": "still broken"
+    }
+  },
+  "host_capabilities": {
+    "include_raw_emotion": false
   },
   "last_state": {
     "vector": {},
@@ -181,9 +193,9 @@ Malformed JSON, missing files, and top-level arrays return exit code `2` with a 
 | `overlay` | overlay prompt inspection |
 | `posthoc` | review-pass and calibration inspection |
 
-## Emotion Model
+## Internal Model
 
-The engine keeps three concurrent layers:
+The engine keeps three concurrent internal layers:
 
 - `emotion_vector`: `urgency`, `frustration`, `confusion`, `skepticism`, `satisfaction`, `cautiousness`, `openness`
 - `interaction_state`: `clarity`, `trust`, `engagement`
@@ -196,12 +208,12 @@ Intensity bands:
 - `0.55-0.74`: strong
 - `0.75-1.00`: dominant
 
-Use `mode_scores` in the full `run` output when tuning arbitration between concurrent states.
+Use `mode_scores` in the full `run` output or `diagnostics.internal` when tuning arbitration between concurrent states. Production hosts should feed the model `guidance.system_prompt_addendum`, `response_constraints`, and `routing` rather than raw affect axes.
 
 ## Integration Pattern
 
 1. Run `host` when a user turn arrives.
-2. Insert `overlay_prompt` into the current agent turn.
+2. Insert `guidance.system_prompt_addendum` and `overlay_prompt` into the current agent turn.
 3. Feed `routing` into queue priority, thread choice, heartbeat deferral, progress cadence, and subtask policy.
 4. Feed `response_constraints` into the next reply.
 5. Apply `satisfaction_lock` after success to keep the agent in closeout and regression mode.

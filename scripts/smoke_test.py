@@ -227,16 +227,19 @@ def check_cli_demo(failures: list[dict[str, Any]]) -> dict[str, Any]:
         "features" not in parsed
         and "prompts" not in parsed
         and bool(parsed.get("overlay_prompt"))
+        and "labels" not in parsed
         and isinstance(parsed.get("route_reasons"), list)
         and isinstance(parsed.get("response_constraints"), list)
         and isinstance(parsed.get("satisfaction_lock"), dict)
+        and isinstance((parsed.get("guidance") or {}).get("system_prompt_addendum"), str)
+        and "emotion_vector" not in (parsed.get("state") or {})
         and isinstance((parsed.get("state") or {}).get("state_delta"), dict),
         {"keys": sorted(parsed.keys())},
         failures,
     )
     return {
         "mode": parsed["mode"],
-        "labels": parsed["labels"],
+        "labels": ((parsed.get("diagnostics") or {}).get("internal") or {}).get("labels", []),
         "queue_mode": parsed["routing"]["queue_mode"],
         "prefer_main_thread": parsed["routing"]["prefer_main_thread"],
     }

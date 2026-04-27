@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -9,6 +10,7 @@ from typing import Any
 ROOT = Path(__file__).resolve().parents[1]
 SKILL = ROOT / "SKILL.md"
 IGNORE_FILE = ROOT / ".clawhubignore"
+MANIFEST_ITEM_RE = re.compile(r"^\s*-\s+`([^`]+)`\s*$")
 
 
 def to_posix(path: Path) -> str:
@@ -62,8 +64,10 @@ def documented_bundle_files() -> list[str]:
             continue
         if inside and line.startswith("The full GitHub repo keeps"):
             break
-        if inside and line.strip().startswith("- `") and "`" in line.strip()[3:]:
-            files.append(line.split("`", 2)[1])
+        if inside:
+            match = MANIFEST_ITEM_RE.match(line)
+            if match:
+                files.append(match.group(1))
     return sorted(files)
 
 

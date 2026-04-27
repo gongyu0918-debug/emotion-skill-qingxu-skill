@@ -1,5 +1,32 @@
 # Changelog
 
+## 1.2.0 - 2026-04-27
+
+- changed default `host` output to keep raw `labels` and `state.emotion_vector` out of the production payload
+- added `guidance.system_prompt_addendum` and `guidance.tone` so internal user-state signals route into positive action prompts
+- added `host_capabilities.include_raw_emotion=true` / `--include-raw-emotion` for audit-only `diagnostics.internal.labels`, `diagnostics.internal.emotion_vector`, raw `state_delta`, and `mode_scores`
+- changed host-facing `state.state_delta.dominant_shift` from affect wording such as `rising_frustration` / `falling_trust` to action wording such as `needs_concrete_unblock` / `needs_evidence_first`
+- changed default host `state.state_delta.interaction` to expose action needs instead of raw signed interaction deltas
+- added `runtime.last_routing_outcome` as a lightweight feedback channel for the next turn
+- added `ROUTE_REASON_ENUM` validation at the route-reason exit
+- hardened numeric clamping against non-finite values before host-facing output
+- changed degradation reason finalization to dedupe and emit `degradation_reasons_truncated` when capped
+- clarified `weight_schedule.weight_model=independent_signal_weights`
+- fixed bundle manifest parsing to read only exact bullet items in the published-bundle section
+- adapter now reports ignored corrupt store files through `adapter_warnings`
+
+### Field-Level Diff
+
+- `host.labels`: removed by default; available at `diagnostics.internal.labels` with raw opt-in
+- `host.state.emotion_vector`: removed by default; available at `diagnostics.internal.emotion_vector` with raw opt-in
+- `host.guidance.system_prompt_addendum`: added
+- `host.guidance.tone`: added
+- `host.interaction_state`: added as a top-level positive host-facing state
+- `host.state.state_delta.dominant_shift`: renamed values to action names
+- `host.state.state_delta.interaction`: changed from raw numeric deltas to `{changed, needs}`
+- `run.host_capabilities`: added
+- `runtime.last_routing_outcome`: added optional input
+
 ## 1.1.4 - 2026-04-27
 
 - added friendly top-level JSON object errors for CLI and host adapter inputs

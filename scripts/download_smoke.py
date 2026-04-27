@@ -44,9 +44,12 @@ def main() -> int:
         and isinstance(host_result, dict)
         and isinstance(host_result.get("schema_version"), str)
         and isinstance(host_result.get("mode"), str)
+        and "labels" not in host_result
         and isinstance(host_result.get("routing"), dict)
+        and isinstance((host_result.get("guidance") or {}).get("system_prompt_addendum"), str)
         and isinstance(host_result.get("route_reasons"), list)
-        and isinstance(host_result.get("response_constraints"), list),
+        and isinstance(host_result.get("response_constraints"), list)
+        and "emotion_vector" not in (host_result.get("state") or {}),
         {"exit_code": host_code, "raw": host_raw[:300]},
     )
 

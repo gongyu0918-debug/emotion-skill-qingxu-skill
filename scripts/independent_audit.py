@@ -38,6 +38,7 @@ def main() -> int:
         "schema_version",
         "degraded",
         "degradation_reasons",
+        "host_capabilities",
         "profile_state",
         "memory_update",
         "weight_schedule",
@@ -160,9 +161,14 @@ def main() -> int:
         and isinstance(host_parsed, dict)
         and "overlay_prompt" in host_parsed
         and "routing" in host_parsed
+        and "labels" not in host_parsed
+        and isinstance(host_parsed.get("interaction_state"), dict)
         and isinstance(host_parsed.get("route_reasons"), list)
+        and all(reason in ee.ROUTE_REASON_ENUM for reason in host_parsed.get("route_reasons", []))
         and isinstance(host_parsed.get("response_constraints"), list)
         and isinstance(host_parsed.get("satisfaction_lock"), dict)
+        and isinstance((host_parsed.get("guidance") or {}).get("system_prompt_addendum"), str)
+        and "emotion_vector" not in (host_parsed.get("state") or {})
         and isinstance((host_parsed.get("state") or {}).get("state_delta"), dict)
         and "features" not in host_parsed
         and "prompts" not in host_parsed
@@ -172,6 +178,34 @@ def main() -> int:
         "host_output_contract",
         host_contract_ok,
         {"exit_code": host_code, "keys": sorted(host_parsed.keys()) if isinstance(host_parsed, dict) else [], "raw": host_raw[:400]},
+        findings,
+    )
+
+    raw_host_code, raw_host_raw = run_command(
+        [sys.executable, "scripts/emotion_engine.py", "host", "--input", str(DEMO_EVENT), "--include-raw-emotion", "--pretty"]
+    )
+    try:
+        raw_host_parsed = json.loads(raw_host_raw) if raw_host_raw else {}
+    except json.JSONDecodeError:
+        raw_host_parsed = {}
+    raw_internal = ((raw_host_parsed.get("diagnostics") or {}).get("internal") or {}) if isinstance(raw_host_parsed, dict) else {}
+    record(
+        "host_raw_emotion_opt_in",
+        raw_host_code == 0
+        and isinstance(raw_internal.get("labels"), list)
+        and isinstance(raw_internal.get("emotion_vector"), dict)
+        and "labels" not in raw_host_parsed
+        and "emotion_vector" not in (raw_host_parsed.get("state") or {}),
+        {"exit_code": raw_host_code, "diagnostics_keys": sorted(raw_internal.keys()) if isinstance(raw_internal, dict) else [], "raw": raw_host_raw[:400]},
+        findings,
+    )
+
+    prompt_addendum = (host_parsed.get("guidance") or {}).get("system_prompt_addendum", "") if isinstance(host_parsed, dict) else ""
+    blocked_prompt_terms = ["frustration", "frustrated", "skeptical", "distrust", "confused", "falling_trust", "rising_frustration", "挫败", "怀疑", "困惑"]
+    record(
+        "positive_prompt_addendum_no_raw_negative_terms",
+        isinstance(prompt_addendum, str) and prompt_addendum.strip() and not any(term in prompt_addendum.lower() for term in blocked_prompt_terms),
+        {"system_prompt_addendum": prompt_addendum},
         findings,
     )
 
@@ -187,8 +221,9 @@ def main() -> int:
     )
     delta_ok = (
         delta_result["state_delta"]["available"] is True
-        and delta_result["state_delta"]["dominant_shift"] in {"rising_frustration", "falling_trust", "changed"}
+        and delta_result["state_delta"]["dominant_shift"] in {"needs_concrete_unblock", "needs_evidence_first", "needs_alignment_check", "needs_recheck", "changed"}
         and "repeat_failure_pressure" in delta_result["route_reasons"]
+        and all(reason in ee.ROUTE_REASON_ENUM for reason in delta_result["route_reasons"])
         and isinstance(delta_result["response_constraints"], list)
     )
     record(
@@ -325,6 +360,8 @@ def main() -> int:
     degradation_cap_ok = (
         degradation_flood.get("degraded") is True
         and len(flood_reasons) <= ee.MAX_DEGRADATION_REASONS
+        and len(flood_reasons) == len(set(flood_reasons))
+        and "degradation_reasons_truncated" in flood_reasons
         and any(reason.startswith("...+") for reason in flood_reasons)
     )
     record(

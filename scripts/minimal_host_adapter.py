@@ -16,6 +16,7 @@ STORE_FILES = {
     "last_state": "last_state.json",
     "calibration_state": "calibration_state.json",
 }
+PROFILE_MAPPING_FIELDS = ("baseline", "persona_traits", "big5", "affective_prior")
 
 
 def load_json(path: Path, default: Any, *, ignore_errors: bool = False) -> tuple[Any, str]:
@@ -69,6 +70,9 @@ def build_payload(event: dict[str, Any], store: dict[str, Any], adapter_warnings
     event_profile = payload.get("user_profile")
     store_profile = store.get("user_profile", {})
     if isinstance(event_profile, dict):
+        for key in PROFILE_MAPPING_FIELDS:
+            if key in event_profile and not isinstance(event_profile.get(key), dict):
+                adapter_warnings.append(f"user_profile.{key}_not_mapping.forwarded_to_engine")
         payload["user_profile"] = merge_dict(store_profile, event_profile)
     elif "user_profile" in payload:
         adapter_warnings.append("user_profile_not_mapping.forwarded_to_engine")
@@ -133,6 +137,8 @@ def run_event(event_path: Path, store_dir: Path, pretty: bool, persist: bool, vi
         raise ValueError(f"Event payload is empty: {event_path}")
     store, store_errors = load_store(store_dir, ignore_bad_store)
     adapter_warnings: list[str] = []
+    for key in store_errors:
+        adapter_warnings.append(f"corrupt_store_ignored.{key}")
     payload = build_payload(event, store, adapter_warnings)
     result = ee.run_pipeline(payload)
     persisted = persist_store(store_dir, payload, result) if persist else {}

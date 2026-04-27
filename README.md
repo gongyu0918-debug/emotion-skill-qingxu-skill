@@ -19,10 +19,10 @@ The same coding request should route differently when the user state changes.
 | "This is still broken" | keep the main thread focused, raise verification, shorten updates |
 | "Show me the basis" | show evidence, exact checks, and failure path before edits |
 | "Only touch this file" | tighten scope, avoid config drift, verify first |
-| "I am confused" | explain the next step, ask at most one clarifier |
+| "I am lost on the path" | align the goal, explain the next step, ask at most one clarifier |
 | "Works now, wrap it up" | enter guard mode, run regression checks, stop scope drift |
 
-The output is intentionally boring: JSON fields your host can consume without exposing raw user text.
+The default host output is intentionally bounded: it turns internal state into positive action prompts and avoids exposing raw affect vectors to the model.
 
 ## Install
 
@@ -60,10 +60,13 @@ Expected shape:
 ```json
 {
   "mode": "skeptical",
-  "labels": ["frustrated", "skeptical"],
   "route_reasons": ["repeat_failure_pressure", "evidence_requested"],
   "response_constraints": ["show_basis_first", "name_verification_steps"],
   "overlay_prompt": "<state mode=skeptical ...>",
+  "guidance": {
+    "system_prompt_addendum": "The user wants evidence before more changes. Start with a verification point, command, or log excerpt, then give the conclusion and next step.",
+    "tone": "evidence_first"
+  },
   "routing": {
     "reply_style": "evidence_then_act",
     "verification_level": "high",
@@ -94,16 +97,31 @@ Use `host` for runtime integration. It returns the compact fields most hosts nee
 
 - `overlay_prompt`: small per-turn state hint for the agent.
 - `mode`: primary orchestration mode for this turn.
-- `labels`: concurrent user states that matter this turn.
 - `route_reasons`: compact route log safe for telemetry.
 - `response_constraints`: direct guardrails for the next response.
+- `guidance.system_prompt_addendum`: positive action prompt for the host LLM.
+- `guidance.tone`: compact tone target such as `evidence_first` or `careful_and_bounded`.
 - `routing.reply_style`: response posture such as `repair_then_explain`, `evidence_then_act`, or `verify_then_act`.
 - `routing.verification_level`: checking depth before edits.
 - `routing.queue_mode`: collect, steer, or interrupt work.
 - `routing.progress_update_interval_sec`: progress cadence.
 - `satisfaction_lock`: post-success guard and closeout behavior.
-- `state.state_delta`: significant cross-turn shifts from host-owned state.
+- `interaction_state`: positive host-facing axes: clarity, trust, and engagement.
+- `state.state_delta`: action-named cross-turn shifts such as `needs_evidence_first`.
 - `memory.should_persist`: recommendation for merging profile updates.
+
+Raw affect fields are internal by default. For audit and calibration, pass:
+
+```json
+{
+  "message": "Show me the basis first.",
+  "host_capabilities": {
+    "include_raw_emotion": true
+  }
+}
+```
+
+That adds `diagnostics.internal.labels` and `diagnostics.internal.emotion_vector` while keeping the default host state clean.
 
 Minimal input:
 
@@ -125,7 +143,11 @@ Useful optional fields:
     "response_delay_seconds": 20,
     "unresolved_turns": 3,
     "bug_retries": 2,
-    "same_issue_mentions": 2
+    "same_issue_mentions": 2,
+    "last_routing_outcome": {
+      "mode_was": "skeptical",
+      "user_followed_up_with": "still broken"
+    }
   },
   "last_state": {},
   "calibration_state": {},

@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import math
 import os
 import re
 import sys
@@ -14,6 +15,8 @@ from typing import Any
 from zoneinfo import ZoneInfo
 
 
+# Internal affect axes are converted to positive interaction axes before they
+# reach the default host contract.
 STATE_DIMS = ("urgency", "frustration", "clarity", "satisfaction", "trust", "engagement")
 INTERACTION_DIMS = ("clarity", "trust", "engagement")
 EMOTION_DIMS = ("urgency", "frustration", "confusion", "skepticism", "satisfaction", "cautiousness", "openness")
@@ -32,10 +35,39 @@ DEFAULT_PERSONA_TRAITS = {
     "openness": 0.5,
     "assertiveness": 0.4,
 }
-SCHEMA_VERSION = "1.1.4"
+SCHEMA_VERSION = "1.2.0"
 MAX_DEGRADATION_REASONS = 32
 LABEL_ORDER = ("urgent", "frustrated", "confused", "skeptical", "cautious", "exploratory", "satisfied", "neutral")
 LABEL_ORDER_INDEX = {label: index for index, label in enumerate(LABEL_ORDER)}
+STATE_SHIFT_ALIASES = {
+    "rising_frustration": "needs_concrete_unblock",
+    "rising_urgency": "needs_priority_action",
+    "falling_trust": "needs_evidence_first",
+    "falling_clarity": "needs_alignment_check",
+    "rising_satisfaction": "ready_for_closeout",
+    "satisfaction_drop": "needs_stabilization",
+    "changed": "needs_recheck",
+    "stable": "stable",
+    "new_turn": "new_turn",
+}
+ROUTE_REASON_ENUM = {
+    "runtime_priority",
+    "urgent_pressure",
+    "repeat_failure_pressure",
+    "evidence_requested",
+    "scope_guard_requested",
+    "low_clarity",
+    "post_success_guard",
+    "stall_risk",
+    "needs_concrete_unblock",
+    "needs_priority_action",
+    "needs_evidence_first",
+    "needs_alignment_check",
+    "needs_stabilization",
+    "ready_for_closeout",
+    "task_specific",
+}
+RAW_HOST_CAPABILITY_KEYS = ("include_raw_emotion", "include_internal_diagnostics")
 
 ANGER_TERMS = {
     "气死", "烦", "垃圾", "离谱", "扯", "蠢", "废物", "火大", "崩溃", "受不了", "妈的",
@@ -281,7 +313,13 @@ STILL_BROKEN_PATTERN = re.compile(
 
 
 def clamp(value: float, low: float = 0.0, high: float = 1.0) -> float:
-    return max(low, min(high, value))
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        return low
+    if not math.isfinite(number):
+        return low
+    return max(low, min(high, number))
 
 
 def load_json_file(path: str | None) -> Any:
@@ -522,10 +560,10 @@ def normalize_history(value: Any, diagnostics: dict[str, Any]) -> list[dict[str,
 
 
 def finalize_degradation_reasons(diagnostics: dict[str, Any]) -> list[str]:
-    reasons = [str(reason).strip() for reason in diagnostics.get("degradation_reasons", []) if str(reason).strip()]
+    reasons = unique_labels([str(reason).strip() for reason in diagnostics.get("degradation_reasons", []) if str(reason).strip()])
     if len(reasons) > MAX_DEGRADATION_REASONS:
-        overflow = len(reasons) - (MAX_DEGRADATION_REASONS - 1)
-        reasons = reasons[: MAX_DEGRADATION_REASONS - 1] + [f"...+{overflow} more"]
+        overflow = len(reasons) - (MAX_DEGRADATION_REASONS - 2)
+        reasons = reasons[: MAX_DEGRADATION_REASONS - 2] + ["degradation_reasons_truncated", f"...+{overflow} more"]
     diagnostics["degradation_reasons"] = reasons
     diagnostics["degraded"] = bool(reasons) or bool(diagnostics.get("degraded"))
     return reasons
@@ -569,12 +607,13 @@ def normalize_payload(payload: Any) -> tuple[dict[str, Any], dict[str, Any]]:
             semantic["labels"] = canonicalize_labels(normalize_string_list(semantic.get("labels"), diagnostics, f"{key}.labels_not_list"))
         normalized[key] = semantic
     normalized["calibration_state"] = as_mapping(normalized.get("calibration_state"), diagnostics, "calibration_state_not_mapping")
+    normalized["host_capabilities"] = as_mapping(normalized.get("host_capabilities"), diagnostics, "host_capabilities_not_mapping")
     normalized["history"] = normalize_history(normalized.get("history"), diagnostics)
     return normalized, diagnostics
 
 
 def combine_named_vectors(weighted_vectors: list[tuple[dict[str, Any], float]], dims: tuple[str, ...]) -> dict[str, float]:
-    """Combine partial vectors by per-dimension weight averages. Weights can sum to any positive value."""
+    """Combine partial vectors with independent per-dimension weighted averages."""
     totals = {dim: 0.0 for dim in dims}
     weight_sum = {dim: 0.0 for dim in dims}
     for vector, weight in weighted_vectors:
@@ -916,6 +955,18 @@ def build_features(payload: dict[str, Any], diagnostics: dict[str, Any]) -> dict
     background_tasks_running = float(runtime.get("background_tasks_running", 0) or 0)
     same_issue_mentions = float(runtime.get("same_issue_mentions", 0) or 0)
     contradiction_signal = clamp(float(runtime.get("contradiction_signal", 0) or 0))
+    raw_last_outcome = runtime.get("last_routing_outcome")
+    if raw_last_outcome is None:
+        last_routing_outcome: dict[str, Any] = {}
+    elif isinstance(raw_last_outcome, dict):
+        last_routing_outcome = raw_last_outcome
+    else:
+        mark_degraded(diagnostics, "runtime.last_routing_outcome_not_mapping")
+        last_routing_outcome = {}
+    outcome_text = normalize_text(str(last_routing_outcome.get("user_followed_up_with") or last_routing_outcome.get("result") or ""))
+    last_outcome_success = 1.0 if outcome_text in {"thanks", "works", "resolved", "success", "accepted", "done"} or CLAIMED_RESOLUTION_PATTERN.search(outcome_text) else 0.0
+    last_outcome_retry = 1.0 if outcome_text in {"still broken", "same issue", "failed", "not fixed", "retry"} or STILL_BROKEN_PATTERN.search(outcome_text) else 0.0
+    last_outcome_complaint = 1.0 if outcome_text in {"explicit_complaint", "complaint", "bad", "worse"} else 0.0
     resolution_claimed = 1.0 if CLAIMED_RESOLUTION_PATTERN.search(norm_last_assistant) else 0.0
     resolution_mismatch = 1.0 if resolution_claimed and STILL_BROKEN_PATTERN.search(norm_message) else 0.0
 
@@ -929,6 +980,9 @@ def build_features(payload: dict[str, Any], diagnostics: dict[str, Any]) -> dict
         + (stall_ratio * 0.14)
         + (repeat_similarity * 0.12)
         + (resolution_mismatch * 0.08)
+        + (last_outcome_retry * 0.2)
+        + (last_outcome_complaint * 0.16)
+        - (last_outcome_success * 0.08)
     )
     if soft_urgency_hits and (delay_pressure >= 0.34 or stall_hits >= 1 or blocking_hits >= 1 or frustration_hits >= 1 or stuck_pressure >= 0.42):
         urgency_hits += soft_urgency_hits
@@ -992,6 +1046,10 @@ def build_features(payload: dict[str, Any], diagnostics: dict[str, Any]) -> dict
         evidence.append("guardrail_request")
     if resolution_mismatch:
         evidence.append("resolution_mismatch")
+    if last_outcome_retry or last_outcome_complaint:
+        evidence.append("last_routing_outcome_retry")
+    if last_outcome_success:
+        evidence.append("last_routing_outcome_success")
     if guard_hits:
         evidence.append("guard_terms")
     if blocking_hits:
@@ -1125,6 +1183,10 @@ def build_features(payload: dict[str, Any], diagnostics: dict[str, Any]) -> dict
         "contradiction_signal": contradiction_signal,
         "resolution_claimed": resolution_claimed,
         "resolution_mismatch": resolution_mismatch,
+        "last_routing_outcome": last_routing_outcome,
+        "last_outcome_success": last_outcome_success,
+        "last_outcome_retry": last_outcome_retry,
+        "last_outcome_complaint": last_outcome_complaint,
         "delay_pressure": round(delay_pressure, 4),
         "stuck_pressure": round(stuck_pressure, 4),
         "background_pressure": round(background_pressure, 4),
@@ -1364,6 +1426,7 @@ def build_weight_schedule(payload: dict[str, Any], features: dict[str, Any]) -> 
         "agreement_confidence": round(agreement_confidence, 4),
         "effective_consistency": round(effective_consistency, 4),
         "consistency_shift": round(consistency_shift, 4),
+        "weight_model": "independent_signal_weights",
         "screen_weight": screen_weight,
         "screen_semantic_weight": screen_semantic_weight,
         "prior_weight": prior_weight,
@@ -2116,15 +2179,17 @@ def build_state_delta(payload: dict[str, Any], confirmed: dict[str, Any]) -> dic
     interaction_delta = significant_vector_delta(confirmed["vector"], previous_vector, INTERACTION_DIMS)
     emotion_delta = significant_vector_delta(confirmed["emotion_vector"], previous_emotion, EMOTION_DIMS)
     if emotion_delta.get("frustration", 0.0) >= 0.12:
-        dominant_shift = "rising_frustration"
+        dominant_shift = "needs_concrete_unblock"
     elif emotion_delta.get("urgency", 0.0) >= 0.12:
-        dominant_shift = "rising_urgency"
+        dominant_shift = "needs_priority_action"
     elif emotion_delta.get("skepticism", 0.0) >= 0.12 or interaction_delta.get("trust", 0.0) <= -0.12:
-        dominant_shift = "falling_trust"
+        dominant_shift = "needs_evidence_first"
     elif emotion_delta.get("confusion", 0.0) >= 0.12 or interaction_delta.get("clarity", 0.0) <= -0.12:
-        dominant_shift = "falling_clarity"
+        dominant_shift = "needs_alignment_check"
     elif emotion_delta.get("satisfaction", 0.0) >= 0.12:
-        dominant_shift = "rising_satisfaction"
+        dominant_shift = "ready_for_closeout"
+    elif emotion_delta.get("satisfaction", 0.0) <= -0.12:
+        dominant_shift = "needs_stabilization"
     elif not interaction_delta and not emotion_delta:
         dominant_shift = "stable"
     else:
@@ -2135,6 +2200,14 @@ def build_state_delta(payload: dict[str, Any], confirmed: dict[str, Any]) -> dic
         "emotion": emotion_delta,
         "interaction": interaction_delta,
     }
+
+
+def validate_route_reasons(reasons: list[str]) -> list[str]:
+    valid: list[str] = []
+    for reason in unique_labels(reasons):
+        if reason in ROUTE_REASON_ENUM:
+            valid.append(reason)
+    return valid[:6]
 
 
 def build_route_reasons(
@@ -2164,11 +2237,11 @@ def build_route_reasons(
         reasons.append("post_success_guard")
     if prediction["stall_risk"] >= 0.62 or features.get("stall_ratio", 0.0) >= 0.25:
         reasons.append("stall_risk")
-    if state_delta.get("dominant_shift") in {"rising_frustration", "falling_trust", "falling_clarity"}:
+    if state_delta.get("dominant_shift") in {"needs_concrete_unblock", "needs_evidence_first", "needs_alignment_check", "needs_stabilization", "needs_priority_action"}:
         reasons.append(str(state_delta["dominant_shift"]))
     if features.get("goal_specificity", 0.0) >= 0.48:
         reasons.append("task_specific")
-    return unique_labels(reasons)[:6]
+    return validate_route_reasons(reasons)
 
 
 def build_satisfaction_lock(features: dict[str, Any], confirmed: dict[str, Any], prediction: dict[str, Any]) -> dict[str, Any]:
@@ -2229,9 +2302,53 @@ def build_response_constraints(
     return unique_labels(constraints)[:8]
 
 
+def build_system_prompt_addendum(features: dict[str, Any], confirmed: dict[str, Any], prediction: dict[str, Any]) -> str:
+    mode = confirmed["dominant_mode"]
+    language = features["language"]
+    if language == "zh":
+        if mode in {"urgent", "frustrated"}:
+            return "用户已经多次尝试。先确认当前障碍点的最小复现路径，再给出一个带明确成功判据的下一步。保持进度可见。"
+        if mode == "skeptical":
+            return "用户希望先看到依据。回复以校验点、命令或日志片段开头，再给结论和下一步。"
+        if mode == "confused":
+            return "用户需要目标对齐。先用一句话复述你理解的目标，再给一个可纠正的默认路径。"
+        if mode == "cautious":
+            return "默认保护现有可工作状态。任何变更前先说明范围、校验点和回滚路径。"
+        if mode == "satisfied" or prediction["guard_needed"]:
+            return "保留当前可工作状态。优先做回归检查、交付说明和收口，避免扩展 scope。"
+        return "给出一个具体建议，说明下一步和验证方式。"
+    if mode in {"urgent", "frustrated"}:
+        return "The user has retried this path. Confirm the smallest reproducible blocking point, then give one next action with a clear success criterion. Keep progress visible."
+    if mode == "skeptical":
+        return "The user wants evidence before more changes. Start with a verification point, command, or log excerpt, then give the conclusion and next step."
+    if mode == "confused":
+        return "The user needs goal alignment. Restate the target in one sentence, then give one correctable default path."
+    if mode == "cautious":
+        return "Protect the current working state by default. Before any change, name the scope, verification point, and rollback path."
+    if mode == "satisfied" or prediction["guard_needed"]:
+        return "Preserve the working state. Prioritize regression checks, handoff notes, and closeout before adding scope."
+    return "Give one concrete recommendation, the next step, and the verification method."
+
+
+def guidance_tone(mode: str) -> str:
+    if mode in {"urgent", "frustrated"}:
+        return "concise_and_concrete"
+    if mode == "skeptical":
+        return "evidence_first"
+    if mode == "cautious":
+        return "careful_and_bounded"
+    if mode == "confused":
+        return "alignment_first"
+    if mode == "satisfied":
+        return "guarded_closeout"
+    return "direct_and_useful"
+
+
 def build_guidance(features: dict[str, Any], confirmed: dict[str, Any], prediction: dict[str, Any]) -> dict[str, Any]:
     mode = confirmed["dominant_mode"]
     language = features["language"]
+    system_prompt_addendum = build_system_prompt_addendum(features, confirmed, prediction)
+    tone = guidance_tone(mode)
     should_probe = prediction["probe_needed"]
     allow_emotion_hook = bool(should_probe and mode not in {"urgent", "frustrated", "skeptical"} and prediction["frustration_risk"] < 0.7)
     if not should_probe:
@@ -2240,6 +2357,8 @@ def build_guidance(features: dict[str, Any], confirmed: dict[str, Any], predicti
             "allow_emotion_hook": False,
             "probe_style": "none",
             "hook_mode": "none",
+            "tone": tone,
+            "system_prompt_addendum": system_prompt_addendum,
             "soft_probe_seed": "",
             "question": "",
             "reason": "state already clear enough",
@@ -2311,6 +2430,8 @@ def build_guidance(features: dict[str, Any], confirmed: dict[str, Any], predicti
         "allow_emotion_hook": allow_emotion_hook,
         "probe_style": probe_style,
         "hook_mode": hook_mode,
+        "tone": tone,
+        "system_prompt_addendum": system_prompt_addendum,
         "soft_probe_seed": soft_probe_seed if allow_emotion_hook else "",
         "question": question,
         "reason": "clarity is low or frustration risk is rising",
@@ -2519,6 +2640,7 @@ def run_pipeline(payload: dict[str, Any]) -> dict[str, Any]:
         "schema_version": SCHEMA_VERSION,
         "degraded": bool(diagnostics["degraded"]),
         "degradation_reasons": degradation_reasons,
+        "host_capabilities": normalized_payload.get("host_capabilities", {}),
         "profile_state": profile_state,
         "memory_update": memory_update,
         "constraint_signals": constraint_signals,
@@ -2572,6 +2694,10 @@ def parse_payload(args: argparse.Namespace) -> dict[str, Any]:
         payload.setdefault("review_semantic", legacy_review)
     if getattr(args, "calibration_file", None):
         payload["calibration_state"] = load_json_file(args.calibration_file)
+    if getattr(args, "include_raw_emotion", False):
+        host_capabilities = dict(payload.get("host_capabilities") or {})
+        host_capabilities["include_raw_emotion"] = True
+        payload["host_capabilities"] = host_capabilities
     return payload
 
 
@@ -2611,22 +2737,49 @@ def select_output(command: str, full: dict[str, Any]) -> Any:
     return full
 
 
+def raw_emotion_requested(full: dict[str, Any]) -> bool:
+    capabilities = full.get("host_capabilities") or {}
+    return any(bool(capabilities.get(key)) for key in RAW_HOST_CAPABILITY_KEYS)
+
+
+def build_host_state_delta(state_delta: dict[str, Any]) -> dict[str, Any]:
+    dominant_shift = str(state_delta.get("dominant_shift", "changed"))
+    interaction_delta = dict(state_delta.get("interaction") or {})
+    interaction_needs: list[str] = []
+    if interaction_delta.get("clarity", 0.0) <= -0.05:
+        interaction_needs.append("alignment_check")
+    if interaction_delta.get("trust", 0.0) <= -0.05:
+        interaction_needs.append("evidence_first")
+    if interaction_delta.get("engagement", 0.0) <= -0.05:
+        interaction_needs.append("keep_progress_visible")
+    return {
+        "available": bool(state_delta.get("available")),
+        "dominant_shift": STATE_SHIFT_ALIASES.get(dominant_shift, dominant_shift),
+        "interaction": {
+            "changed": bool(interaction_delta),
+            "needs": unique_labels(interaction_needs),
+        },
+    }
+
+
 def build_host_output(full: dict[str, Any]) -> dict[str, Any]:
     confirmed = full["confirmed_state"]
     routing = full["routing"]
     thread_interface = routing["thread_interface"]
     memory_update = full["memory_update"]
-    return {
+    emotion_vector = clamp_dict(confirmed.get("emotion_vector"), EMOTION_DIMS)
+    interaction_state = clamp_dict(confirmed.get("interaction_state"), INTERACTION_DIMS)
+    output = {
         "schema_version": full["schema_version"],
         "degraded": full["degraded"],
         "degradation_reasons": full["degradation_reasons"],
         "mode": confirmed["dominant_mode"],
-        "labels": confirmed["labels"],
         "confidence": confirmed["confidence"],
         "overlay_prompt": full["overlay_prompt"],
         "route_reasons": full["route_reasons"],
         "response_constraints": full["response_constraints"],
         "satisfaction_lock": full["satisfaction_lock"],
+        "interaction_state": interaction_state,
         "routing": {
             "reply_style": routing["reply_style"],
             "verification_level": routing["verification_level"],
@@ -2641,13 +2794,14 @@ def build_host_output(full: dict[str, Any]) -> dict[str, Any]:
             "should_probe": full["guidance"]["should_probe"],
             "hook_mode": full["guidance"]["hook_mode"],
             "probe_style": full["guidance"]["probe_style"],
+            "tone": full["guidance"]["tone"],
+            "system_prompt_addendum": full["guidance"]["system_prompt_addendum"],
             "question": full["guidance"]["question"],
             "soft_probe_seed": full["guidance"]["soft_probe_seed"],
         },
         "state": {
-            "emotion_vector": confirmed["emotion_vector"],
-            "interaction_state": confirmed["interaction_state"],
-            "state_delta": full["state_delta"],
+            "interaction_state": interaction_state,
+            "state_delta": build_host_state_delta(full["state_delta"]),
         },
         "memory": {
             "should_persist": memory_update["should_persist"],
@@ -2655,6 +2809,16 @@ def build_host_output(full: dict[str, Any]) -> dict[str, Any]:
             "proposed_calibration_state": memory_update["proposed_calibration_state"],
         },
     }
+    if raw_emotion_requested(full):
+        output["diagnostics"] = {
+            "internal": {
+                "labels": confirmed["labels"],
+                "emotion_vector": emotion_vector,
+                "state_delta": full["state_delta"],
+                "mode_scores": confirmed.get("mode_scores", {}),
+            }
+        }
+    return output
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -2671,6 +2835,7 @@ def build_parser() -> argparse.ArgumentParser:
         sub.add_argument("--review-file", help="Path to review_semantic JSON.")
         sub.add_argument("--posthoc-file", help="Path to posthoc_semantic JSON.")
         sub.add_argument("--calibration-file", help="Path to calibration_state JSON.")
+        sub.add_argument("--include-raw-emotion", action="store_true", help="Include internal raw affect diagnostics in host output.")
         sub.add_argument("--output", help="Path to write JSON output.")
         sub.add_argument("--pretty", action="store_true", help="Pretty-print JSON.")
     return parser
