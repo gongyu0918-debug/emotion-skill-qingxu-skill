@@ -17,6 +17,10 @@ import smoke_test as smoke
 
 ROOT = Path(__file__).resolve().parents[1]
 DEMO_EVENT = ROOT / "demo" / "local_history_event.json"
+NEGATIVE_VALENCE_TERM_FILES = (
+    ROOT / "assets" / "negative_valence_terms.en.txt",
+    ROOT / "assets" / "negative_valence_terms.zh.txt",
+)
 
 
 def record(name: str, ok: bool, detail: dict[str, Any], findings: list[dict[str, Any]]) -> None:
@@ -27,6 +31,33 @@ def run_command(args: list[str], stdin: str | None = None) -> tuple[int, str]:
     proc = subprocess.run(args, input=stdin, capture_output=True, text=True, cwd=ROOT)
     raw = proc.stdout.strip() or proc.stderr.strip()
     return proc.returncode, raw
+
+
+def load_negative_valence_terms() -> list[str]:
+    terms: list[str] = []
+    for path in NEGATIVE_VALENCE_TERM_FILES:
+        for line in path.read_text(encoding="utf-8").splitlines():
+            term = line.strip().lower()
+            if term and not term.startswith("#"):
+                terms.append(term)
+    return sorted(set(terms))
+
+
+def negative_valence_hits(text: str, terms: list[str]) -> list[str]:
+    haystack = text.lower()
+    return [term for term in terms if term in haystack]
+
+
+def prompt_addendum_samples() -> dict[str, str]:
+    samples: dict[str, str] = {}
+    for language in ("en", "zh"):
+        for mode in ("urgent", "frustrated", "skeptical", "confused", "cautious", "satisfied", "exploratory"):
+            samples[f"{language}:{mode}"] = ee.build_system_prompt_addendum(
+                {"language": language},
+                {"dominant_mode": mode},
+                {"guard_needed": mode == "satisfied"},
+            )
+    return samples
 
 
 def main() -> int:
@@ -170,6 +201,7 @@ def main() -> int:
         and isinstance((host_parsed.get("guidance") or {}).get("system_prompt_addendum"), str)
         and "emotion_vector" not in (host_parsed.get("state") or {})
         and isinstance((host_parsed.get("state") or {}).get("state_delta"), dict)
+        and ((host_parsed.get("state") or {}).get("_deprecated_alias") or {}).get("interaction_state") == "top_level.interaction_state"
         and "features" not in host_parsed
         and "prompts" not in host_parsed
         and isinstance(host_parsed.get("memory"), dict)
@@ -189,23 +221,76 @@ def main() -> int:
     except json.JSONDecodeError:
         raw_host_parsed = {}
     raw_internal = ((raw_host_parsed.get("diagnostics") or {}).get("internal") or {}) if isinstance(raw_host_parsed, dict) else {}
+    raw_state_delta = raw_internal.get("state_delta") or {}
     record(
         "host_raw_emotion_opt_in",
         raw_host_code == 0
         and isinstance(raw_internal.get("labels"), list)
         and isinstance(raw_internal.get("emotion_vector"), dict)
+        and isinstance(raw_state_delta, dict)
+        and not str(raw_state_delta.get("dominant_shift", "")).startswith(("rising_", "falling_"))
         and "labels" not in raw_host_parsed
         and "emotion_vector" not in (raw_host_parsed.get("state") or {}),
-        {"exit_code": raw_host_code, "diagnostics_keys": sorted(raw_internal.keys()) if isinstance(raw_internal, dict) else [], "raw": raw_host_raw[:400]},
+        {
+            "exit_code": raw_host_code,
+            "diagnostics_keys": sorted(raw_internal.keys()) if isinstance(raw_internal, dict) else [],
+            "diagnostic_dominant_shift": raw_state_delta.get("dominant_shift") if isinstance(raw_state_delta, dict) else None,
+            "raw": raw_host_raw[:400],
+        },
         findings,
     )
 
-    prompt_addendum = (host_parsed.get("guidance") or {}).get("system_prompt_addendum", "") if isinstance(host_parsed, dict) else ""
-    blocked_prompt_terms = ["frustration", "frustrated", "skeptical", "distrust", "confused", "falling_trust", "rising_frustration", "挫败", "怀疑", "困惑"]
+    raw_false_code, raw_false_raw = run_command(
+        [sys.executable, "scripts/emotion_engine.py", "host", "--include-raw-emotion", "--pretty"],
+        stdin=json.dumps(
+            {
+                "message": "Show me the exact failing path first.",
+                "host_capabilities": {"include_raw_emotion": False},
+            }
+        ),
+    )
+    try:
+        raw_false_parsed = json.loads(raw_false_raw) if raw_false_raw else {}
+    except json.JSONDecodeError:
+        raw_false_parsed = {}
+    record(
+        "host_raw_emotion_payload_false_wins",
+        raw_false_code == 0 and isinstance(raw_false_parsed, dict) and "diagnostics" not in raw_false_parsed,
+        {"exit_code": raw_false_code, "keys": sorted(raw_false_parsed.keys()) if isinstance(raw_false_parsed, dict) else [], "raw": raw_false_raw[:400]},
+        findings,
+    )
+
+    raw_string_false_code, raw_string_false_raw = run_command(
+        [sys.executable, "scripts/emotion_engine.py", "host", "--include-raw-emotion", "--pretty"],
+        stdin=json.dumps(
+            {
+                "message": "Show me the exact failing path first.",
+                "host_capabilities": {"include_raw_emotion": "false"},
+            }
+        ),
+    )
+    try:
+        raw_string_false_parsed = json.loads(raw_string_false_raw) if raw_string_false_raw else {}
+    except json.JSONDecodeError:
+        raw_string_false_parsed = {}
+    record(
+        "host_raw_emotion_string_false_wins",
+        raw_string_false_code == 0 and isinstance(raw_string_false_parsed, dict) and "diagnostics" not in raw_string_false_parsed,
+        {
+            "exit_code": raw_string_false_code,
+            "keys": sorted(raw_string_false_parsed.keys()) if isinstance(raw_string_false_parsed, dict) else [],
+            "raw": raw_string_false_raw[:400],
+        },
+        findings,
+    )
+
+    prompt_terms = load_negative_valence_terms()
+    prompt_samples = prompt_addendum_samples()
+    prompt_hits = {name: negative_valence_hits(text, prompt_terms) for name, text in prompt_samples.items()}
     record(
         "positive_prompt_addendum_no_raw_negative_terms",
-        isinstance(prompt_addendum, str) and prompt_addendum.strip() and not any(term in prompt_addendum.lower() for term in blocked_prompt_terms),
-        {"system_prompt_addendum": prompt_addendum},
+        bool(prompt_samples) and all(text.strip() for text in prompt_samples.values()) and not any(prompt_hits.values()),
+        {"checked": sorted(prompt_samples), "hits": {name: hits for name, hits in prompt_hits.items() if hits}},
         findings,
     )
 
@@ -224,6 +309,7 @@ def main() -> int:
         and delta_result["state_delta"]["dominant_shift"] in {"needs_concrete_unblock", "needs_evidence_first", "needs_alignment_check", "needs_recheck", "changed"}
         and "repeat_failure_pressure" in delta_result["route_reasons"]
         and all(reason in ee.ROUTE_REASON_ENUM for reason in delta_result["route_reasons"])
+        and all(need in ee.INTERACTION_NEED_ENUM for need in ee.build_host_state_delta(delta_result["state_delta"])["interaction"]["needs"])
         and isinstance(delta_result["response_constraints"], list)
     )
     record(
@@ -231,8 +317,28 @@ def main() -> int:
         delta_ok,
         {
             "state_delta": delta_result["state_delta"],
+            "host_state_delta": ee.build_host_state_delta(delta_result["state_delta"]),
             "route_reasons": delta_result["route_reasons"],
             "response_constraints": delta_result["response_constraints"],
+        },
+        findings,
+    )
+
+    unsupported_language = ee.run_pipeline(
+        {
+            "message": "Show the verification point first.",
+            "context": {"language": "ja"},
+        }
+    )
+    record(
+        "unsupported_language_fallback_marked",
+        unsupported_language["features"]["language"] == "en"
+        and unsupported_language["degraded"] is True
+        and "unsupported_language:ja" in unsupported_language["degradation_reasons"],
+        {
+            "language": unsupported_language["features"]["language"],
+            "degraded": unsupported_language["degraded"],
+            "degradation_reasons": unsupported_language["degradation_reasons"],
         },
         findings,
     )

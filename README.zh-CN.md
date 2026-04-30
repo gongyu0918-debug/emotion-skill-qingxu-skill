@@ -102,6 +102,8 @@ python scripts/emotion_engine.py host \
 - `state.state_delta`：动作命名的跨轮变化，比如 `needs_evidence_first`。
 - `memory.should_persist`：是否建议宿主合并画像更新。
 
+顶层 `interaction_state` 是 canonical 字段。`state.interaction_state` 是给 v1.1 host 的 deprecated 兼容别名，并通过 `state._deprecated_alias` 标记；计划在 1.3 线之后移除。
+
 完整 `run` 命令保留 diagnostics、features、prompts、calibration 字段，给研究和回归测试用。
 
 ## Raw Affect 显式开启
@@ -125,6 +127,8 @@ python scripts/emotion_engine.py host \
 - `diagnostics.internal.emotion_vector`
 - `diagnostics.internal.state_delta`
 - `diagnostics.internal.mode_scores`
+
+安全优先级：payload 显式设置 `host_capabilities.include_raw_emotion=false` 或 `include_internal_diagnostics=false` 时，即使 CLI 带了 `--include-raw-emotion` 也不会输出 raw diagnostics。CLI flag 只作为本地审计便利入口。
 
 ## 反馈闭环
 

@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.2.3 - 2026-04-30
+
+- marked `state.interaction_state` as a deprecated compatibility alias for top-level `interaction_state`
+- changed raw diagnostics safety precedence so explicit payload `false` values override `--include-raw-emotion`
+- added `INTERACTION_NEED_ENUM` validation for `state.state_delta.interaction.needs`
+- added unsupported `context.language` / `runtime.language` degradation markers with English fallback
+- expanded positive prompt leakage audit with English and Chinese negative-valence term files across all prompt-addendum modes
+- removed negative-valence wording from the frustrated/urgent positive prompt templates
+
 ## 1.2.2 - 2026-04-27
 
 - aligned the ClawHub published-bundle manifest with the real install surface by excluding the repository license file from the runtime package

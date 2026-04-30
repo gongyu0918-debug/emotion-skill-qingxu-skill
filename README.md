@@ -102,6 +102,8 @@ Use `host` for runtime integration. The most important fields are:
 - `state.state_delta`: action-named shifts such as `needs_evidence_first`.
 - `memory.should_persist`: recommendation for host-owned profile storage.
 
+`interaction_state` at the top level is the canonical field. `state.interaction_state` is a deprecated compatibility alias for v1.1 hosts and is marked by `state._deprecated_alias`; plan to remove that alias after the 1.3 line.
+
 The full `run` command keeps diagnostics, features, prompts, and calibration fields for research and regression work.
 
 ## Raw Affect Is Opt-In
@@ -125,6 +127,8 @@ That adds:
 - `diagnostics.internal.emotion_vector`
 - `diagnostics.internal.state_delta`
 - `diagnostics.internal.mode_scores`
+
+Safety precedence: an explicit payload value of `host_capabilities.include_raw_emotion=false` or `include_internal_diagnostics=false` disables raw diagnostics even when the CLI includes `--include-raw-emotion`. The CLI flag is a local audit convenience.
 
 ## Feedback Loop
 

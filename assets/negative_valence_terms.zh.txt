@@ -1,0 +1,15 @@
+挫败
+生气
+恼火
+沮丧
+怀疑
+不信任
+困惑
+迷茫
+卡住
+坏了
+失败
+没用
+障碍
+falling_trust
+rising_frustration

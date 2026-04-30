@@ -35,8 +35,9 @@ DEFAULT_PERSONA_TRAITS = {
     "openness": 0.5,
     "assertiveness": 0.4,
 }
-SCHEMA_VERSION = "1.2.0"
+SCHEMA_VERSION = "1.2.3"
 MAX_DEGRADATION_REASONS = 32
+SUPPORTED_OUTPUT_LANGUAGES = {"en", "zh"}
 LABEL_ORDER = ("urgent", "frustrated", "confused", "skeptical", "cautious", "exploratory", "satisfied", "neutral")
 LABEL_ORDER_INDEX = {label: index for index, label in enumerate(LABEL_ORDER)}
 STATE_SHIFT_ALIASES = {
@@ -68,6 +69,12 @@ ROUTE_REASON_ENUM = {
     "task_specific",
 }
 RAW_HOST_CAPABILITY_KEYS = ("include_raw_emotion", "include_internal_diagnostics")
+CLI_RAW_EMOTION_REQUEST_KEY = "_cli_include_raw_emotion"
+INTERACTION_NEED_ENUM = {
+    "alignment_check",
+    "evidence_first",
+    "keep_progress_visible",
+}
 
 ANGER_TERMS = {
     "气死", "烦", "垃圾", "离谱", "扯", "蠢", "废物", "火大", "崩溃", "受不了", "妈的",
@@ -366,6 +373,11 @@ def normalize_text(text: str) -> str:
 
 def detect_language(text: str) -> str:
     return "zh" if re.search(r"[\u4e00-\u9fff]", text or "") else "en"
+
+
+def normalize_language_hint(value: Any) -> str:
+    raw = str(value or "").strip().lower()
+    return re.sub(r"[^a-z0-9_-]+", "_", raw)[:32]
 
 
 def count_terms(text: str, terms: set[str]) -> int:
@@ -813,8 +825,16 @@ def build_features(payload: dict[str, Any], diagnostics: dict[str, Any]) -> dict
     message = str(payload.get("message") or "")
     history = payload.get("history") or []
     runtime = payload.get("runtime") or {}
+    context = payload.get("context") or {}
     user_profile = load_user_profile(payload, diagnostics)
-    language = detect_language(message)
+    language_hint = normalize_language_hint(context.get("language") or runtime.get("language"))
+    if language_hint and language_hint in SUPPORTED_OUTPUT_LANGUAGES:
+        language = language_hint
+    elif language_hint:
+        mark_degraded(diagnostics, f"unsupported_language:{language_hint}")
+        language = "en"
+    else:
+        language = detect_language(message)
     norm_message = normalize_text(message)
     recent_users = recent_user_messages(history)
     previous_users = recent_users[:-1] if recent_users and normalize_text(recent_users[-1]) == norm_message else recent_users
@@ -2307,7 +2327,7 @@ def build_system_prompt_addendum(features: dict[str, Any], confirmed: dict[str, 
     language = features["language"]
     if language == "zh":
         if mode in {"urgent", "frustrated"}:
-            return "用户已经多次尝试。先确认当前障碍点的最小复现路径，再给出一个带明确成功判据的下一步。保持进度可见。"
+            return "用户已经多次尝试。先确认当前最小复现检查点，再给出一个带明确成功判据的下一步。保持进度可见。"
         if mode == "skeptical":
             return "用户希望先看到依据。回复以校验点、命令或日志片段开头，再给结论和下一步。"
         if mode == "confused":
@@ -2318,7 +2338,7 @@ def build_system_prompt_addendum(features: dict[str, Any], confirmed: dict[str, 
             return "保留当前可工作状态。优先做回归检查、交付说明和收口，避免扩展 scope。"
         return "给出一个具体建议，说明下一步和验证方式。"
     if mode in {"urgent", "frustrated"}:
-        return "The user has retried this path. Confirm the smallest reproducible blocking point, then give one next action with a clear success criterion. Keep progress visible."
+        return "The user has tried this path multiple times. Confirm the smallest reproducible checkpoint, then give one next action with a clear success criterion. Keep progress visible."
     if mode == "skeptical":
         return "The user wants evidence before more changes. Start with a verification point, command, or log excerpt, then give the conclusion and next step."
     if mode == "confused":
@@ -2641,6 +2661,9 @@ def run_pipeline(payload: dict[str, Any]) -> dict[str, Any]:
         "degraded": bool(diagnostics["degraded"]),
         "degradation_reasons": degradation_reasons,
         "host_capabilities": normalized_payload.get("host_capabilities", {}),
+        "cli_options": {
+            "include_raw_emotion": bool(normalized_payload.get(CLI_RAW_EMOTION_REQUEST_KEY)),
+        },
         "profile_state": profile_state,
         "memory_update": memory_update,
         "constraint_signals": constraint_signals,
@@ -2695,9 +2718,7 @@ def parse_payload(args: argparse.Namespace) -> dict[str, Any]:
     if getattr(args, "calibration_file", None):
         payload["calibration_state"] = load_json_file(args.calibration_file)
     if getattr(args, "include_raw_emotion", False):
-        host_capabilities = dict(payload.get("host_capabilities") or {})
-        host_capabilities["include_raw_emotion"] = True
-        payload["host_capabilities"] = host_capabilities
+        payload[CLI_RAW_EMOTION_REQUEST_KEY] = True
     return payload
 
 
@@ -2739,7 +2760,34 @@ def select_output(command: str, full: dict[str, Any]) -> Any:
 
 def raw_emotion_requested(full: dict[str, Any]) -> bool:
     capabilities = full.get("host_capabilities") or {}
-    return any(bool(capabilities.get(key)) for key in RAW_HOST_CAPABILITY_KEYS)
+    explicit_values = [capabilities.get(key) for key in RAW_HOST_CAPABILITY_KEYS if key in capabilities]
+    if any(capability_disabled(value) for value in explicit_values):
+        return False
+    return any(capability_enabled(value) for value in explicit_values) or bool((full.get("cli_options") or {}).get("include_raw_emotion"))
+
+
+def capability_enabled(value: Any) -> bool:
+    if value is True or value == 1:
+        return True
+    if isinstance(value, str):
+        return value.strip().lower() in {"1", "true", "yes", "on"}
+    return False
+
+
+def capability_disabled(value: Any) -> bool:
+    if value is False or value == 0:
+        return True
+    if isinstance(value, str):
+        return value.strip().lower() in {"0", "false", "no", "off"}
+    return False
+
+
+def validate_interaction_needs(needs: list[str]) -> list[str]:
+    valid: list[str] = []
+    for need in unique_labels(needs):
+        if need in INTERACTION_NEED_ENUM:
+            valid.append(need)
+    return valid[:3]
 
 
 def build_host_state_delta(state_delta: dict[str, Any]) -> dict[str, Any]:
@@ -2757,7 +2805,7 @@ def build_host_state_delta(state_delta: dict[str, Any]) -> dict[str, Any]:
         "dominant_shift": STATE_SHIFT_ALIASES.get(dominant_shift, dominant_shift),
         "interaction": {
             "changed": bool(interaction_delta),
-            "needs": unique_labels(interaction_needs),
+            "needs": validate_interaction_needs(interaction_needs),
         },
     }
 
@@ -2801,6 +2849,10 @@ def build_host_output(full: dict[str, Any]) -> dict[str, Any]:
         },
         "state": {
             "interaction_state": interaction_state,
+            "_deprecated_alias": {
+                "interaction_state": "top_level.interaction_state",
+                "remove_after": "1.3",
+            },
             "state_delta": build_host_state_delta(full["state_delta"]),
         },
         "memory": {

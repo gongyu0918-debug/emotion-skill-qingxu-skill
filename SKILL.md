@@ -71,6 +71,10 @@ Default output deliberately keeps raw `labels` and raw `emotion_vector` out of t
 - `state.state_delta`: action-named shifts such as `needs_concrete_unblock`, `needs_evidence_first`, or `needs_alignment_check`.
 - `memory.should_persist`: host-side persistence recommendation.
 
+Top-level `interaction_state` is canonical. `state.interaction_state` is a deprecated compatibility alias for v1.1 hosts and is marked by `state._deprecated_alias`; plan to remove that alias after the 1.3 line.
+
+`state.state_delta.interaction.needs` is validated against `alignment_check`, `evidence_first`, and `keep_progress_visible`.
+
 ## Input Contract
 
 Smallest valid payload:
@@ -127,6 +131,8 @@ For audit and calibration only:
 ```
 
 This adds `diagnostics.internal.labels`, `diagnostics.internal.emotion_vector`, raw `state_delta`, and `mode_scores`. Keep these fields out of normal LLM prompts.
+
+Safety precedence: an explicit payload value of `host_capabilities.include_raw_emotion=false` or `include_internal_diagnostics=false` disables raw diagnostics even when the CLI includes `--include-raw-emotion`.
 
 ## Runtime Commands
 
