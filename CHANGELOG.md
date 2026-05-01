@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.3.0 - 2026-05-02
+
+- split the former monolithic runtime into focused modules for types, terms, features, scoring, routing, output, and shared helpers
+- kept `scripts/emotion_engine.py` as the CLI and pipeline facade with the existing `host` / `run` behavior
+- kept the 1.2 host contract shape, raw affect isolation, positive prompt addenda, profiling, logging, and route-reason truncation behavior
+- reorganized `infer_labels` into named signal predicates and `dominant_mode` into an ordered rule table with stable rule ids
+- updated README, README.zh-CN, SKILL.md, and the ClawHub runtime bundle manifest for the new module files
+- this entry covers the local mainline refactor; GitHub Release and ClawHub publish are intentionally paused
+
 ## 1.2.4 - 2026-05-01
 
 - reused the already computed profile state in `build_model_prompts` and passed real `features` into overlay rendering

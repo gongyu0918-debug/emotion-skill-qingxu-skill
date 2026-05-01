@@ -170,6 +170,18 @@ Use `--no-persist` for read-only previews. Use `--ignore-bad-store` to skip corr
 6. Apply `satisfaction_lock` after success.
 7. Persist `memory.proposed_calibration_state` only in host-owned storage.
 
+## Runtime Layout
+
+`scripts/emotion_engine.py` is the CLI and pipeline facade. Runtime logic lives in focused modules:
+
+- `emotion_types.py`: schema, dimensions, enums, and typed maps.
+- `emotion_terms.py`: terms, regexes, language detection, and counting.
+- `emotion_features.py`: payload, profile, history, and feature extraction.
+- `emotion_scoring.py`: screen, labels, mode scores, and dominant mode.
+- `emotion_routing.py`: prediction, analysis, routing, constraints, and state delta.
+- `emotion_output.py`: positive prompts, guidance, overlays, and host output.
+- `emotion_utils.py`: shared JSON, diagnostics, vector, and normalization helpers.
+
 ## Published Bundle
 
 ClawHub publish now ships the runtime-facing subset only:
@@ -180,6 +192,13 @@ ClawHub publish now ships the runtime-facing subset only:
 - `CHANGELOG.md`
 - `agents/openai.yaml`
 - `scripts/emotion_engine.py`
+- `scripts/emotion_types.py`
+- `scripts/emotion_terms.py`
+- `scripts/emotion_utils.py`
+- `scripts/emotion_features.py`
+- `scripts/emotion_scoring.py`
+- `scripts/emotion_routing.py`
+- `scripts/emotion_output.py`
 - `scripts/minimal_host_adapter.py`
 - `scripts/download_smoke.py`
 - `demo/local_history_event.json`

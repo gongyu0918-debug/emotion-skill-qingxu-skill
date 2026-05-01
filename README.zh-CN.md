@@ -57,6 +57,18 @@ python scripts/download_smoke.py
 - 只用标准库
 - 运行时引擎不发网络请求
 
+## 运行时结构
+
+1.3 版本保留 `scripts/emotion_engine.py` 作为 CLI 和 pipeline 门面。运行逻辑拆到直白模块里，后续改动可以定位在单个文件：
+
+- `emotion_types.py`：schema version、维度、枚举、`TypedDict` 边界。
+- `emotion_terms.py`：词集、正则、语言检测、term counting。
+- `emotion_features.py`：payload、profile、history、特征提取。
+- `emotion_scoring.py`：screen vector、labels、mode scores、dominant mode。
+- `emotion_routing.py`：prediction、analysis、routing、constraints、state delta。
+- `emotion_output.py`：正向 prompt、guidance、overlay、host output。
+- `emotion_utils.py`：JSON、diagnostics、vector、normalize 等共享 helper。
+
 ## 30 秒试跑
 
 ```bash
@@ -211,6 +223,13 @@ ClawHub 发布包只带运行时需要的文件：
 - `CHANGELOG.md`
 - `agents/openai.yaml`
 - `scripts/emotion_engine.py`
+- `scripts/emotion_types.py`
+- `scripts/emotion_terms.py`
+- `scripts/emotion_utils.py`
+- `scripts/emotion_features.py`
+- `scripts/emotion_scoring.py`
+- `scripts/emotion_routing.py`
+- `scripts/emotion_output.py`
 - `scripts/minimal_host_adapter.py`
 - `scripts/download_smoke.py`
 - `demo/local_history_event.json`

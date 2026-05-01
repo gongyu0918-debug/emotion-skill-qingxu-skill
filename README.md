@@ -57,6 +57,18 @@ Requirements:
 - standard library only
 - no network calls from the runtime engine
 
+## Runtime Layout
+
+Version 1.3 keeps `scripts/emotion_engine.py` as the CLI and pipeline facade. The runtime logic is split into direct modules so future edits can stay local:
+
+- `emotion_types.py`: schema version, dimensions, enums, `TypedDict` boundaries.
+- `emotion_terms.py`: term sets, regexes, language detection, term counting.
+- `emotion_features.py`: payload, profile, history, and feature extraction.
+- `emotion_scoring.py`: screen vectors, labels, mode scores, dominant mode.
+- `emotion_routing.py`: prediction, analysis, routing, constraints, state delta.
+- `emotion_output.py`: positive prompts, guidance, overlays, host output.
+- `emotion_utils.py`: shared JSON, diagnostics, vector, and normalization helpers.
+
 ## Try It
 
 ```bash
@@ -211,6 +223,13 @@ ClawHub ships the runtime-facing subset:
 - `CHANGELOG.md`
 - `agents/openai.yaml`
 - `scripts/emotion_engine.py`
+- `scripts/emotion_types.py`
+- `scripts/emotion_terms.py`
+- `scripts/emotion_utils.py`
+- `scripts/emotion_features.py`
+- `scripts/emotion_scoring.py`
+- `scripts/emotion_routing.py`
+- `scripts/emotion_output.py`
 - `scripts/minimal_host_adapter.py`
 - `scripts/download_smoke.py`
 - `demo/local_history_event.json`
