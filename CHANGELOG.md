@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.2.4 - 2026-05-01
+
+- reused the already computed profile state in `build_model_prompts` and passed real `features` into overlay rendering
+- added visible degradation marking for truncated `route_reasons`
+- added optional CLI profiling through `--profile` with pipeline stage timings in full `run` output
+- added `--log-level` for stderr-only runtime logs while preserving JSON stdout
+- added lightweight `TypedDict` boundaries for core pipeline maps and a dev-only `mypy.ini`
+- added audit coverage for repeated-token regex, profile/log output, prompt overlay features, and route-reason truncation
+
 ## 1.2.3 - 2026-04-30
 
 - marked `state.interaction_state` as a deprecated compatibility alias for top-level `interaction_state`

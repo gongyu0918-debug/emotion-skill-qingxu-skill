@@ -3,16 +3,88 @@ from __future__ import annotations
 
 import argparse
 import json
+import logging
 import math
 import os
 import re
 import sys
 import tempfile
+import time
 from datetime import datetime
 from difflib import SequenceMatcher
 from pathlib import Path
-from typing import Any
+from typing import Any, TypedDict
 from zoneinfo import ZoneInfo
+
+
+LOGGER = logging.getLogger("emotion_skill")
+
+
+class FeatureMap(TypedDict, total=False):
+    message: str
+    language: str
+    user_profile: dict[str, Any]
+    evidence: list[str]
+
+
+class ScreenState(TypedDict, total=False):
+    vector: dict[str, float]
+    state_vector: dict[str, float]
+    interaction_state: dict[str, float]
+    emotion_vector: dict[str, float]
+    labels: list[str]
+    confidence: float
+    evidence: list[str]
+
+
+class ConfirmedState(TypedDict, total=False):
+    dominant_mode: str
+    labels: list[str]
+    confidence: float
+    vector: dict[str, float]
+    state_vector: dict[str, float]
+    interaction_state: dict[str, float]
+    emotion_vector: dict[str, float]
+    mode_scores: dict[str, float]
+
+
+class RoutingState(TypedDict, total=False):
+    reply_style: str
+    verification_level: str
+    thread_interface: dict[str, Any]
+
+
+class PipelineResult(TypedDict, total=False):
+    schema_version: str
+    degraded: bool
+    degradation_reasons: list[str]
+    host_capabilities: dict[str, Any]
+    cli_options: dict[str, Any]
+    profile_state: dict[str, Any]
+    memory_update: dict[str, Any]
+    constraint_signals: dict[str, Any]
+    weight_schedule: dict[str, Any]
+    collection_stack: dict[str, Any]
+    consistency_snapshot: dict[str, Any]
+    review_plan: dict[str, Any]
+    posthoc_plan: dict[str, Any]
+    review_shadow: dict[str, Any]
+    posthoc_shadow: dict[str, Any]
+    features: FeatureMap
+    initial_screen: ScreenState
+    confirmed_state: ConfirmedState
+    prediction: dict[str, Any]
+    analysis: dict[str, Any]
+    routing: RoutingState
+    route_reasons: list[str]
+    response_constraints: list[str]
+    state_delta: dict[str, Any]
+    satisfaction_lock: dict[str, Any]
+    guidance: dict[str, Any]
+    overlay_prompt: str
+    debug_overlay_prompt: str
+    prompts: dict[str, str]
+    pipeline_profile: dict[str, Any]
 
 
 # Internal affect axes are converted to positive interaction axes before they
@@ -35,8 +107,9 @@ DEFAULT_PERSONA_TRAITS = {
     "openness": 0.5,
     "assertiveness": 0.4,
 }
-SCHEMA_VERSION = "1.2.3"
+SCHEMA_VERSION = "1.2.4"
 MAX_DEGRADATION_REASONS = 32
+MAX_ROUTE_REASONS = 6
 SUPPORTED_OUTPUT_LANGUAGES = {"en", "zh"}
 LABEL_ORDER = ("urgent", "frustrated", "confused", "skeptical", "cautious", "exploratory", "satisfied", "neutral")
 LABEL_ORDER_INDEX = {label: index for index, label in enumerate(LABEL_ORDER)}
@@ -349,6 +422,16 @@ def dump_json(data: Any, pretty: bool) -> str:
     if pretty:
         return json.dumps(data, ensure_ascii=False, indent=2, sort_keys=True)
     return json.dumps(data, ensure_ascii=False, separators=(",", ":"), sort_keys=True)
+
+
+def configure_logging(level_name: str) -> None:
+    level = getattr(logging, level_name.upper(), logging.WARNING)
+    logging.basicConfig(level=level, stream=sys.stderr, format="%(levelname)s emotion_skill: %(message)s")
+
+
+def record_profile(profile: dict[str, Any] | None, stage: str, start: float) -> None:
+    if profile is not None:
+        profile[stage] = round((time.perf_counter() - start) * 1000.0, 3)
 
 
 def atomic_write_text(path: Path, text: str) -> None:
@@ -821,7 +904,7 @@ def load_user_profile(payload: dict[str, Any], diagnostics: dict[str, Any]) -> d
     }
 
 
-def build_features(payload: dict[str, Any], diagnostics: dict[str, Any]) -> dict[str, Any]:
+def build_features(payload: dict[str, Any], diagnostics: dict[str, Any]) -> FeatureMap:
     message = str(payload.get("message") or "")
     history = payload.get("history") or []
     runtime = payload.get("runtime") or {}
@@ -1533,7 +1616,7 @@ def infer_labels(emotion_vector: dict[str, float], features: dict[str, Any]) -> 
     return canonicalize_labels(labels)
 
 
-def initial_screen(features: dict[str, Any]) -> dict[str, Any]:
+def initial_screen(features: FeatureMap) -> ScreenState:
     urgency = clamp(
         0.23 * clamp(features["urgency_hits"] / 2.0)
         + 0.12 * features["blocking_ratio"]
@@ -1774,7 +1857,7 @@ def dominant_mode(emotion_vector: dict[str, float], features: dict[str, Any], sc
     return "neutral"
 
 
-def confirm_state(payload: dict[str, Any], features: dict[str, Any], screen: dict[str, Any], weight_schedule: dict[str, Any]) -> dict[str, Any]:
+def confirm_state(payload: dict[str, Any], features: FeatureMap, screen: ScreenState, weight_schedule: dict[str, Any]) -> ConfirmedState:
     llm_semantic = payload.get("llm_semantic") or {}
     llm_confidence = clamp(float(llm_semantic.get("confidence", 0.0) or 0.0))
     llm_state_vector = clamp_dict(llm_semantic.get("vector"), STATE_DIMS) if llm_semantic.get("vector") else {}
@@ -2084,7 +2167,7 @@ def build_memory_update(payload: dict[str, Any], features: dict[str, Any], confi
     }
 
 
-def build_routing(features: dict[str, Any], confirmed: dict[str, Any], prediction: dict[str, Any]) -> dict[str, Any]:
+def build_routing(features: FeatureMap, confirmed: ConfirmedState, prediction: dict[str, Any]) -> RoutingState:
     mode = confirmed["dominant_mode"]
     vector = confirmed["vector"]
     emotion_vector = confirmed["emotion_vector"]
@@ -2222,20 +2305,23 @@ def build_state_delta(payload: dict[str, Any], confirmed: dict[str, Any]) -> dic
     }
 
 
-def validate_route_reasons(reasons: list[str]) -> list[str]:
+def validate_route_reasons(reasons: list[str], diagnostics: dict[str, Any] | None = None) -> list[str]:
     valid: list[str] = []
     for reason in unique_labels(reasons):
         if reason in ROUTE_REASON_ENUM:
             valid.append(reason)
-    return valid[:6]
+    if len(valid) > MAX_ROUTE_REASONS and diagnostics is not None:
+        mark_degraded(diagnostics, "route_reasons_truncated")
+    return valid[:MAX_ROUTE_REASONS]
 
 
 def build_route_reasons(
-    features: dict[str, Any],
-    confirmed: dict[str, Any],
+    features: FeatureMap,
+    confirmed: ConfirmedState,
     prediction: dict[str, Any],
-    routing: dict[str, Any],
+    routing: RoutingState,
     state_delta: dict[str, Any],
+    diagnostics: dict[str, Any] | None = None,
 ) -> list[str]:
     mode = confirmed["dominant_mode"]
     labels = set(confirmed.get("labels") or [])
@@ -2261,7 +2347,7 @@ def build_route_reasons(
         reasons.append(str(state_delta["dominant_shift"]))
     if features.get("goal_specificity", 0.0) >= 0.48:
         reasons.append("task_specific")
-    return validate_route_reasons(reasons)
+    return validate_route_reasons(reasons, diagnostics)
 
 
 def build_satisfaction_lock(features: dict[str, Any], confirmed: dict[str, Any], prediction: dict[str, Any]) -> dict[str, Any]:
@@ -2565,11 +2651,11 @@ def render_debug_overlay(features: dict[str, Any], confirmed: dict[str, Any], pr
     )
 
 
-def build_model_prompts(payload: dict[str, Any], screen: dict[str, Any], confirmed: dict[str, Any], routing: dict[str, Any], prediction: dict[str, Any], analysis: dict[str, Any], weight_schedule: dict[str, Any], posthoc_plan: dict[str, Any]) -> dict[str, str]:
+def build_model_prompts(payload: dict[str, Any], features: FeatureMap, screen: ScreenState, confirmed: ConfirmedState, routing: RoutingState, prediction: dict[str, Any], analysis: dict[str, Any], weight_schedule: dict[str, Any], posthoc_plan: dict[str, Any]) -> dict[str, str]:
     latest = str(payload.get("message") or "").strip()[:160]
     history = payload.get("history") or []
     runtime = payload.get("runtime") or {}
-    user_profile = load_user_profile(payload, {"degraded": False, "degradation_reasons": []})
+    user_profile = features["user_profile"]
     history_excerpt = [{"r": item.get("role", ""), "t": str(item.get("text") or item.get("content") or "")[:80]} for item in history[-3:]]
     profile_hint = {
         "tz": user_profile["timezone"],
@@ -2625,38 +2711,63 @@ def build_model_prompts(payload: dict[str, Any], screen: dict[str, Any], confirm
         "fast_confirmation_prompt": fast_confirmation_prompt,
         "review_pass_prompt": review_pass_prompt,
         "posthoc_reflection_prompt": review_pass_prompt,
-        "overlay_prompt": render_overlay({}, confirmed, prediction, routing, analysis),
+        "overlay_prompt": render_overlay(features, confirmed, prediction, routing, analysis),
     }
 
 
-def run_pipeline(payload: dict[str, Any]) -> dict[str, Any]:
+def run_pipeline(payload: dict[str, Any], profile: bool = False) -> PipelineResult:
+    total_start = time.perf_counter()
+    pipeline_profile: dict[str, Any] | None = {} if profile else None
+
+    stage_start = time.perf_counter()
     normalized_payload, diagnostics = normalize_payload(payload)
+    record_profile(pipeline_profile, "normalize_ms", stage_start)
+
+    stage_start = time.perf_counter()
     features = build_features(normalized_payload, diagnostics)
     profile_state = build_profile_state(features)
     constraint_signals = build_constraint_signals(features)
     weight_schedule = build_weight_schedule(normalized_payload, features)
+    record_profile(pipeline_profile, "features_ms", stage_start)
+
+    stage_start = time.perf_counter()
     screen = initial_screen(features)
+    record_profile(pipeline_profile, "screen_ms", stage_start)
+
+    stage_start = time.perf_counter()
     confirmed = confirm_state(normalized_payload, features, screen, weight_schedule)
     consistency_snapshot = build_consistency_snapshot(normalized_payload, screen)
     memory_update = build_memory_update(normalized_payload, features, confirmed, weight_schedule, consistency_snapshot)
+    record_profile(pipeline_profile, "confirm_ms", stage_start)
+
+    stage_start = time.perf_counter()
     prediction = predict_state(features, confirmed)
     analysis = build_analysis_plan(features, screen, confirmed, prediction)
     routing = build_routing(features, confirmed, prediction)
     state_delta = build_state_delta(normalized_payload, confirmed)
-    route_reasons = build_route_reasons(features, confirmed, prediction, routing, state_delta)
+    route_reasons = build_route_reasons(features, confirmed, prediction, routing, state_delta, diagnostics)
     satisfaction_lock = build_satisfaction_lock(features, confirmed, prediction)
     response_constraints = build_response_constraints(confirmed, routing, prediction, satisfaction_lock)
+    record_profile(pipeline_profile, "route_ms", stage_start)
+
+    stage_start = time.perf_counter()
     guidance = build_guidance(features, confirmed, prediction)
     posthoc_plan = build_posthoc_plan(features, confirmed, analysis, weight_schedule)
     posthoc_shadow = build_posthoc_shadow(normalized_payload, features, confirmed, analysis, posthoc_plan)
     collection_stack = build_collection_stack(weight_schedule, features, posthoc_plan)
     overlay_prompt = render_overlay(features, confirmed, prediction, routing, analysis)
     debug_overlay_prompt = render_debug_overlay(features, confirmed, prediction, routing, analysis)
-    prompts = build_model_prompts(normalized_payload, screen, confirmed, routing, prediction, analysis, weight_schedule, posthoc_plan)
+    record_profile(pipeline_profile, "guidance_ms", stage_start)
+
+    stage_start = time.perf_counter()
+    prompts = build_model_prompts(normalized_payload, features, screen, confirmed, routing, prediction, analysis, weight_schedule, posthoc_plan)
     prompts["overlay_prompt"] = overlay_prompt
     prompts["debug_overlay_prompt"] = debug_overlay_prompt
+    record_profile(pipeline_profile, "prompts_ms", stage_start)
+
+    stage_start = time.perf_counter()
     degradation_reasons = finalize_degradation_reasons(diagnostics)
-    return {
+    result: PipelineResult = {
         "schema_version": SCHEMA_VERSION,
         "degraded": bool(diagnostics["degraded"]),
         "degradation_reasons": degradation_reasons,
@@ -2689,6 +2800,19 @@ def run_pipeline(payload: dict[str, Any]) -> dict[str, Any]:
         "debug_overlay_prompt": debug_overlay_prompt,
         "prompts": prompts,
     }
+    record_profile(pipeline_profile, "finalize_ms", stage_start)
+    if pipeline_profile is not None:
+        pipeline_profile["total_ms"] = round((time.perf_counter() - total_start) * 1000.0, 3)
+        result["pipeline_profile"] = pipeline_profile
+    LOGGER.info(
+        "pipeline mode=%s labels=%s route_reasons=%s degraded=%s total_ms=%.3f",
+        confirmed["dominant_mode"],
+        ",".join(confirmed["labels"]),
+        ",".join(route_reasons),
+        result["degraded"],
+        (time.perf_counter() - total_start) * 1000.0,
+    )
+    return result
 
 
 def parse_payload(args: argparse.Namespace) -> dict[str, Any]:
@@ -2888,6 +3012,8 @@ def build_parser() -> argparse.ArgumentParser:
         sub.add_argument("--posthoc-file", help="Path to posthoc_semantic JSON.")
         sub.add_argument("--calibration-file", help="Path to calibration_state JSON.")
         sub.add_argument("--include-raw-emotion", action="store_true", help="Include internal raw affect diagnostics in host output.")
+        sub.add_argument("--profile", action="store_true", help="Include pipeline stage timings in full run output.")
+        sub.add_argument("--log-level", choices=("DEBUG", "INFO", "WARNING", "ERROR"), default="WARNING", help="Write runtime logs to stderr.")
         sub.add_argument("--output", help="Path to write JSON output.")
         sub.add_argument("--pretty", action="store_true", help="Pretty-print JSON.")
     return parser
@@ -2896,6 +3022,7 @@ def build_parser() -> argparse.ArgumentParser:
 def main() -> int:
     parser = build_parser()
     args = parser.parse_args()
+    configure_logging(args.log_level)
     try:
         payload = parse_payload(args)
     except FileNotFoundError as exc:
@@ -2906,7 +3033,7 @@ def main() -> int:
         parser.exit(2, f"{exc}\n")
     if not payload.get("message"):
         parser.error("A message is required via --message, --input, or stdin JSON.")
-    full = run_pipeline(payload)
+    full = run_pipeline(payload, profile=args.profile)
     selected = select_output(args.command, full)
     rendered = dump_json(selected, args.pretty)
     if args.output:

@@ -106,6 +106,16 @@ python scripts/emotion_engine.py host \
 
 完整 `run` 命令保留 diagnostics、features、prompts、calibration 字段，给研究和回归测试用。
 
+## Profiling
+
+只在完整 `run` 命令里打开 profiling：
+
+```bash
+python scripts/emotion_engine.py run --input demo/local_history_event.json --profile --log-level INFO --pretty
+```
+
+`--profile` 会增加 `pipeline_profile`，记录 normalize、features、screen、confirm、route、guidance、prompts、finalize 和 total 耗时。`--log-level INFO` 把关键判定写到 stderr，stdout 仍保持合法 JSON。
+
 ## Raw Affect 显式开启
 
 生产 host 应该把 `guidance.system_prompt_addendum`、`response_constraints`、`routing` 喂给模型。
@@ -177,6 +187,7 @@ python scripts/independent_audit.py
 python scripts/marketplace_tag_audit.py
 python scripts/feature_gate_audit.py
 python scripts/bundle_manifest_check.py
+python -m compileall -q scripts
 ```
 
 当前本地结果：

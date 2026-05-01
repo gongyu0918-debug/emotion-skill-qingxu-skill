@@ -199,6 +199,14 @@ Published-bundle smoke:
 python scripts/download_smoke.py
 ```
 
+Runtime profiling:
+
+```bash
+python scripts/emotion_engine.py run --input demo/local_history_event.json --profile --log-level INFO --pretty
+```
+
+`--profile` adds `pipeline_profile` to full `run` output. `--log-level INFO` writes mode, labels, route reasons, degradation state, and total runtime to stderr, keeping stdout as valid JSON.
+
 Full GitHub validation:
 
 ```bash
@@ -209,6 +217,7 @@ python scripts/independent_audit.py
 python scripts/marketplace_tag_audit.py
 python scripts/feature_gate_audit.py
 python scripts/bundle_manifest_check.py
+python -m compileall -q scripts
 ```
 
 Current local regression results:

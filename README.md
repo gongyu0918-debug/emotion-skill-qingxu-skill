@@ -106,6 +106,16 @@ Use `host` for runtime integration. The most important fields are:
 
 The full `run` command keeps diagnostics, features, prompts, and calibration fields for research and regression work.
 
+## Profiling
+
+Use profiling only on the full `run` command:
+
+```bash
+python scripts/emotion_engine.py run --input demo/local_history_event.json --profile --log-level INFO --pretty
+```
+
+`--profile` adds `pipeline_profile` with stage timings for normalize, features, screen, confirm, route, guidance, prompts, finalize, and total runtime. `--log-level INFO` writes key decisions to stderr, so stdout remains parseable JSON.
+
 ## Raw Affect Is Opt-In
 
 Production hosts should feed the model `guidance.system_prompt_addendum`, `response_constraints`, and `routing`.
@@ -177,6 +187,7 @@ python scripts/independent_audit.py
 python scripts/marketplace_tag_audit.py
 python scripts/feature_gate_audit.py
 python scripts/bundle_manifest_check.py
+python -m compileall -q scripts
 ```
 
 Current local results:

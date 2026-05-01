@@ -130,6 +130,25 @@ def main() -> int:
         findings,
     )
 
+    token_repeat_text = "go go 测试 测试 ok ok ok"
+    token_repeat = ee.run_pipeline({"message": token_repeat_text})
+    token_repeat_ok = (
+        ee.TOKEN_REPEAT_PATTERN.findall(token_repeat_text) == ["go", "测试", "ok"]
+        and token_repeat["features"]["token_repeat_runs"] == 3
+        and token_repeat["features"]["tempo_pause_ratio"] > 0.0
+    )
+    record(
+        "token_repeat_pattern_active",
+        token_repeat_ok,
+        {
+            "pattern": ee.TOKEN_REPEAT_PATTERN.pattern,
+            "matches": ee.TOKEN_REPEAT_PATTERN.findall(token_repeat_text),
+            "token_repeat_runs": token_repeat["features"]["token_repeat_runs"],
+            "tempo_pause_ratio": token_repeat["features"]["tempo_pause_ratio"],
+        },
+        findings,
+    )
+
     missing_code, missing_raw = run_command(
         [sys.executable, "scripts/emotion_engine.py", "run", "--input", "missing-turn.json", "--pretty"]
     )
@@ -179,6 +198,33 @@ def main() -> int:
             {"exit_code": nested_code, "raw": nested_raw, "exists": nested_output.exists()},
             findings,
         )
+
+    profile_proc = subprocess.run(
+        [sys.executable, "scripts/emotion_engine.py", "run", "--input", str(DEMO_EVENT), "--profile", "--log-level", "INFO", "--pretty"],
+        capture_output=True,
+        text=True,
+        cwd=ROOT,
+    )
+    try:
+        profile_parsed = json.loads(profile_proc.stdout) if profile_proc.stdout else {}
+    except json.JSONDecodeError:
+        profile_parsed = {}
+    pipeline_profile = profile_parsed.get("pipeline_profile") if isinstance(profile_parsed, dict) else {}
+    profile_keys = {"normalize_ms", "features_ms", "screen_ms", "confirm_ms", "route_ms", "guidance_ms", "prompts_ms", "finalize_ms", "total_ms"}
+    record(
+        "profile_output_and_stderr_logging",
+        profile_proc.returncode == 0
+        and profile_keys.issubset(set(pipeline_profile or {}))
+        and "pipeline mode=" in profile_proc.stderr
+        and isinstance(profile_parsed, dict),
+        {
+            "exit_code": profile_proc.returncode,
+            "profile_keys": sorted((pipeline_profile or {}).keys()) if isinstance(pipeline_profile, dict) else [],
+            "stderr": profile_proc.stderr.strip()[:400],
+            "stdout_prefix": profile_proc.stdout[:1],
+        },
+        findings,
+    )
 
     host_code, host_raw = run_command(
         [sys.executable, "scripts/emotion_engine.py", "host", "--input", str(DEMO_EVENT), "--pretty"]
@@ -291,6 +337,54 @@ def main() -> int:
         "positive_prompt_addendum_no_raw_negative_terms",
         bool(prompt_samples) and all(text.strip() for text in prompt_samples.values()) and not any(prompt_hits.values()),
         {"checked": sorted(prompt_samples), "hits": {name: hits for name, hits in prompt_hits.items() if hits}},
+        findings,
+    )
+
+    model_prompts = ee.build_model_prompts(
+        demo_payload,
+        demo_result["features"],
+        demo_result["initial_screen"],
+        demo_result["confirmed_state"],
+        demo_result["routing"],
+        demo_result["prediction"],
+        demo_result["analysis"],
+        demo_result["weight_schedule"],
+        demo_result["posthoc_plan"],
+    )
+    expected_overlay = ee.render_overlay(demo_result["features"], demo_result["confirmed_state"], demo_result["prediction"], demo_result["routing"], demo_result["analysis"])
+    record(
+        "build_model_prompts_uses_features_overlay",
+        model_prompts["overlay_prompt"] == expected_overlay,
+        {
+            "overlay_prompt": model_prompts["overlay_prompt"],
+            "expected_overlay": expected_overlay,
+        },
+        findings,
+    )
+
+    route_diag = {"degraded": False, "degradation_reasons": []}
+    route_reasons = ee.validate_route_reasons(
+        [
+            "runtime_priority",
+            "urgent_pressure",
+            "repeat_failure_pressure",
+            "evidence_requested",
+            "scope_guard_requested",
+            "low_clarity",
+            "post_success_guard",
+            "stall_risk",
+            "task_specific",
+        ],
+        route_diag,
+    )
+    route_degradation = ee.finalize_degradation_reasons(route_diag)
+    record(
+        "route_reasons_truncation_marked",
+        len(route_reasons) == ee.MAX_ROUTE_REASONS and "route_reasons_truncated" in route_degradation,
+        {
+            "route_reasons": route_reasons,
+            "degradation_reasons": route_degradation,
+        },
         findings,
     )
 
