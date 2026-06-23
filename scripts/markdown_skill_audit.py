@@ -16,6 +16,7 @@ REQUIRED_REFS = [
     "references/routing-playbook.md",
     "references/response-constraints.md",
     "references/real-scenarios.md",
+    "references/subagent-forward-tests.md",
     "references/model-prompts.md",
     "references/integration-openclaw-hermes.md",
     "references/examples.md",
@@ -66,11 +67,26 @@ def main() -> int:
     routing = read(ROOT / "references" / "routing-playbook.md").lower()
     constraints = read(ROOT / "references" / "response-constraints.md").lower()
     scenarios = read(ROOT / "references" / "real-scenarios.md").lower()
+    forward_tests = read(ROOT / "references" / "subagent-forward-tests.md").lower()
     combined_published = "\n".join(read(ROOT / path) for path in actual)
 
     record(checks, "routing_generalizes_beyond_keywords", "route by situation, not by a single word" in routing and "do not add phrase-specific" in routing, {})
     record(checks, "constraints_cover_core_gates", all(term in constraints for term in ["evidence first", "scope guard", "visible progress", "closeout guard"]), {})
     record(checks, "scenario_families_present", all(term in scenarios for term in ["repeated failure", "evidence request", "scope protection", "post-success closeout"]), {})
+    record(
+        checks,
+        "subagent_forward_protocol_present",
+        all(term in forward_tests for term in ["fresh subagent", "soft constraint", "hard guardrails", "no hidden classifier"]),
+        {},
+    )
+    record(
+        checks,
+        "soft_constraint_case_present",
+        "forward-conditional-scope-expansion" in forward_tests
+        and "does not hard-refuse" in forward_tests
+        and "conditional-scope-expansion" in scenarios,
+        {},
+    )
     record(checks, "no_published_python_classifier_requirement", "python scripts/emotion_engine.py" not in combined_published and "emotion_engine.py host" not in combined_published, {})
 
     ok = all(item["ok"] for item in checks)

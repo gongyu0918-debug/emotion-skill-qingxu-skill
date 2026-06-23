@@ -7,6 +7,7 @@ mypy.ini
 assets/**
 demo/**
 scripts/**
+reports/**
 references/emotion-policy-matrix.md
 references/feature-admission-v1.md
 references/prompt-chain-audit.md

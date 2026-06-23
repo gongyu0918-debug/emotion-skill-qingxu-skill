@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.4.1 - 2026-06-23
+
+- added `references/subagent-forward-tests.md` so real agent forward-testing is part of the published Markdown skill guidance
+- documented soft constraints versus hard guardrails, including conditional scope expansion where evidence can justify a second helper file
+- clarified that `scripts/real_scenario_replay.py` is only a structural smoke test, while subagent forward tests are the behavior check
+- added report-level evidence for real scenarios in `reports/` while keeping reports out of the ClawHub install bundle
+
 ## 1.4.0 - 2026-06-23
 
 - reframed the skill as a Markdown-first agent playbook instead of a Python runtime router

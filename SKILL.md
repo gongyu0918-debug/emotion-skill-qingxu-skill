@@ -33,6 +33,8 @@ Use [references/response-constraints.md](references/response-constraints.md) whe
 
 Use [references/real-scenarios.md](references/real-scenarios.md) when validating that a change generalizes across real coding-agent failure patterns instead of fixing one example.
 
+Use [references/subagent-forward-tests.md](references/subagent-forward-tests.md) when validating actual agent behavior with fresh subagents, especially soft constraints versus hard guardrails.
+
 Use [references/model-prompts.md](references/model-prompts.md) when a host or agent framework needs compact prompt snippets.
 
 Use [references/integration-openclaw-hermes.md](references/integration-openclaw-hermes.md) only when integrating this playbook into an OpenClaw/Hermes host.
@@ -82,6 +84,7 @@ ClawHub publish now ships the Markdown-first skill bundle:
 - `references/routing-playbook.md`
 - `references/response-constraints.md`
 - `references/real-scenarios.md`
+- `references/subagent-forward-tests.md`
 - `references/model-prompts.md`
 - `references/integration-openclaw-hermes.md`
 - `references/examples.md`

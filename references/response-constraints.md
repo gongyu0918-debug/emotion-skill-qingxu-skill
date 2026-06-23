@@ -73,6 +73,8 @@ Required behavior:
 - Summarize only the completed scope.
 - Run or name the smoke/regression check.
 - Report pass/fail honestly.
+- Before checks run, use future or current-action wording. After checks run,
+  include the exact command and result before saying pass or fail.
 - Stop adding features, cleanup, or refactors.
 
 Closeout first sentence shape:

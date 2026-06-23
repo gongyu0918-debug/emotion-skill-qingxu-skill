@@ -45,6 +45,12 @@ SCENARIOS: list[dict[str, Any]] = [
         "source": "field-pattern: accepted fix closeout",
         "expected_terms": ["summarize completed scope", "smoke/regression", "stop expanding"],
     },
+    {
+        "id": "conditional-scope-expansion",
+        "family": "scope protection",
+        "source": "field-pattern: user grants conditional helper expansion",
+        "expected_terms": ["soft constraint", "evidence", "rollback"],
+    },
 ]
 
 
@@ -56,6 +62,7 @@ def main() -> int:
     routing = read_reference("routing-playbook.md")
     constraints = read_reference("response-constraints.md")
     scenario_doc = read_reference("real-scenarios.md")
+    forward_doc = read_reference("subagent-forward-tests.md")
     rows: list[dict[str, Any]] = []
 
     for scenario in SCENARIOS:
@@ -64,7 +71,9 @@ def main() -> int:
         expected_terms = scenario["expected_terms"]
         doc_hit = scenario_id in scenario_doc
         family_hit = family in scenario_doc and family in (scenario_doc + "\n" + routing)
-        behavior_hits = [term for term in expected_terms if term in scenario_doc or term in constraints or term in routing]
+        behavior_hits = [
+            term for term in expected_terms if term in scenario_doc or term in constraints or term in routing or term in forward_doc
+        ]
         ok = doc_hit and family_hit and len(behavior_hits) >= max(2, len(expected_terms) - 1)
         rows.append(
             {
@@ -90,6 +99,17 @@ def main() -> int:
             "source": "release policy",
             "ok": anti_overfit,
             "detail": "scenario doc requires family-level routing rather than exact phrase patches",
+        }
+    )
+    rows.append(
+        {
+            "id": "subagent-forward-protocol",
+            "source": "references/subagent-forward-tests.md",
+            "ok": all(
+                term in forward_doc
+                for term in ["fresh subagent", "exact reply", "soft constraint", "no hidden classifier"]
+            ),
+            "detail": "published references include an agent-in-the-loop protocol beyond script replay",
         }
     )
 

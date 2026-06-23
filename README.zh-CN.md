@@ -27,6 +27,7 @@ ClawHub 发布包：
 - `references/routing-playbook.md`：主路由、状态模式和冲突优先级
 - `references/response-constraints.md`：依据优先、范围保护、进度、收口门禁
 - `references/real-scenarios.md`：真实场景族，用于避免一例一修
+- `references/subagent-forward-tests.md`：真实 agent 前向测试协议
 - `references/model-prompts.md`：宿主需要时可用的紧凑 prompt overlay
 - `references/integration-openclaw-hermes.md`：OpenClaw/Hermes 接入说明
 - `references/examples.md`：前后对比示例
@@ -70,7 +71,8 @@ git diff --check
 验证口径：
 
 - Markdown audit 检查路由、披露和发布边界是否已经回到 Markdown-first。
-- 真实场景 replay 检查场景族覆盖，不围绕单个句子打补丁。
+- 真实场景 replay 只做场景族结构烟测，不代表真实 agent 已按技能行动。
+- subagent forward test 才是路由准确性、软约束和非硬护栏行为的真实使用检查；实测报告放在 `reports/`。
 - bundle manifest 确认 ClawHub 只发布精简 Markdown skill。
 - legacy runtime 测试保留为回归证据，确保脚本退出安装路径时没有被误伤。
 

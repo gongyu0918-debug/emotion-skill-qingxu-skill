@@ -31,6 +31,7 @@ Published ClawHub bundle:
 - `references/routing-playbook.md`: main state routing and tie breakers
 - `references/response-constraints.md`: evidence, scope, progress, closeout guardrails
 - `references/real-scenarios.md`: real scenario families for regression thinking
+- `references/subagent-forward-tests.md`: agent-in-the-loop forward-test protocol
 - `references/model-prompts.md`: optional compact overlays for host prompts
 - `references/integration-openclaw-hermes.md`: host integration guidance
 - `references/examples.md`: before/after behavior examples
@@ -76,8 +77,9 @@ Validation intent:
 
 - Markdown audit checks that routing, disclosure, and publish boundaries are
   Markdown-first.
-- Real scenario replay checks representative scenario families against the
-  references, not one exact phrase.
+- Real scenario replay is a structural smoke test for scenario-family coverage.
+- Subagent forward tests are the real behavior check for routing accuracy and
+  soft constraints versus hard guardrails; reports live under `reports/`.
 - Bundle manifest check confirms ClawHub publishes the lean Markdown bundle.
 - Legacy runtime tests remain as regression evidence that the old Python tooling
   was not accidentally broken while being moved out of the installed skill path.

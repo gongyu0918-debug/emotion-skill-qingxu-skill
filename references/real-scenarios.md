@@ -14,6 +14,7 @@ behavior across the family.
 | `repo-grounding-limits` | agent makes blind assumptions about a repo | evidence-first review | state what code was inspected, what is not yet known, and ground claims in files/tests |
 | `silent-background-job-alert-gap` | scheduled or background work fails quietly | silent progress risk + repeated failure | make progress visible, name the next checkpoint, add a check/alert path before claiming recovery |
 | `post-success-closeout-guard` | user says the result is good and asks for summary/regression | post-success closeout | summarize completed scope, run smoke/regression, stop expanding scope |
+| `conditional-scope-expansion` | user first limits scope but later allows a second helper if evidence proves it is needed | scope protection + evidence request | treat the scope rule as a soft constraint: require evidence, impact, and rollback before expanding; do not mechanically refuse |
 | `bad-host-review-payload` | host-provided review or metadata is malformed | integration resilience | degrade gracefully, keep the agent behavior safe, and do not expose malformed internal state |
 | `timezone-or-host-context-gap` | host lacks precise local context | confusion risk + integration boundary | use provided context if available; otherwise state the missing boundary rather than guessing |
 
@@ -36,3 +37,12 @@ Before release:
 2. Confirm the relevant reference file tells an agent what to do without Python classification.
 3. Confirm the expected behavior would still hold if the wording changes.
 4. Confirm no published reference instructs the agent to run a hidden classifier before acting.
+
+## Agent-In-The-Loop Check
+
+`scripts/real_scenario_replay.py` is only a structural smoke test for these scenario
+families. It does not prove that a live agent follows the skill.
+
+Use [subagent-forward-tests.md](subagent-forward-tests.md) for the real behavior
+check: fresh subagents, realistic user turns, no expected answer leakage, and a
+manual score for routing accuracy and soft-constraint behavior.
