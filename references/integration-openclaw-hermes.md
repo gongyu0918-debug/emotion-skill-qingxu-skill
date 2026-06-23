@@ -1,85 +1,53 @@
 # Integration Notes For OpenClaw And Hermes
 
+This skill is Markdown-first. Integrations should load the relevant reference file
+and inject a short behavior overlay. They should not require a Python classifier
+before the agent can act.
+
 ## OpenClaw
 
 Recommended flow:
 
-1. `message_received` or `before_agent_start` collects:
-   - latest user message
-   - recent visible history
-   - runtime pressure data
-2. Run:
-
-```bash
-python skills/emotion-skill/scripts/emotion_engine.py host --input turn.json --output emotion.json
-```
-
-Use full diagnostics while tuning:
-
-```bash
-python skills/emotion-skill/scripts/emotion_engine.py run --input turn.json --output emotion.full.json
-```
-
-3. Use `overlay_prompt` in:
-   - `before_agent_start`, or
-   - `agent:bootstrap` if you want the overlay appended as a small extra context block
-4. Apply the compact `routing` fields to:
-   - queue mode
-   - heartbeat suppression or deferral
-   - `sessions_spawn` policy
-   - progress update cadence
-5. Merge `memory.proposed_calibration_state` into a bounded host-owned calibration store.
+1. Match the current user turn to the trigger description in `SKILL.md`.
+2. Read `SKILL.md`.
+3. Read only the relevant reference:
+   - repeated failure, evidence, scope, confusion, progress, or closeout:
+     `references/routing-playbook.md`
+   - reply shaping and edit guardrails:
+     `references/response-constraints.md`
+   - release validation:
+     `references/real-scenarios.md`
+4. Add a compact overlay from `references/model-prompts.md` only when the host needs
+   structured prompt text.
+5. Keep progress and handoff decisions visible in the main conversation.
 
 Suggested mapping:
 
-- `queue_mode=interrupt`: newest urgent human message should preempt slow background work
-- `queue_mode=steer`: steer the current run at the next tool boundary
-- `prefer_main_thread=true`: do not bury the user behind subagent chatter
-- `allow_parallel_subagents=false`: collapse to the main thread unless exploration is explicitly useful
-- `defer_heartbeat=true`: move heartbeat and low-priority scans behind the active user turn
+- Evidence-first: keep the active lane on the main thread until the basis is named.
+- Scope guard: assign any subagent a disjoint write boundary or do not delegate.
+- Repeated failure: steer the active run toward reproduction before more changes.
+- Silent progress risk: send a visible status update at the next observable checkpoint.
+- Closeout: run smoke/regression and stop expanding scope.
 
 ## Hermes
 
 Recommended flow:
 
-1. Keep the long-lived voice in your runtime personality config.
-2. Keep longer-lived user tendencies in a host-owned profile store.
-3. Treat emotion output as a turn-local overlay.
-4. Map `guidance.tone`, `routing.reply_style`, and `mode` to a short-lived `/personality` or equivalent orchestration state.
-5. Use `guidance.question` only when the state is unclear enough to justify one short probe.
-6. Use the full `run` output when you need `memory_update.proposed_baseline` for an EMA host profile store.
-7. Feed the host profile store back through `user_profile.persona_traits`, `user_profile.big5`, and `user_profile.affective_prior`.
-8. Store `memory_update.proposed_calibration_state` beside that profile so front-versus-review trust can evolve per user.
+1. Keep stable personality in the host config.
+2. Treat this skill as a turn-local behavior overlay.
+3. Map the active pattern to temporary tone:
+   - repeated failure: concise repair
+   - evidence-first: analytical
+   - scope guard: careful
+   - confusion recovery: teacher-style alignment
+   - closeout: guarded summary
+4. Do not store raw user-state labels unless the user explicitly asks for an audit.
 
-Suggested mapping:
+## Hook Boundary
 
-- `concise`: urgent or frustrated
-- `teacher`: confused
-- `analytical`: skeptical
-- `careful`: cautious
-- `helpful`: neutral or satisfied
+The host may still keep local validation scripts in a GitHub clone, but a ClawHub
+installation of this skill should be useful with Markdown alone.
 
-## Hook Contract
-
-The emotion engine returns a stable structure:
-
-```json
-{
-  "mode": "skeptical",
-  "route_reasons": ["repeat_failure_pressure", "evidence_requested"],
-  "response_constraints": ["show_basis_first", "name_verification_steps"],
-  "guidance": {},
-  "routing": {
-    "reply_style": "evidence_then_act",
-    "verification_level": "very_high",
-    "queue_mode": "steer",
-    "prefer_main_thread": true,
-    "defer_heartbeat": true,
-    "allow_parallel_subagents": false,
-    "progress_update_interval_sec": 15
-  },
-  "overlay_prompt": "<state mode=skeptical ...>"
-}
-```
-
-The compact `host` output is the recommended runtime contract. Raw labels stay out of that payload unless `host_capabilities.include_raw_emotion=true` is set for audit, in which case they appear under `diagnostics.internal.labels`. The full `run` output keeps deeper fields such as `confirmed_state`, `prediction`, `routing.thread_interface`, `memory_update`, and `debug_overlay_prompt`. Use `debug_overlay_prompt` for inspection logs.
+Never hide a classifier run from the user as a prerequisite for following these
+instructions. If a host runs additional automation, report only the resulting
+evidence, boundary, or check result that matters to the task.

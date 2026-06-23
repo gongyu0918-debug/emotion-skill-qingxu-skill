@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.4.0 - 2026-06-23
+
+- reframed the skill as a Markdown-first agent playbook instead of a Python runtime router
+- moved main routing, response constraints, progress, scope, and closeout guardrails into `references/`
+- changed the ClawHub publish bundle to exclude scripts, demo payloads, README files, changelog, assets, and research-only references
+- added Markdown and real-scenario validation gates so release checks test general scenario families rather than one-off phrase patches
+
 ## 1.3.3 - 2026-06-23
 
 - republished release metadata to move the legacy ClawHub combined tag mapping to the current version, keeping all visible ClawHub tag values aligned with GitHub latest

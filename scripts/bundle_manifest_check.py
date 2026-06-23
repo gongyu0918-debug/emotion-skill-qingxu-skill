@@ -59,10 +59,10 @@ def documented_bundle_files() -> list[str]:
     inside = False
     files: list[str] = []
     for line in lines:
-        if line.strip() == "ClawHub publish now ships the runtime-facing subset only:":
+        if line.strip() == "ClawHub publish now ships the Markdown-first skill bundle:":
             inside = True
             continue
-        if inside and line.startswith("The full GitHub repo keeps"):
+        if inside and line.startswith("The GitHub repository keeps"):
             break
         if inside:
             match = MANIFEST_ITEM_RE.match(line)

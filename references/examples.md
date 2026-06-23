@@ -1,135 +1,110 @@
-# Examples / 实际案例对比
+# Examples
 
-这些案例用来说明同一个问题在“有没有情绪层”时会触发什么不同的工作模式。
+These examples show behavior changes. They are not phrase triggers.
 
-回答内容是示意型对比，重点看工作模式差异。
-
-## 1. Long delay and repeated failure
+## Repeated Failure
 
 User:
 
 ```text
-Pick up where you left off. This is still not fixed. No response for several minutes.
+This is still not fixed. You already changed it twice.
 ```
 
-Without emotion layer:
+Weak response:
 
 ```text
-I will continue investigating the issue.
+I will continue investigating.
 ```
 
-With emotion layer:
+Better response:
 
 ```text
-I am treating this as urgent and frustrated. I will inspect the stuck step first, report one concrete failure point, and keep the main thread focused here.
+I will stop expanding the fix path and first identify the smallest failing check.
+I will report the file/test boundary before editing again.
 ```
 
-Value:
-
-- 主线程优先
-- 更短首答
-- 更快进入有效动作
-
-## 2. Mild skepticism hidden in a hedge
+## Evidence First
 
 User:
 
 ```text
-但是不一定，先给我依据。
+Show me the basis before changing more files.
 ```
 
-Without emotion layer:
+Weak response:
 
 ```text
-Direct answer continues with the previous assumption.
+The issue is probably in the handler.
 ```
 
-With emotion layer:
+Better response:
 
 ```text
-I see a skeptical shift. I will give the basis and one validation point first, then the action path.
+I will start with the inspected file, command, or log that supports the claim.
+If the current evidence does not prove the handler path, I will say that before
+editing.
 ```
 
-Value:
-
-- 不会直接顺着原判断滑过去
-- 会先补依据
-- 更贴“轻度修正”的真实语气
-
-## 3. Caution and narrow scope
+## Scope Guard
 
 User:
 
 ```text
-小心点，只改这个文件，别碰配置，也别搞砸现有流程。
+Only change this module. Do not touch config.
 ```
 
-Without emotion layer:
+Weak response:
 
 ```text
-I will make the requested changes.
+I will make the requested changes and clean up nearby config.
 ```
 
-With emotion layer:
+Better response:
 
 ```text
-I am treating this as cautious. I will keep scope tight, avoid config changes, and verify the path before editing.
+Allowed scope is this module only. I will not change config. I will name the
+verification command and rollback path before editing.
 ```
 
-Value:
-
-- 自动收紧边界
-- 降低误改概率
-- 减少越界修改
-
-## 4. Satisfaction after success
+## Confusion Recovery
 
 User:
 
 ```text
-主流程已经好了，继续收口，把配置守住。
+I cannot tell whether this is path escaping or resolution.
 ```
 
-Without emotion layer:
+Weak response:
 
 ```text
-I will continue improving the implementation.
+It could be several things.
 ```
 
-With emotion layer:
+Better response:
 
 ```text
-Main flow is already good. I am switching into guard mode: smoke check, boundary lock, regression prevention, and drift prevention.
+Target as I understand it: determine whether the failing path is transformed
+incorrectly before open/read. I will check one exact path through the resolver
+first, then adjust the default path if that is wrong.
 ```
 
-Value:
-
-- 从推进切到收口
-- 防继续改坏
-- 防配置漂移
-
-## 5. Polite but high pressure
+## Closeout
 
 User:
 
 ```text
-麻烦尽快处理一下，这个问题已经卡住我今天的发布了，谢谢。
+Looks good. Do not expand scope; summarize and run the regression check.
 ```
 
-Without emotion layer:
+Weak response:
 
 ```text
-The answer may overread the politeness and stay too calm.
+I can also refactor the helper now.
 ```
 
-With emotion layer:
+Better response:
 
 ```text
-I am treating this as urgent despite the polite surface. I will prioritize the release blocker first and keep updates short.
+I will close at the verified scope, summarize what changed, run the regression
+check, and report the result. I will not add cleanup or new changes.
 ```
-
-Value:
-
-- 礼貌不会掩盖高压
-- 优先级会上升
-- 输出更贴真实状态

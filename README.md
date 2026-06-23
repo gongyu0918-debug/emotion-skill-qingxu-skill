@@ -2,14 +2,13 @@
 
 [简体中文](./README.zh-CN.md) · [GitHub](https://github.com/gongyu0918-debug/emotion-skill-qingxu-skill) · `clawhub install emotion-skill`
 
-Positive routing for coding agents when the conversation gets tense, vague, blocked, or ready to close.
+Markdown-first guidance for coding agents under pressure.
 
-Emotion Skill reads user-state signals internally, then gives the host LLM a positive execution policy: what to verify first, how much scope to protect, when to stay on the main thread, and when to stop expanding work after success.
-
-![Python](https://img.shields.io/badge/python-3.9%2B-3776AB)
-![Dependencies](https://img.shields.io/badge/dependencies-standard%20library-2E7D32)
-![Runtime](https://img.shields.io/badge/runtime-no%20network-455A64)
-![License](https://img.shields.io/badge/license-MIT-blue)
+Emotion Skill helps an agent choose better behavior when a coding task becomes
+tense, blocked, ambiguous, or ready to close. The installed skill is an
+agent-readable playbook: `SKILL.md` routes to focused files in `references/`.
+Python scripts in this repository are maintainer validation tools, not the skill's
+runtime control plane.
 
 ## Why People Install It
 
@@ -18,236 +17,76 @@ Coding agents often fail in the same human moments:
 - The user says the same bug still happens, and the agent keeps explaining.
 - The user asks for evidence, and the agent keeps guessing.
 - The user protects scope, and the agent touches nearby files.
+- The user gets no progress signal during a silent tool or queue delay.
 - The user says it works, and the agent starts a new refactor.
-- The user gets vague after a long delay, and the agent misses the pressure.
 
-This skill turns those moments into host-readable routing fields and a positive `system_prompt_addendum`. Raw affect signals stay internal unless you explicitly opt in for audit.
+This skill turns those moments into readable routing and response rules.
 
-## What It Changes
+## Structure
 
-| User signal | Host behavior |
-|---|---|
-| "This is still broken" with retry/runtime evidence | raise verification, keep work on the main thread, shorten progress updates |
-| "Show me the basis" | start with a command, log, test, or exact check before the conclusion |
-| "Only touch this file" | tighten scope, protect config, name rollback path |
-| "I am lost on the path" | restate the target, give one correctable default path |
-| "Works now, wrap it up" | enter guard mode, run regression checks, stop scope drift |
+Published ClawHub bundle:
 
-## Install
+- `SKILL.md`: trigger description, workflow, and reference index
+- `agents/openai.yaml`: UI metadata and starter prompt
+- `references/routing-playbook.md`: main state routing and tie breakers
+- `references/response-constraints.md`: evidence, scope, progress, closeout guardrails
+- `references/real-scenarios.md`: real scenario families for regression thinking
+- `references/model-prompts.md`: optional compact overlays for host prompts
+- `references/integration-openclaw-hermes.md`: host integration guidance
+- `references/examples.md`: before/after behavior examples
+- `references/emotion-value-model.md`: rationale and measurement ideas
 
-From ClawHub:
+GitHub-only maintenance files:
 
-```bash
-clawhub install emotion-skill
-cd skills/emotion-skill
-python scripts/download_smoke.py
+- `scripts/`: regression, audit, scenario, and historical runtime validation
+- `assets/`: calibration and long-tail corpus material
+- `demo/`: local examples for legacy runtime checks
+- historical and research references excluded from the installed bundle
+
+## Use
+
+In a skills-aware agent:
+
+```text
+Use $emotion-skill when the user asks for evidence, repeats a failed bug,
+protects scope, waits through a delay, is confused by a path, or asks to close
+out after success.
 ```
 
-From GitHub:
-
-```bash
-git clone https://github.com/gongyu0918-debug/emotion-skill-qingxu-skill.git
-cd emotion-skill-qingxu-skill
-python scripts/download_smoke.py
-```
-
-Requirements:
-
-- Python `3.9+`
-- standard library only
-- no network calls from the runtime engine
-- On Windows without IANA timezone data, pass `context.local_hour` or an offset-bearing `context.now_iso` for deterministic local-hour handling.
-
-## Runtime Layout
-
-Version 1.3 keeps `scripts/emotion_engine.py` as the CLI and pipeline facade. The runtime logic is split into direct modules so future edits can stay local:
-
-- `emotion_types.py`: schema version, dimensions, enums, `TypedDict` boundaries.
-- `emotion_terms.py`: term sets, regexes, language detection, term counting.
-- `emotion_features.py`: payload, profile, history, and feature extraction.
-- `emotion_scoring.py`: screen vectors, labels, mode scores, dominant mode.
-- `emotion_routing.py`: prediction, analysis, routing, constraints, state delta.
-- `emotion_output.py`: positive prompts, guidance, overlays, host output.
-- `emotion_utils.py`: shared JSON, diagnostics, vector, and normalization helpers.
-
-## Try It
-
-```bash
-python scripts/emotion_engine.py host \
-  --message "This is still not fixed. Show me the basis before changing more files." \
-  --pretty
-```
-
-Default host output is designed for production prompts:
-
-```json
-{
-  "mode": "skeptical",
-  "route_reasons": ["evidence_requested", "stall_risk"],
-  "response_constraints": ["show_basis_first", "name_verification_steps", "avoid_guessing", "include_check_result", "progress_update_required"],
-  "guidance": {
-    "system_prompt_addendum": "The user wants evidence before more changes. Start with a verification point, command, or log excerpt, then give the conclusion and next step.",
-    "tone": "evidence_first"
-  },
-  "routing": {
-    "reply_style": "evidence_then_act",
-    "verification_level": "high",
-    "queue_mode": "collect",
-    "prefer_main_thread": false,
-    "progress_update_interval_sec": 20
-  }
-}
-```
-
-Notice what is absent by default: no raw `labels`, no raw `emotion_vector`, no negative state phrase such as `falling_trust`.
-
-## Host Contract
-
-Use `host` for runtime integration. The most important fields are:
-
-- `guidance.system_prompt_addendum`: positive instruction text for the host LLM.
-- `response_constraints`: compact guardrails for the next reply.
-- `routing.reply_style`: posture such as `evidence_then_act`, `repair_then_explain`, or `verify_then_act`.
-- `routing.verification_level`: how much checking to do before editing.
-- `routing.queue_mode`: collect, steer, or interrupt current work.
-- `routing.progress_update_interval_sec`: progress cadence for long turns.
-- `satisfaction_lock`: closeout guard after success.
-- `interaction_state`: positive host-facing axes: clarity, trust, engagement.
-- `state.state_delta`: action-named shifts such as `needs_evidence_first`.
-- `memory.should_persist`: recommendation for host-owned profile storage.
-
-`interaction_state` at the top level is the canonical field. `state.interaction_state` is a deprecated compatibility alias for v1.1 hosts and is marked by `state._deprecated_alias`; plan to remove that alias after the 1.4 line.
-
-The full `run` command keeps diagnostics, features, prompts, and calibration fields for research and regression work.
-
-## Profiling
-
-Use profiling only on the full `run` command:
-
-```bash
-python scripts/emotion_engine.py run --input demo/local_history_event.json --profile --log-level INFO --pretty
-```
-
-`--profile` adds `pipeline_profile` with stage timings for normalize, features, screen, confirm, route, guidance, prompts, finalize, and total runtime. `--log-level INFO` writes key decisions to stderr, so stdout remains parseable JSON.
-
-## Raw Affect Is Opt-In
-
-Production hosts should feed the model `guidance.system_prompt_addendum`, `response_constraints`, and `routing`.
-
-Audit tools can request raw internal state:
-
-```json
-{
-  "message": "Show me the exact failing path first.",
-  "host_capabilities": {
-    "include_raw_emotion": true
-  }
-}
-```
-
-That adds:
-
-- `diagnostics.internal.labels`
-- `diagnostics.internal.emotion_vector`
-- `diagnostics.internal.state_delta`
-- `diagnostics.internal.mode_scores`
-
-Safety precedence: an explicit payload value of `host_capabilities.include_raw_emotion=false` or `include_internal_diagnostics=false` disables raw diagnostics even when the CLI includes `--include-raw-emotion`. The CLI flag is a local audit convenience.
-
-## Feedback Loop
-
-Hosts can pass the previous route outcome into the next turn:
-
-```json
-{
-  "runtime": {
-    "last_routing_outcome": {
-      "mode_was": "skeptical",
-      "user_followed_up_with": "still broken"
-    }
-  }
-}
-```
-
-This gives the router a lightweight effect signal without adding a model-training pipeline.
-
-## Persistence Boundary
-
-The engine itself is stateless. It returns JSON, makes no network calls, and writes only when `--output` is provided.
-
-The minimal host adapter can persist three host-owned files under `--store-dir`:
-
-- `user_profile.json`
-- `last_state.json`
-- `calibration_state.json`
-
-Use `--no-persist` for read-only previews. Use `--ignore-bad-store` to skip corrupt local store files and continue from empty values.
+The agent should read `SKILL.md`, then load only the matching reference. It should
+not run a Python classifier before applying the playbook.
 
 ## Validation
 
-Published-bundle smoke:
+Repository validation:
 
 ```bash
-python scripts/download_smoke.py
-```
-
-Full repository validation:
-
-```bash
+python scripts/markdown_skill_audit.py
+python scripts/real_scenario_replay.py
+python scripts/bundle_manifest_check.py
+python scripts/marketplace_tag_audit.py
 python scripts/alignment_test.py
 python scripts/ablation_test.py
 python scripts/smoke_test.py --seed 20260424 --strict
-python scripts/independent_audit.py
-python scripts/marketplace_tag_audit.py
-python scripts/feature_gate_audit.py
-python scripts/bundle_manifest_check.py
 python -m compileall -q scripts
+git diff --check
 ```
 
-Current local results:
+Validation intent:
 
-- alignment regression: `70/70`
-- ablation harness: `333/333`
-- strict smoke: `ok`
-- independent audit: `ok`
-- marketplace scope audit: `ok`
-- feature gate audit: `ok`
-- download smoke: `ok`
-- bundle manifest check: `ok`
+- Markdown audit checks that routing, disclosure, and publish boundaries are
+  Markdown-first.
+- Real scenario replay checks representative scenario families against the
+  references, not one exact phrase.
+- Bundle manifest check confirms ClawHub publishes the lean Markdown bundle.
+- Legacy runtime tests remain as regression evidence that the old Python tooling
+  was not accidentally broken while being moved out of the installed skill path.
 
-## Published Bundle
+## Design Boundary
 
-ClawHub ships the runtime-facing subset:
-
-- `SKILL.md`
-- `README.md`
-- `README.zh-CN.md`
-- `CHANGELOG.md`
-- `agents/openai.yaml`
-- `scripts/emotion_engine.py`
-- `scripts/emotion_types.py`
-- `scripts/emotion_terms.py`
-- `scripts/emotion_utils.py`
-- `scripts/emotion_features.py`
-- `scripts/emotion_scoring.py`
-- `scripts/emotion_routing.py`
-- `scripts/emotion_output.py`
-- `scripts/minimal_host_adapter.py`
-- `scripts/download_smoke.py`
-- `demo/local_history_event.json`
-- `references/examples.md`
-- `references/model-prompts.md`
-- `references/emotion-value-model.md`
-- `references/emotion-policy-matrix.md`
-- `references/integration-openclaw-hermes.md`
-
-The GitHub repository keeps the heavier regression, audit, and calibration files.
-
-## Good Fit
-
-- Coding agents that need better turn-by-turn behavior under pressure.
-- Hosts that want routing fields, progress cadence, and verification depth.
-- Teams that want emotion-aware behavior with raw affect kept in audit mode.
+This is a skill, not a plugin. A plugin or host may implement automation around
+the guidance, but the installed skill itself should remain useful as Markdown
+that a person or agent can read directly.
 
 ## License
 

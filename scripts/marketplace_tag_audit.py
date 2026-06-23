@@ -13,17 +13,13 @@ PUBLIC_FILES = {
     "readme_zh": ROOT / "README.zh-CN.md",
     "changelog": ROOT / "CHANGELOG.md",
     "openai_yaml": ROOT / "agents" / "openai.yaml",
+    "routing_playbook": ROOT / "references" / "routing-playbook.md",
+    "response_constraints": ROOT / "references" / "response-constraints.md",
+    "real_scenarios": ROOT / "references" / "real-scenarios.md",
     "examples": ROOT / "references" / "examples.md",
     "emotion_value_model": ROOT / "references" / "emotion-value-model.md",
-    "emotion_policy_matrix": ROOT / "references" / "emotion-policy-matrix.md",
     "integration_notes": ROOT / "references" / "integration-openclaw-hermes.md",
     "model_prompts": ROOT / "references" / "model-prompts.md",
-    "runtime_contract": ROOT / "scripts" / "emotion_engine.py",
-    "runtime_features": ROOT / "scripts" / "emotion_features.py",
-    "runtime_output": ROOT / "scripts" / "emotion_output.py",
-    "runtime_routing": ROOT / "scripts" / "emotion_routing.py",
-    "runtime_scoring": ROOT / "scripts" / "emotion_scoring.py",
-    "minimal_host_adapter": ROOT / "scripts" / "minimal_host_adapter.py",
 }
 
 
@@ -70,6 +66,8 @@ SCOPE_TERMS = {
     "thread priority", "guard behavior", "guard mode", "scope protection", "scope control", "queue priority",
     "reply style", "post-success", "stabilization", "debugging", "编排", "路由", "验证强度", "线程优先级",
     "收口策略", "代码工作流", "coding-task", "coding agents", "heartbeat coordination", "thread and heartbeat",
+    "markdown-first", "playbook", "evidence-first", "scope guard", "closeout", "progress visible",
+    "references", "response constraints", "real scenarios",
 }
 EMOTION_TERMS = {
     "emotion", "emotion-aware", "urgency", "frustration", "skepticism", "confusion", "caution", "satisfaction",
@@ -276,7 +274,7 @@ def main() -> int:
     )
     record(
         "skill_frontmatter_runtime_hint",
-        "repo debugging" in description or "scope protection" in description,
+        "markdown-first" in description and ("scope" in description or "evidence" in description),
         {"description": frontmatter.get("description", "")},
         checks,
     )
