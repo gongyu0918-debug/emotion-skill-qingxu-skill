@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.2 - 2026-06-23
+
+- republished the same hardened runtime and audit gate set with explicit ClawHub display metadata so GitHub and ClawHub latest release identifiers stay aligned
+
 ## 1.3.1 - 2026-06-23
 
 - hardened host payload numeric parsing so malformed runtime, profile, calibration, and vector values degrade instead of crashing the engine
