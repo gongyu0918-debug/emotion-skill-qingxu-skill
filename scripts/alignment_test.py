@@ -621,7 +621,7 @@ def main() -> int:
         )
     summary = {"passed": passed, "total": len(CASES), "results": rows}
     print(json.dumps(summary, ensure_ascii=False, indent=2))
-    return 0
+    return 0 if passed == len(CASES) else 1
 
 
 if __name__ == "__main__":

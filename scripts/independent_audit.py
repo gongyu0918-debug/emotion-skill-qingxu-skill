@@ -259,6 +259,40 @@ def main() -> int:
         findings,
     )
 
+    readme_example_code, readme_example_raw = run_command(
+        [
+            sys.executable,
+            "scripts/emotion_engine.py",
+            "host",
+            "--message",
+            "This is still not fixed. Show me the basis before changing more files.",
+            "--pretty",
+        ]
+    )
+    try:
+        readme_example = json.loads(readme_example_raw) if readme_example_raw else {}
+    except json.JSONDecodeError:
+        readme_example = {}
+    readme_example_ok = (
+        readme_example_code == 0
+        and readme_example.get("mode") == "skeptical"
+        and readme_example.get("route_reasons") == ["evidence_requested", "stall_risk"]
+        and "include_check_result" in readme_example.get("response_constraints", [])
+        and (readme_example.get("routing") or {}).get("prefer_main_thread") is False
+        and (readme_example.get("routing") or {}).get("progress_update_interval_sec") == 20
+    )
+    record(
+        "readme_example_host_output",
+        readme_example_ok,
+        {
+            "exit_code": readme_example_code,
+            "route_reasons": readme_example.get("route_reasons") if isinstance(readme_example, dict) else None,
+            "routing": readme_example.get("routing") if isinstance(readme_example, dict) else None,
+            "raw": readme_example_raw[:400],
+        },
+        findings,
+    )
+
     raw_host_code, raw_host_raw = run_command(
         [sys.executable, "scripts/emotion_engine.py", "host", "--input", str(DEMO_EVENT), "--include-raw-emotion", "--pretty"]
     )
@@ -461,6 +495,86 @@ def main() -> int:
             "degraded": degraded.get("degraded"),
             "degradation_reasons": degraded.get("degradation_reasons"),
             "mode": degraded.get("confirmed_state", {}).get("dominant_mode"),
+        },
+        findings,
+    )
+
+    bad_numeric_runtime = ee.run_pipeline(
+        {
+            "message": "test",
+            "runtime": {"response_delay_seconds": "bad"},
+        }
+    )
+    bad_numeric_ok = (
+        bad_numeric_runtime.get("degraded") is True
+        and "runtime.response_delay_seconds_invalid" in bad_numeric_runtime.get("degradation_reasons", [])
+        and isinstance(bad_numeric_runtime.get("features"), dict)
+    )
+    record(
+        "bad_runtime_number_degrades_not_crash",
+        bad_numeric_ok,
+        {
+            "degraded": bad_numeric_runtime.get("degraded"),
+            "degradation_reasons": bad_numeric_runtime.get("degradation_reasons"),
+            "response_delay_seconds": (bad_numeric_runtime.get("features") or {}).get("response_delay_seconds"),
+        },
+        findings,
+    )
+
+    bad_review_numeric = ee.run_pipeline(
+        {
+            "message": "test",
+            "review_semantic": {
+                "confidence": "bad",
+                "labels": ["skeptical"],
+                "emotion_vector": {"skepticism": 0.8},
+            },
+        }
+    )
+    bad_review_numeric_ok = (
+        bad_review_numeric.get("degraded") is True
+        and "review_semantic.confidence_invalid" in bad_review_numeric.get("degradation_reasons", [])
+        and isinstance(bad_review_numeric.get("posthoc_shadow"), dict)
+    )
+    record(
+        "bad_review_semantic_confidence_degrades_not_crash",
+        bad_review_numeric_ok,
+        {
+            "degraded": bad_review_numeric.get("degraded"),
+            "degradation_reasons": bad_review_numeric.get("degradation_reasons"),
+            "posthoc_shadow": bad_review_numeric.get("posthoc_shadow"),
+        },
+        findings,
+    )
+
+    bad_vector_values = ee.run_pipeline(
+        {
+            "message": "test",
+            "user_profile": {
+                "persona_traits": {"caution": "bad"},
+                "affective_prior": {"urgency": "bad"},
+            },
+            "llm_semantic": {
+                "labels": ["skeptical"],
+                "emotion_vector": {"skepticism": "bad"},
+            },
+        }
+    )
+    bad_vector_reasons = bad_vector_values.get("degradation_reasons", [])
+    bad_vector_values_ok = (
+        bad_vector_values.get("degraded") is True
+        and "user_profile.persona_traits.caution_invalid" in bad_vector_reasons
+        and "user_profile.affective_prior.urgency_invalid" in bad_vector_reasons
+        and "llm_semantic.emotion_vector.skepticism_invalid" in bad_vector_reasons
+        and isinstance(bad_vector_values.get("confirmed_state"), dict)
+    )
+    record(
+        "bad_vector_values_degrade_not_crash",
+        bad_vector_values_ok,
+        {
+            "degraded": bad_vector_values.get("degraded"),
+            "degradation_reasons": bad_vector_reasons,
+            "mode": bad_vector_values.get("confirmed_state", {}).get("dominant_mode"),
         },
         findings,
     )
@@ -758,6 +872,31 @@ def main() -> int:
             "adapter_top_level_type_error",
             bad_event_code == 2 and "Top-level JSON object required" in bad_event_raw and "Traceback" not in bad_event_raw,
             {"exit_code": bad_event_code, "raw": bad_event_raw},
+            findings,
+        )
+
+        missing_message_event = Path(tmp_dir) / "missing-message-event.json"
+        missing_message_event.write_text(json.dumps({"runtime": {"bug_retries": 2}}, ensure_ascii=False), encoding="utf-8")
+        missing_message_store = Path(tmp_dir) / "missing-message-store"
+        missing_message_code, missing_message_raw = run_command(
+            [
+                sys.executable,
+                "scripts/minimal_host_adapter.py",
+                "--event",
+                str(missing_message_event),
+                "--store-dir",
+                str(missing_message_store),
+                "--view",
+                "host",
+                "--pretty",
+            ]
+        )
+        record(
+            "adapter_missing_message_error",
+            missing_message_code == 2
+            and "Event message is required" in missing_message_raw
+            and not any(missing_message_store.glob("*.json")),
+            {"exit_code": missing_message_code, "raw": missing_message_raw, "store_exists": missing_message_store.exists()},
             findings,
         )
 

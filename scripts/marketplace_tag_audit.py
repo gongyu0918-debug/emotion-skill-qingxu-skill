@@ -11,12 +11,19 @@ PUBLIC_FILES = {
     "skill": ROOT / "SKILL.md",
     "readme_en": ROOT / "README.md",
     "readme_zh": ROOT / "README.zh-CN.md",
+    "changelog": ROOT / "CHANGELOG.md",
     "openai_yaml": ROOT / "agents" / "openai.yaml",
+    "examples": ROOT / "references" / "examples.md",
+    "emotion_value_model": ROOT / "references" / "emotion-value-model.md",
+    "emotion_policy_matrix": ROOT / "references" / "emotion-policy-matrix.md",
     "integration_notes": ROOT / "references" / "integration-openclaw-hermes.md",
     "model_prompts": ROOT / "references" / "model-prompts.md",
     "runtime_contract": ROOT / "scripts" / "emotion_engine.py",
-    "pack_snapshot_v2": ROOT / "assets" / "community-posthoc-calibration-v2.pack.json",
-    "pack_snapshot_56": ROOT / "assets" / "community-posthoc-calibration-56.pack.json",
+    "runtime_features": ROOT / "scripts" / "emotion_features.py",
+    "runtime_output": ROOT / "scripts" / "emotion_output.py",
+    "runtime_routing": ROOT / "scripts" / "emotion_routing.py",
+    "runtime_scoring": ROOT / "scripts" / "emotion_scoring.py",
+    "minimal_host_adapter": ROOT / "scripts" / "minimal_host_adapter.py",
 }
 
 

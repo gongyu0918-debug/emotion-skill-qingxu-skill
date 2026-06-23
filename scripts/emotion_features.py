@@ -10,10 +10,10 @@ from emotion_types import *
 from emotion_utils import *
 
 
-def derive_persona_traits(user_profile: dict[str, Any]) -> tuple[dict[str, float], str]:
-    persona_traits = clamp_dict(user_profile.get("persona_traits"), tuple(DEFAULT_PERSONA_TRAITS.keys()), DEFAULT_PERSONA_TRAITS)
+def derive_persona_traits(user_profile: dict[str, Any], diagnostics: dict[str, Any] | None = None) -> tuple[dict[str, float], str]:
+    persona_traits = clamp_dict(user_profile.get("persona_traits"), tuple(DEFAULT_PERSONA_TRAITS.keys()), DEFAULT_PERSONA_TRAITS, diagnostics, "user_profile.persona_traits")
     source = "default"
-    big5 = clamp_dict(user_profile.get("big5"), ("openness", "conscientiousness", "extraversion", "agreeableness", "neuroticism"))
+    big5 = clamp_dict(user_profile.get("big5"), ("openness", "conscientiousness", "extraversion", "agreeableness", "neuroticism"), diagnostics=diagnostics, reason_prefix="user_profile.big5")
     if any(value > 0 for value in big5.values()):
         source = "big5"
         persona_traits = {
@@ -24,7 +24,7 @@ def derive_persona_traits(user_profile: dict[str, Any]) -> tuple[dict[str, float
             "assertiveness": round(clamp(0.1 + 0.8 * big5["extraversion"]), 4),
         }
     explicit_raw = user_profile.get("persona_traits")
-    explicit = clamp_dict(explicit_raw, tuple(DEFAULT_PERSONA_TRAITS.keys()))
+    explicit = clamp_dict(explicit_raw, tuple(DEFAULT_PERSONA_TRAITS.keys()), diagnostics=diagnostics, reason_prefix="user_profile.persona_traits")
     explicit_mapping = explicit_raw if isinstance(explicit_raw, dict) else {}
     if any(value > 0 for value in explicit.values()):
         source = "persona_traits"
@@ -35,8 +35,8 @@ def derive_persona_traits(user_profile: dict[str, Any]) -> tuple[dict[str, float
     return persona_traits, source
 
 
-def derive_affective_prior(user_profile: dict[str, Any], persona_traits: dict[str, float], persona_source: str) -> tuple[dict[str, float], str, float]:
-    explicit_prior = clamp_dict(user_profile.get("affective_prior") or user_profile.get("background_emotion"), EMOTION_DIMS)
+def derive_affective_prior(user_profile: dict[str, Any], persona_traits: dict[str, float], persona_source: str, diagnostics: dict[str, Any] | None = None) -> tuple[dict[str, float], str, float]:
+    explicit_prior = clamp_dict(user_profile.get("affective_prior") or user_profile.get("background_emotion"), EMOTION_DIMS, diagnostics=diagnostics, reason_prefix="user_profile.affective_prior")
     if any(value > 0 for value in explicit_prior.values()):
         return explicit_prior, "explicit", 0.22
     patience = persona_traits["patience"]
@@ -126,18 +126,21 @@ def infer_local_hour(payload: dict[str, Any], timezone_name: str | None, diagnos
         except (TypeError, ValueError):
             mark_degraded(diagnostics, "local_hour_invalid")
             return None
-    if not timezone_name:
-        return None
-    try:
-        tz = ZoneInfo(timezone_name)
-    except Exception:
-        mark_degraded(diagnostics, "timezone_unavailable")
-        return None
     now_iso = context.get("now_iso") or runtime.get("now_iso")
     if not now_iso:
         return None
     try:
         dt = datetime.fromisoformat(str(now_iso).replace("Z", "+00:00"))
+    except Exception:
+        mark_degraded(diagnostics, "now_iso_invalid")
+        return None
+    if not timezone_name:
+        return int(dt.hour)
+    try:
+        tz = ZoneInfo(timezone_name)
+    except Exception:
+        return int(dt.hour)
+    try:
         if dt.tzinfo is None:
             dt = dt.replace(tzinfo=tz)
         else:
@@ -151,17 +154,17 @@ def infer_local_hour(payload: dict[str, Any], timezone_name: str | None, diagnos
 def load_user_profile(payload: dict[str, Any], diagnostics: dict[str, Any]) -> dict[str, Any]:
     user_profile = payload.get("user_profile") or {}
     baseline = as_mapping(user_profile.get("baseline"), diagnostics, "user_profile.baseline_not_mapping")
-    persona_traits, persona_source = derive_persona_traits(user_profile)
-    affective_prior, affective_prior_source, affective_prior_weight = derive_affective_prior(user_profile, persona_traits, persona_source)
+    persona_traits, persona_source = derive_persona_traits(user_profile, diagnostics)
+    affective_prior, affective_prior_source, affective_prior_weight = derive_affective_prior(user_profile, persona_traits, persona_source, diagnostics)
     timezone_name = user_profile.get("timezone") or payload.get("context", {}).get("timezone")
     work_start, work_end = parse_hour_window(user_profile.get("work_hours_local") or user_profile.get("work_hours"))
     local_hour = infer_local_hour(payload, timezone_name, diagnostics)
     in_work_window = hour_in_window(local_hour, work_start, work_end)
-    baseline_delay = max(12.0, float(baseline.get("response_delay_seconds", DEFAULT_BASELINE["response_delay_seconds"]) or DEFAULT_BASELINE["response_delay_seconds"]))
-    baseline_politeness = clamp(float(baseline.get("politeness", DEFAULT_BASELINE["politeness"]) or DEFAULT_BASELINE["politeness"]))
-    baseline_terseness = clamp(float(baseline.get("terseness", baseline.get("terse", DEFAULT_BASELINE["terseness"])) or DEFAULT_BASELINE["terseness"]))
-    baseline_punctuation = clamp(float(baseline.get("punctuation", DEFAULT_BASELINE["punctuation"]) or DEFAULT_BASELINE["punctuation"]))
-    baseline_directness = clamp(float(baseline.get("directness", DEFAULT_BASELINE["directness"]) or DEFAULT_BASELINE["directness"]))
+    baseline_delay = max(12.0, safe_float(baseline.get("response_delay_seconds"), DEFAULT_BASELINE["response_delay_seconds"], diagnostics, "user_profile.baseline.response_delay_seconds_invalid"))
+    baseline_politeness = clamp(safe_float(baseline.get("politeness"), DEFAULT_BASELINE["politeness"], diagnostics, "user_profile.baseline.politeness_invalid"))
+    baseline_terseness = clamp(safe_float(baseline.get("terseness", baseline.get("terse")), DEFAULT_BASELINE["terseness"], diagnostics, "user_profile.baseline.terseness_invalid"))
+    baseline_punctuation = clamp(safe_float(baseline.get("punctuation"), DEFAULT_BASELINE["punctuation"], diagnostics, "user_profile.baseline.punctuation_invalid"))
+    baseline_directness = clamp(safe_float(baseline.get("directness"), DEFAULT_BASELINE["directness"], diagnostics, "user_profile.baseline.directness_invalid"))
     availability_multiplier = 1.35 if in_work_window is False else 1.0
     return {
         "id": user_profile.get("id", ""),
@@ -374,14 +377,14 @@ def build_features(payload: dict[str, Any], diagnostics: dict[str, Any]) -> Feat
         + 0.1 * short_burst
     )
 
-    response_delay_seconds = float(runtime.get("response_delay_seconds", 0) or 0)
-    unresolved_turns = float(runtime.get("unresolved_turns", 0) or 0)
-    bug_retries = float(runtime.get("bug_retries", 0) or 0)
-    task_age_minutes = float(runtime.get("task_age_minutes", 0) or 0)
-    queue_depth = float(runtime.get("queue_depth", 0) or 0)
-    background_tasks_running = float(runtime.get("background_tasks_running", 0) or 0)
-    same_issue_mentions = float(runtime.get("same_issue_mentions", 0) or 0)
-    contradiction_signal = clamp(float(runtime.get("contradiction_signal", 0) or 0))
+    response_delay_seconds = safe_float(runtime.get("response_delay_seconds"), 0.0, diagnostics, "runtime.response_delay_seconds_invalid")
+    unresolved_turns = safe_float(runtime.get("unresolved_turns"), 0.0, diagnostics, "runtime.unresolved_turns_invalid")
+    bug_retries = safe_float(runtime.get("bug_retries"), 0.0, diagnostics, "runtime.bug_retries_invalid")
+    task_age_minutes = safe_float(runtime.get("task_age_minutes"), 0.0, diagnostics, "runtime.task_age_minutes_invalid")
+    queue_depth = safe_float(runtime.get("queue_depth"), 0.0, diagnostics, "runtime.queue_depth_invalid")
+    background_tasks_running = safe_float(runtime.get("background_tasks_running"), 0.0, diagnostics, "runtime.background_tasks_running_invalid")
+    same_issue_mentions = safe_float(runtime.get("same_issue_mentions"), 0.0, diagnostics, "runtime.same_issue_mentions_invalid")
+    contradiction_signal = clamp(safe_float(runtime.get("contradiction_signal"), 0.0, diagnostics, "runtime.contradiction_signal_invalid"))
     raw_last_outcome = runtime.get("last_routing_outcome")
     if raw_last_outcome is None:
         last_routing_outcome: dict[str, Any] = {}

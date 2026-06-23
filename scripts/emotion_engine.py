@@ -41,7 +41,7 @@ def run_pipeline(payload: dict[str, Any], profile: bool = False) -> PipelineResu
     features = build_features(normalized_payload, diagnostics)
     profile_state = build_profile_state(features)
     constraint_signals = build_constraint_signals(features)
-    weight_schedule = build_weight_schedule(normalized_payload, features)
+    weight_schedule = build_weight_schedule(normalized_payload, features, diagnostics)
     record_profile(pipeline_profile, "features_ms", stage_start)
 
     stage_start = time.perf_counter()
@@ -49,8 +49,8 @@ def run_pipeline(payload: dict[str, Any], profile: bool = False) -> PipelineResu
     record_profile(pipeline_profile, "screen_ms", stage_start)
 
     stage_start = time.perf_counter()
-    confirmed = confirm_state(normalized_payload, features, screen, weight_schedule)
-    consistency_snapshot = build_consistency_snapshot(normalized_payload, screen)
+    confirmed = confirm_state(normalized_payload, features, screen, weight_schedule, diagnostics)
+    consistency_snapshot = build_consistency_snapshot(normalized_payload, screen, diagnostics)
     memory_update = build_memory_update(normalized_payload, features, confirmed, weight_schedule, consistency_snapshot)
     record_profile(pipeline_profile, "confirm_ms", stage_start)
 
@@ -67,7 +67,7 @@ def run_pipeline(payload: dict[str, Any], profile: bool = False) -> PipelineResu
     stage_start = time.perf_counter()
     guidance = build_guidance(features, confirmed, prediction)
     posthoc_plan = build_posthoc_plan(features, confirmed, analysis, weight_schedule)
-    posthoc_shadow = build_posthoc_shadow(normalized_payload, features, confirmed, analysis, posthoc_plan)
+    posthoc_shadow = build_posthoc_shadow(normalized_payload, features, confirmed, analysis, posthoc_plan, diagnostics)
     collection_stack = build_collection_stack(weight_schedule, features, posthoc_plan)
     overlay_prompt = render_overlay(features, confirmed, prediction, routing, analysis)
     debug_overlay_prompt = render_debug_overlay(features, confirmed, prediction, routing, analysis)

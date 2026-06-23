@@ -407,7 +407,7 @@ def build_host_output(full: dict[str, Any]) -> dict[str, Any]:
             "interaction_state": interaction_state,
             "_deprecated_alias": {
                 "interaction_state": "top_level.interaction_state",
-                "remove_after": "1.3",
+                "remove_after": "1.4",
             },
             "state_delta": build_host_state_delta(full["state_delta"]),
         },

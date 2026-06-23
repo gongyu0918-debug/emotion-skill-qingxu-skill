@@ -139,13 +139,15 @@ def build_emotionality_metrics(emotion_vector: dict[str, float], features: dict[
     }
 
 
-def build_posthoc_shadow(payload: dict[str, Any], features: dict[str, Any], confirmed: dict[str, Any], analysis: dict[str, Any], posthoc_plan: dict[str, Any]) -> dict[str, Any]:
+def build_posthoc_shadow(payload: dict[str, Any], features: dict[str, Any], confirmed: dict[str, Any], analysis: dict[str, Any], posthoc_plan: dict[str, Any], diagnostics: dict[str, Any] | None = None) -> dict[str, Any]:
     review_semantic = load_review_semantic(payload)
-    source_vector = clamp_dict(review_semantic.get("emotion_vector"), EMOTION_DIMS) if review_semantic.get("emotion_vector") else confirmed["emotion_vector"]
+    source_vector = clamp_dict(review_semantic.get("emotion_vector"), EMOTION_DIMS, diagnostics=diagnostics, reason_prefix="review_semantic.emotion_vector") if review_semantic.get("emotion_vector") else confirmed["emotion_vector"]
     source_labels = canonicalize_labels(list(review_semantic.get("labels") or [])) if review_semantic.get("labels") else canonicalize_labels(confirmed["labels"])
     metrics = build_emotionality_metrics(source_vector, features)
     dominant_axis = max(EMOTION_DIMS, key=lambda dim: float(source_vector.get(dim, 0.0)))
     available = bool(review_semantic.get("emotion_vector") or review_semantic.get("labels"))
+    confirmed_confidence = safe_float(confirmed.get("confidence"), 0.0)
+    review_confidence = safe_float(review_semantic.get("confidence"), confirmed_confidence, diagnostics, "review_semantic.confidence_invalid")
     return {
         "enabled": True,
         "available": available,
@@ -161,7 +163,7 @@ def build_posthoc_shadow(payload: dict[str, Any], features: dict[str, Any], conf
         "dominant_axis": dominant_axis,
         "dominant_axis_score": round(float(source_vector.get(dominant_axis, 0.0)), 4),
         "labels": source_labels,
-        "confidence": round(clamp(float(review_semantic.get("confidence", 0.0) or 0.0)), 4) if available else round(float(confirmed["confidence"]), 4),
+        "confidence": round(clamp(review_confidence), 4) if available else round(clamp(confirmed_confidence), 4),
         "stance_cues": analysis["priority_reason"][:3],
     }
 
@@ -192,14 +194,14 @@ def build_constraint_signals(features: dict[str, Any]) -> dict[str, float]:
     }
 
 
-def build_weight_schedule(payload: dict[str, Any], features: dict[str, Any]) -> dict[str, Any]:
+def build_weight_schedule(payload: dict[str, Any], features: dict[str, Any], diagnostics: dict[str, Any] | None = None) -> dict[str, Any]:
     calibration = payload.get("calibration_state") or {}
-    observed_turns = int(calibration.get("observed_turns", features.get("unresolved_turns", 0)) or 0)
-    posthoc_samples = int(calibration.get("posthoc_samples", calibration.get("calibrated_samples", 0)) or 0)
-    consistency_samples = int(calibration.get("consistency_samples", posthoc_samples) or 0)
-    stable_prediction_hits = int(calibration.get("stable_prediction_hits", 0) or 0)
-    prediction_agreement = clamp(float(calibration.get("prediction_agreement", 0.0) or 0.0))
-    consistency_rate = clamp(float(calibration.get("consistency_rate", calibration.get("front_posthoc_consistency", prediction_agreement)) or prediction_agreement))
+    observed_turns = safe_int(calibration.get("observed_turns", features.get("unresolved_turns", 0)), safe_int(features.get("unresolved_turns"), 0), diagnostics, "calibration_state.observed_turns_invalid")
+    posthoc_samples = safe_int(calibration.get("posthoc_samples", calibration.get("calibrated_samples", 0)), 0, diagnostics, "calibration_state.posthoc_samples_invalid")
+    consistency_samples = safe_int(calibration.get("consistency_samples", posthoc_samples), posthoc_samples, diagnostics, "calibration_state.consistency_samples_invalid")
+    stable_prediction_hits = safe_int(calibration.get("stable_prediction_hits", 0), 0, diagnostics, "calibration_state.stable_prediction_hits_invalid")
+    prediction_agreement = clamp(safe_float(calibration.get("prediction_agreement"), 0.0, diagnostics, "calibration_state.prediction_agreement_invalid"))
+    consistency_rate = clamp(safe_float(calibration.get("consistency_rate", calibration.get("front_posthoc_consistency")), prediction_agreement, diagnostics, "calibration_state.consistency_rate_invalid"))
     agreement_confidence = clamp(consistency_samples / 18.0)
     effective_consistency = clamp((consistency_rate * agreement_confidence) + (prediction_agreement * (1.0 - agreement_confidence)))
     profile_seed = features["user_profile"]
@@ -783,15 +785,16 @@ def dominant_mode(emotion_vector: dict[str, float], features: dict[str, Any], sc
     return "neutral"
 
 
-def confirm_state(payload: dict[str, Any], features: FeatureMap, screen: ScreenState, weight_schedule: dict[str, Any]) -> ConfirmedState:
+def confirm_state(payload: dict[str, Any], features: FeatureMap, screen: ScreenState, weight_schedule: dict[str, Any], diagnostics: dict[str, Any] | None = None) -> ConfirmedState:
     llm_semantic = payload.get("llm_semantic") or {}
-    llm_confidence = clamp(float(llm_semantic.get("confidence", 0.0) or 0.0))
-    llm_state_vector = clamp_dict(llm_semantic.get("vector"), STATE_DIMS) if llm_semantic.get("vector") else {}
+    llm_confidence = clamp(safe_float(llm_semantic.get("confidence"), 0.0, diagnostics, "llm_semantic.confidence_invalid"))
+    llm_emotion_vector = clamp_dict(llm_semantic.get("emotion_vector"), EMOTION_DIMS, diagnostics=diagnostics, reason_prefix="llm_semantic.emotion_vector") if llm_semantic.get("emotion_vector") else {}
+    llm_state_vector = clamp_dict(llm_semantic.get("vector"), STATE_DIMS, diagnostics=diagnostics, reason_prefix="llm_semantic.vector") if llm_semantic.get("vector") else {}
     if not llm_state_vector and llm_semantic.get("emotion_vector"):
-        llm_state_vector = derive_state_vector_from_emotion(llm_semantic["emotion_vector"], features)
+        llm_state_vector = derive_state_vector_from_emotion(llm_emotion_vector, features)
     last_state = payload.get("last_state") or {}
-    previous_vector = last_state.get("vector") or {}
-    ttl_seconds = int(last_state.get("ttl_seconds", 0) or 0)
+    previous_vector = clamp_dict(last_state.get("vector"), STATE_DIMS, diagnostics=diagnostics, reason_prefix="last_state.vector") if last_state.get("vector") else {}
+    ttl_seconds = safe_int(last_state.get("ttl_seconds"), 0)
     prev_weight = weight_schedule["carryover_weight"] if ttl_seconds > 0 else 0.0
     vector_inputs: list[tuple[dict[str, Any], float]] = [(screen["vector"], weight_schedule["screen_weight"])]
     if llm_state_vector:
@@ -801,17 +804,18 @@ def confirm_state(payload: dict[str, Any], features: FeatureMap, screen: ScreenS
     vector = combine_named_vectors(vector_inputs, STATE_DIMS)
     emotion_vector = derive_emotion_vector(vector, features)
     profile_prior = features["user_profile"].get("affective_prior") or {}
-    profile_prior_weight = clamp(float(features["user_profile"].get("affective_prior_weight", 0.0) or 0.0), 0.0, 0.24)
+    profile_prior_weight = clamp(safe_float(features["user_profile"].get("affective_prior_weight"), 0.0), 0.0, 0.24)
     review_semantic = load_review_semantic(payload)
-    posthoc_confidence = clamp(float(review_semantic.get("confidence", 0.0) or 0.0))
-    previous_emotion_vector = last_state.get("emotion_vector") or {}
+    posthoc_confidence = clamp(safe_float(review_semantic.get("confidence"), 0.0, diagnostics, "review_semantic.confidence_invalid"))
+    review_emotion_vector = clamp_dict(review_semantic.get("emotion_vector"), EMOTION_DIMS, diagnostics=diagnostics, reason_prefix="review_semantic.emotion_vector") if review_semantic.get("emotion_vector") else {}
+    previous_emotion_vector = clamp_dict(last_state.get("emotion_vector"), EMOTION_DIMS, diagnostics=diagnostics, reason_prefix="last_state.emotion_vector") if last_state.get("emotion_vector") else {}
     emotion_inputs: list[tuple[dict[str, Any], float]] = [(emotion_vector, weight_schedule["screen_weight"])]
     if profile_prior:
         emotion_inputs.append((profile_prior, min(profile_prior_weight, weight_schedule["prior_weight"])))
-    if llm_semantic.get("emotion_vector"):
-        emotion_inputs.append((llm_semantic["emotion_vector"], weight_schedule["screen_semantic_weight"] * llm_confidence))
-    if review_semantic.get("emotion_vector"):
-        emotion_inputs.append((review_semantic["emotion_vector"], weight_schedule["posthoc_weight"] * max(posthoc_confidence, 0.55)))
+    if llm_emotion_vector:
+        emotion_inputs.append((llm_emotion_vector, weight_schedule["screen_semantic_weight"] * llm_confidence))
+    if review_emotion_vector:
+        emotion_inputs.append((review_emotion_vector, weight_schedule["posthoc_weight"] * max(posthoc_confidence, 0.55)))
     if previous_emotion_vector:
         emotion_inputs.append((previous_emotion_vector, prev_weight))
     emotion_vector = combine_named_vectors(emotion_inputs, EMOTION_DIMS)
@@ -861,7 +865,7 @@ def confirm_state(payload: dict[str, Any], features: FeatureMap, screen: ScreenS
     }
 
 
-def build_consistency_snapshot(payload: dict[str, Any], screen: dict[str, Any]) -> dict[str, Any]:
+def build_consistency_snapshot(payload: dict[str, Any], screen: dict[str, Any], diagnostics: dict[str, Any] | None = None) -> dict[str, Any]:
     review_semantic = load_review_semantic(payload)
     if not review_semantic:
         return {
@@ -874,7 +878,7 @@ def build_consistency_snapshot(payload: dict[str, Any], screen: dict[str, Any]) 
             "posthoc_labels": [],
         }
     screen_vector = clamp_dict(screen.get("emotion_vector"), EMOTION_DIMS)
-    posthoc_vector = clamp_dict(review_semantic.get("emotion_vector"), EMOTION_DIMS)
+    posthoc_vector = clamp_dict(review_semantic.get("emotion_vector"), EMOTION_DIMS, diagnostics=diagnostics, reason_prefix="review_semantic.emotion_vector")
     screen_labels = canonicalize_labels(screen.get("labels", []))
     posthoc_labels = canonicalize_labels(list(review_semantic.get("labels") or []))
     label_overlap = label_overlap_score(screen_labels, posthoc_labels)

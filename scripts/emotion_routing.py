@@ -164,12 +164,12 @@ def build_memory_update(payload: dict[str, Any], features: dict[str, Any], confi
         for key in EMOTION_DIMS
     }
     calibration_learning_rate = round(clamp(0.05 + 0.08 * confirmed["confidence"], 0.05, 0.12), 4)
-    prior_consistency = clamp(float(calibration.get("consistency_rate", weight_schedule["effective_consistency"]) or weight_schedule["effective_consistency"]))
-    prior_prediction_agreement = clamp(float(calibration.get("prediction_agreement", weight_schedule["effective_consistency"]) or weight_schedule["effective_consistency"]))
-    prior_observed_turns = int(calibration.get("observed_turns", 0) or 0)
-    prior_posthoc_samples = int(calibration.get("posthoc_samples", 0) or 0)
-    prior_consistency_samples = int(calibration.get("consistency_samples", prior_posthoc_samples) or prior_posthoc_samples)
-    prior_stable_hits = int(calibration.get("stable_prediction_hits", 0) or 0)
+    prior_consistency = clamp(safe_float(calibration.get("consistency_rate"), weight_schedule["effective_consistency"]))
+    prior_prediction_agreement = clamp(safe_float(calibration.get("prediction_agreement"), weight_schedule["effective_consistency"]))
+    prior_observed_turns = safe_int(calibration.get("observed_turns"), 0)
+    prior_posthoc_samples = safe_int(calibration.get("posthoc_samples"), 0)
+    prior_consistency_samples = safe_int(calibration.get("consistency_samples"), prior_posthoc_samples)
+    prior_stable_hits = safe_int(calibration.get("stable_prediction_hits"), 0)
     if consistency_snapshot["available"]:
         proposed_consistency_rate = round((1.0 - calibration_learning_rate) * prior_consistency + calibration_learning_rate * consistency_snapshot["consistency_rate"], 4)
         proposed_prediction_agreement = round((1.0 - calibration_learning_rate) * prior_prediction_agreement + calibration_learning_rate * consistency_snapshot["vector_alignment"], 4)
@@ -295,7 +295,7 @@ def significant_vector_delta(current: dict[str, Any], previous: dict[str, Any], 
     deltas: dict[str, float] = {}
     for dim in dims:
         try:
-            delta = float(current.get(dim, 0.0)) - float(previous.get(dim, 0.0))
+            delta = safe_float(current.get(dim), 0.0) - safe_float(previous.get(dim), 0.0)
         except (TypeError, ValueError):
             continue
         rounded = round(delta, 4)

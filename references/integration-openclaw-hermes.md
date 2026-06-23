@@ -23,12 +23,12 @@ python skills/emotion-skill/scripts/emotion_engine.py run --input turn.json --ou
 3. Use `overlay_prompt` in:
    - `before_agent_start`, or
    - `agent:bootstrap` if you want the overlay appended as a small extra context block
-4. Apply `routing.thread_interface.openclaw` to:
+4. Apply the compact `routing` fields to:
    - queue mode
    - heartbeat suppression or deferral
    - `sessions_spawn` policy
    - progress update cadence
-5. After the review pass returns, merge `memory_update.proposed_calibration_state` into a bounded host-owned calibration store.
+5. Merge `memory.proposed_calibration_state` into a bounded host-owned calibration store.
 
 Suggested mapping:
 
@@ -45,9 +45,9 @@ Recommended flow:
 1. Keep the long-lived voice in your runtime personality config.
 2. Keep longer-lived user tendencies in a host-owned profile store.
 3. Treat emotion output as a turn-local overlay.
-4. Map `routing.thread_interface.hermes.personality` to a short-lived `/personality` or equivalent orchestration state.
+4. Map `guidance.tone`, `routing.reply_style`, and `mode` to a short-lived `/personality` or equivalent orchestration state.
 5. Use `guidance.question` only when the state is unclear enough to justify one short probe.
-6. Merge `memory_update.proposed_baseline` into the host profile store with EMA.
+6. Use the full `run` output when you need `memory_update.proposed_baseline` for an EMA host profile store.
 7. Feed the host profile store back through `user_profile.persona_traits`, `user_profile.big5`, and `user_profile.affective_prior`.
 8. Store `memory_update.proposed_calibration_state` beside that profile so front-versus-review trust can evolve per user.
 
@@ -66,7 +66,6 @@ The emotion engine returns a stable structure:
 ```json
 {
   "mode": "skeptical",
-  "labels": ["frustrated", "skeptical"],
   "route_reasons": ["repeat_failure_pressure", "evidence_requested"],
   "response_constraints": ["show_basis_first", "name_verification_steps"],
   "guidance": {},
@@ -83,4 +82,4 @@ The emotion engine returns a stable structure:
 }
 ```
 
-The compact `host` output is the recommended runtime contract. The full `run` output keeps deeper fields such as `confirmed_state`, `prediction`, `routing.thread_interface.openclaw`, `routing.thread_interface.hermes`, and `debug_overlay_prompt`. Use `debug_overlay_prompt` for inspection logs.
+The compact `host` output is the recommended runtime contract. Raw labels stay out of that payload unless `host_capabilities.include_raw_emotion=true` is set for audit, in which case they appear under `diagnostics.internal.labels`. The full `run` output keeps deeper fields such as `confirmed_state`, `prediction`, `routing.thread_interface`, `memory_update`, and `debug_overlay_prompt`. Use `debug_overlay_prompt` for inspection logs.

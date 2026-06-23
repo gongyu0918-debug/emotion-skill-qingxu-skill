@@ -20,6 +20,28 @@ def clamp(value: float, low: float = 0.0, high: float = 1.0) -> float:
     return max(low, min(high, number))
 
 
+def safe_float(value: Any, default: float = 0.0, diagnostics: dict[str, Any] | None = None, reason: str = "number_invalid") -> float:
+    if value is None:
+        return default
+    if isinstance(value, str) and not value.strip():
+        return default
+    try:
+        number = float(value)
+    except (TypeError, ValueError):
+        if diagnostics is not None:
+            mark_degraded(diagnostics, reason)
+        return default
+    if not math.isfinite(number):
+        if diagnostics is not None:
+            mark_degraded(diagnostics, reason)
+        return default
+    return number
+
+
+def safe_int(value: Any, default: int = 0, diagnostics: dict[str, Any] | None = None, reason: str = "number_invalid") -> int:
+    return int(safe_float(value, float(default), diagnostics, reason))
+
+
 def load_json_file(path: str | None) -> Any:
     if not path:
         return None
@@ -104,12 +126,12 @@ def vector_alignment_score(vector_a: dict[str, Any], vector_b: dict[str, Any], d
         return 0.0
     diff = 0.0
     for dim in dims:
-        diff += abs(float(vector_a.get(dim, 0.0)) - float(vector_b.get(dim, 0.0)))
+        diff += abs(safe_float(vector_a.get(dim), 0.0) - safe_float(vector_b.get(dim), 0.0))
     return round(clamp(1.0 - (diff / max(len(dims), 1))), 4)
 
 
 def dominant_axes(vector: dict[str, Any], dims: tuple[str, ...], top_n: int = 2, floor: float = 0.32) -> set[str]:
-    ranked = sorted(((dim, float(vector.get(dim, 0.0))) for dim in dims), key=lambda item: item[1], reverse=True)
+    ranked = sorted(((dim, safe_float(vector.get(dim), 0.0)) for dim in dims), key=lambda item: item[1], reverse=True)
     picked = [dim for dim, value in ranked[:top_n] if value >= floor]
     return set(picked)
 
@@ -124,16 +146,19 @@ def axis_overlap_score(vector_a: dict[str, Any], vector_b: dict[str, Any], dims:
     return round(clamp(len(axes_a & axes_b) / len(axes_a | axes_b)), 4)
 
 
-def clamp_dict(raw: Any, keys: tuple[str, ...], defaults: dict[str, float] | None = None) -> dict[str, float]:
-    base = {key: clamp(float((defaults or {}).get(key, 0.0))) for key in keys}
+def clamp_dict(
+    raw: Any,
+    keys: tuple[str, ...],
+    defaults: dict[str, float] | None = None,
+    diagnostics: dict[str, Any] | None = None,
+    reason_prefix: str = "value",
+) -> dict[str, float]:
+    base = {key: clamp(safe_float((defaults or {}).get(key), 0.0)) for key in keys}
     if not isinstance(raw, dict):
         return base
     for key in keys:
         if key in raw and raw[key] is not None:
-            try:
-                base[key] = clamp(float(raw[key]))
-            except (TypeError, ValueError):
-                continue
+            base[key] = clamp(safe_float(raw[key], base[key], diagnostics, f"{reason_prefix}.{key}_invalid"))
     return base
 
 
@@ -241,7 +266,7 @@ def combine_named_vectors(weighted_vectors: list[tuple[dict[str, Any], float]], 
             value = vector.get(dim)
             if value is None:
                 continue
-            totals[dim] += float(value) * weight
+            totals[dim] += safe_float(value, 0.0) * weight
             weight_sum[dim] += weight
     result: dict[str, float] = {}
     for dim in dims:

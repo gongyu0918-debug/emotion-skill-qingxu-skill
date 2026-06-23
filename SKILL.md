@@ -5,6 +5,8 @@ metadata:
   openclaw:
     emoji: "🎛️"
     os: ["darwin", "linux", "win32"]
+    requires:
+      anyBins: ["python", "python3"]
 ---
 
 # Emotion Skill
@@ -37,8 +39,8 @@ Default host shape:
 ```json
 {
   "mode": "skeptical",
-  "route_reasons": ["repeat_failure_pressure", "evidence_requested"],
-  "response_constraints": ["show_basis_first", "name_verification_steps"],
+  "route_reasons": ["evidence_requested", "stall_risk"],
+  "response_constraints": ["show_basis_first", "name_verification_steps", "avoid_guessing", "include_check_result", "progress_update_required"],
   "guidance": {
     "system_prompt_addendum": "The user wants evidence before more changes. Start with a verification point, command, or log excerpt, then give the conclusion and next step.",
     "tone": "evidence_first"
@@ -47,7 +49,7 @@ Default host shape:
     "reply_style": "evidence_then_act",
     "verification_level": "high",
     "queue_mode": "collect",
-    "prefer_main_thread": true,
+    "prefer_main_thread": false,
     "progress_update_interval_sec": 20
   }
 }
@@ -71,7 +73,7 @@ Default output deliberately keeps raw `labels` and raw `emotion_vector` out of t
 - `state.state_delta`: action-named shifts such as `needs_concrete_unblock`, `needs_evidence_first`, or `needs_alignment_check`.
 - `memory.should_persist`: host-side persistence recommendation.
 
-Top-level `interaction_state` is canonical. `state.interaction_state` is a deprecated compatibility alias for v1.1 hosts and is marked by `state._deprecated_alias`; plan to remove that alias after the 1.3 line.
+Top-level `interaction_state` is canonical. `state.interaction_state` is a deprecated compatibility alias for v1.1 hosts and is marked by `state._deprecated_alias`; plan to remove that alias after the 1.4 line.
 
 `state.state_delta.interaction.needs` is validated against `alignment_check`, `evidence_first`, and `keep_progress_visible`.
 
@@ -151,6 +153,8 @@ Safety precedence: an explicit payload value of `host_capabilities.include_raw_e
 ## Persistence Boundary
 
 The core engine is stateless. It returns JSON, makes no network calls, and writes only when `--output` is provided.
+
+Named timezone conversion uses Python `zoneinfo` when host timezone data is available. On Windows hosts without IANA timezone data, pass `context.local_hour` or an offset-bearing `context.now_iso` for deterministic local-hour handling without adding runtime dependencies.
 
 The minimal host adapter writes three host-owned JSON files under `--store-dir` when persistence is enabled:
 
@@ -246,6 +250,8 @@ Current local regression results:
 - strict smoke: `ok`
 - independent audit: `ok`
 - download smoke: `ok`
+- marketplace scope audit: `ok`
+- feature gate audit: `ok`
 - bundle manifest: `ok`
 
 ## Good Fit

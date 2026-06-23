@@ -27,7 +27,7 @@ This skill turns those moments into host-readable routing fields and a positive 
 
 | User signal | Host behavior |
 |---|---|
-| "This is still broken" | raise verification, keep work on the main thread, shorten progress updates |
+| "This is still broken" with retry/runtime evidence | raise verification, keep work on the main thread, shorten progress updates |
 | "Show me the basis" | start with a command, log, test, or exact check before the conclusion |
 | "Only touch this file" | tighten scope, protect config, name rollback path |
 | "I am lost on the path" | restate the target, give one correctable default path |
@@ -56,6 +56,7 @@ Requirements:
 - Python `3.9+`
 - standard library only
 - no network calls from the runtime engine
+- On Windows without IANA timezone data, pass `context.local_hour` or an offset-bearing `context.now_iso` for deterministic local-hour handling.
 
 ## Runtime Layout
 
@@ -82,8 +83,8 @@ Default host output is designed for production prompts:
 ```json
 {
   "mode": "skeptical",
-  "route_reasons": ["repeat_failure_pressure", "evidence_requested"],
-  "response_constraints": ["show_basis_first", "name_verification_steps"],
+  "route_reasons": ["evidence_requested", "stall_risk"],
+  "response_constraints": ["show_basis_first", "name_verification_steps", "avoid_guessing", "include_check_result", "progress_update_required"],
   "guidance": {
     "system_prompt_addendum": "The user wants evidence before more changes. Start with a verification point, command, or log excerpt, then give the conclusion and next step.",
     "tone": "evidence_first"
@@ -92,7 +93,8 @@ Default host output is designed for production prompts:
     "reply_style": "evidence_then_act",
     "verification_level": "high",
     "queue_mode": "collect",
-    "prefer_main_thread": true
+    "prefer_main_thread": false,
+    "progress_update_interval_sec": 20
   }
 }
 ```
@@ -114,7 +116,7 @@ Use `host` for runtime integration. The most important fields are:
 - `state.state_delta`: action-named shifts such as `needs_evidence_first`.
 - `memory.should_persist`: recommendation for host-owned profile storage.
 
-`interaction_state` at the top level is the canonical field. `state.interaction_state` is a deprecated compatibility alias for v1.1 hosts and is marked by `state._deprecated_alias`; plan to remove that alias after the 1.3 line.
+`interaction_state` at the top level is the canonical field. `state.interaction_state` is a deprecated compatibility alias for v1.1 hosts and is marked by `state._deprecated_alias`; plan to remove that alias after the 1.4 line.
 
 The full `run` command keeps diagnostics, features, prompts, and calibration fields for research and regression work.
 

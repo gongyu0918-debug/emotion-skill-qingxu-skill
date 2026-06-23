@@ -601,7 +601,7 @@ def main() -> int:
         "results": rows,
     }
     print(json.dumps(summary, ensure_ascii=False, indent=2))
-    return 0
+    return 0 if skill_passed == skill_total else 1
 
 
 if __name__ == "__main__":

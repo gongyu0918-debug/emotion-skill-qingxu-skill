@@ -135,6 +135,8 @@ def run_event(event_path: Path, store_dir: Path, pretty: bool, persist: bool, vi
     event = require_json_object(event_raw, f"host event {event_path}")
     if not event:
         raise ValueError(f"Event payload is empty: {event_path}")
+    if not str(event.get("message") or "").strip():
+        raise ValueError("Event message is required: set event.message to the latest user turn")
     store, store_errors = load_store(store_dir, ignore_bad_store)
     adapter_warnings: list[str] = []
     for key in store_errors:

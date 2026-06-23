@@ -27,7 +27,7 @@ Coding Agent 常在这些时刻掉质量：
 
 | 用户信号 | 宿主行为 |
 |---|---|
-| “这个还没修好” | 提高验证强度，留在主线程，缩短进度更新间隔 |
+| 带 retry/runtime 证据的“这个还没修好” | 提高验证强度，留在主线程，缩短进度更新间隔 |
 | “先给我依据” | 先给命令、日志、测试或校验点，再给结论 |
 | “只改这个文件” | 收紧范围，保护配置，说明回滚路径 |
 | “路径对不上” | 先复述目标，再给一个可纠正的默认路径 |
@@ -56,6 +56,7 @@ python scripts/download_smoke.py
 - Python `3.9+`
 - 只用标准库
 - 运行时引擎不发网络请求
+- Windows 没有 IANA timezone 数据时，传 `context.local_hour` 或带 offset 的 `context.now_iso`，即可保持确定性本地时间处理。
 
 ## 运行时结构
 
@@ -82,8 +83,8 @@ python scripts/emotion_engine.py host \
 ```json
 {
   "mode": "skeptical",
-  "route_reasons": ["repeat_failure_pressure", "evidence_requested"],
-  "response_constraints": ["show_basis_first", "name_verification_steps"],
+  "route_reasons": ["evidence_requested"],
+  "response_constraints": ["show_basis_first", "name_verification_steps", "avoid_guessing", "include_check_result", "progress_update_required"],
   "guidance": {
     "system_prompt_addendum": "用户希望先看到依据。回复以校验点、命令或日志片段开头，再给结论和下一步。",
     "tone": "evidence_first"
@@ -92,7 +93,9 @@ python scripts/emotion_engine.py host \
     "reply_style": "evidence_then_act",
     "verification_level": "high",
     "queue_mode": "collect",
-    "prefer_main_thread": true
+    "prefer_main_thread": true,
+    "defer_heartbeat": true,
+    "progress_update_interval_sec": 20
   }
 }
 ```
@@ -114,7 +117,7 @@ python scripts/emotion_engine.py host \
 - `state.state_delta`：动作命名的跨轮变化，比如 `needs_evidence_first`。
 - `memory.should_persist`：是否建议宿主合并画像更新。
 
-顶层 `interaction_state` 是 canonical 字段。`state.interaction_state` 是给 v1.1 host 的 deprecated 兼容别名，并通过 `state._deprecated_alias` 标记；计划在 1.3 线之后移除。
+顶层 `interaction_state` 是 canonical 字段。`state.interaction_state` 是给 v1.1 host 的 deprecated 兼容别名，并通过 `state._deprecated_alias` 标记；计划在 1.4 线之后移除。
 
 完整 `run` 命令保留 diagnostics、features、prompts、calibration 字段，给研究和回归测试用。
 

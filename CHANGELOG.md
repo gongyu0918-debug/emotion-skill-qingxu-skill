@@ -1,5 +1,14 @@
 # Changelog
 
+## 1.3.1 - 2026-06-23
+
+- hardened host payload numeric parsing so malformed runtime, profile, calibration, and vector values degrade instead of crashing the engine
+- fixed Windows local-hour handling when IANA timezone data is unavailable by using explicit `local_hour` or offset-bearing `now_iso`
+- made the minimal host adapter reject events without a latest `message` before persistence
+- aligned README, README.zh-CN, SKILL.md, and OpenClaw/Hermes integration notes with the current compact `host` contract
+- turned alignment and ablation scripts into real failure gates and expanded independent audit coverage for bad numeric payloads and missing-message adapter events
+- aligned runtime schema and upcoming GitHub/ClawHub release version to `1.3.1`
+
 ## 1.3.0 - 2026-05-02
 
 - split the former monolithic runtime into focused modules for types, terms, features, scoring, routing, output, and shared helpers
