@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.3.3 - 2026-06-23
+
+- republished release metadata to move the legacy ClawHub combined tag mapping to the current version, keeping all visible ClawHub tag values aligned with GitHub latest
+
 ## 1.3.2 - 2026-06-23
 
 - republished the same hardened runtime and audit gate set with explicit ClawHub display metadata so GitHub and ClawHub latest release identifiers stay aligned
